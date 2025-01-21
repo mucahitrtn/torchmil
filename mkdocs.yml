@@ -1,7 +1,7 @@
 site_name: torchmil
 site_description: Documentation for the torchmil package.
 site_author: Fran Castro
-site_url: 
+site_url: ""
 
 repo_url: https://github.com/Franblueee/torchmil
 repo_name: Franblueee/torchmil
@@ -13,6 +13,11 @@ theme:
     - navigation.sections  # Sections are included in the navigation on the left.
     - toc.integrate  # Table of contents is integrated on the left; does not appear separately on the right.
     - header.autohide  # header disappears as you scroll
+    - navigation.path
+    - navigation.indexes
+    - navigation.tabs
+    - navigation.tabs.sticky
+    
   palette:
     # Light mode / dark mode
     # We deliberately don't automatically use `media` to check a user's preferences. We default to light mode as
@@ -39,7 +44,7 @@ theme:
   twitter_name: "@Franblueee"
   twitter_url: "https://x.com/franblueee"
 
-strict: True
+strict: False
 
 extra_javascript: 
     # The below two make MathJax work, see https://squidfunk.github.io/mkdocs-material/reference/mathjax/
@@ -93,9 +98,24 @@ plugins:
 
 nav:
   - index.md
-  - Models:
+  - Tutorials:
+    - tutorials/index.md
+    - tutorials/tutorial_1.md
+  - API reference:
+    - api/index.md
+    - <tt>torchmil.data</tt>:
+      - api/data/index.md
+      # - api/data/collate.md
+    - <tt>torchmil.datasets</tt>:
+      - api/datasets/toy_dataset.md
+      - api/datasets/wsi_dataset.md
+    - <tt>torchmil.models</tt>:
+      - api/models/index.md
       - Modules:
-          - models/modules/attention_pool.md
-      - models/ABMIL.md
-      - models/SmABMIL.md
-      - models/ProbSmoothABMIL.md
+          - api/models/modules/index.md
+          - api/models/modules/attention_pool.md
+          - api/models/modules/sm.md
+      - api/models/abmil.md
+      - api/models/transformer_abmil.md
+      - api/models/sm_abmil.md
+      - api/models/prob_smooth_abmil.md

@@ -117,7 +117,7 @@ class ProbSmoothAttentionPool(torch.nn.Module):
         return_att : bool = False,
         return_attdist : bool = False,
         return_kl_div : bool = False
-    ) -> tuple[Tensor, Tensor, Tensor, Tensor]:
+    ) -> tuple[Tensor, Tensor, Tensor, Tensor, Tensor]:
         """
         Arguments:
             X: Bag features of shape `(batch_size, bag_size, D)`.
@@ -132,7 +132,7 @@ class ProbSmoothAttentionPool(torch.nn.Module):
             f: Sample from the attention distribution of shape `(batch_size, bag_size, n_samples)`. Only returned when `return_att=True`.
             mu_f: Mean of the attention distribution of shape `(batch_size, bag_size, 1)`. Only returned when `return_attdist=True`.
             diag_Sigma_f: Covariance of the attention distribution of shape `(batch_size, bag_size, 1)`. Only returned when `return_attdist=True`.
-            kl_div: KL divergence between the attention distribution and the prior distribution. Only returned when `return_kl_div=True`.
+            kl_div: KL divergence between the attention distribution and the prior distribution, of shape `()`. Only returned when `return_kl_div=True`.
         """
 
         if self.training:

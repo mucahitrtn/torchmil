@@ -2,14 +2,21 @@ import torch
 from torch import Tensor
 
 from torchmil.models.modules import AttentionPool
-# from torchmil.models import MILModel
 
 
 class ABMIL(torch.nn.Module):
-    """
-    Attention-based Multiple Instance Learning (ABMIL) model. 
+    r"""
+    Attention-based Multiple Instance Learning (ABMIL) model, proposed in the paper [Attention-based Multiple Instance Learning](https://arxiv.org/abs/1802.04712).
 
-    Proposed in the paper [Attention-based Multiple Instance Learning](https://arxiv.org/abs/1802.04712).
+    Given an input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times D}$, this model aggregates the instance features into a bag representation $\mathbf{z} \in \mathbb{R}^{D}$ using the attention-based pooling, 
+
+    $$ \mathbf{z} = \mathbf{X}^\top \text{Softmax}(\mathbf{f}) = \sum_{n=1}^N s_n \mathbf{x}_n, $$
+
+    where $\mathbf{f} = \operatorname{MLP}(\mathbf{X}) \in \mathbb{R}^{N}$ are the attention values and $s_n$ is the normalized attention score for the $n$-th instance.
+    The bag representation $\mathbf{z}$ is then fed into a classifier to predict the bag label.
+
+    The model uses a two-layer perceptron for the attention values computation, and a linear layer for the bag label prediction.
+    Optionally, the input bag may be passed through a feature extractor before the attention pooling.
     """
 
     def __init__(
@@ -17,7 +24,7 @@ class ABMIL(torch.nn.Module):
         input_shape: tuple,
         att_dim: int = 128,
         att_act: str = 'tanh',
-        feat_ext: torch.nn.Module = None,
+        feat_ext: torch.nn.Module = torch.nn.Identity(),
         criterion: torch.nn.Module = torch.nn.BCEWithLogitsLoss(),
     ) -> None:
         """
@@ -26,16 +33,13 @@ class ABMIL(torch.nn.Module):
             att_dim: Attention dimension.
             att_act: Activation function for attention. Possible values: 'tanh', 'relu', 'gelu'.
             feat_ext: Feature extractor.
-            criterion: Loss function.
+            criterion: Loss function. By default, Binary Cross-Entropy loss from logits.
         """
         super().__init__()
         self.input_shape = input_shape
         self.criterion = criterion
 
-        if feat_ext is None:
-            self.feat_ext = torch.nn.Identity()
-        else:
-            self.feat_ext = feat_ext
+        self.feat_ext = feat_ext
         self.feat_dim = self._get_feat_dim()
         self.pool = AttentionPool(
             in_dim=self.feat_dim, att_dim=att_dim, act=att_act)
@@ -60,10 +64,10 @@ class ABMIL(torch.nn.Module):
         Arguments:
             X: Bag features of shape `(batch_size, bag_size, ...)`.
             mask: Mask of shape `(batch_size, bag_size)`.
-            return_att: If True, returns attention values (before normalization) in addition to `Y_logits_pred`.
+            return_att: If True, returns attention values (before normalization) in addition to `bag_pred`.
 
         Returns:
-            Y_logits_pred: Bag label logits of shape `(batch_size,)`.
+            bag_pred: Bag label logits of shape `(batch_size,)`.
             att: Only returned when `return_att=True`. Attention values (before normalization) of shape (batch_size, bag_size).
         """
 
@@ -76,13 +80,13 @@ class ABMIL(torch.nn.Module):
         else:
             Z = out_pool  # (batch_size, feat_dim)
 
-        Y_logits_pred = self.classifier(Z)  # (batch_size, 1)
-        Y_logits_pred = Y_logits_pred.squeeze(-1)  # (batch_size,)
+        bag_pred = self.classifier(Z)  # (batch_size, 1)
+        bag_pred = bag_pred.squeeze(-1)  # (batch_size,)
 
         if return_att:
-            return Y_logits_pred, f
+            return bag_pred, f
         else:
-            return Y_logits_pred
+            return bag_pred
 
     def compute_loss(
         self,
@@ -99,23 +103,23 @@ class ABMIL(torch.nn.Module):
             mask: Mask of shape `(batch_size, bag_size)`.
 
         Returns:
-            Y_logits_pred: Bag label logits of shape `(batch_size,)`.
+            bag_pred: Bag label logits of shape `(batch_size,)`.
             loss_dict: Dictionary containing the loss value.
         """
 
-        Y_logits_pred = self.forward(X, mask, return_att=False)
+        bag_pred = self.forward(X, mask, return_att=False)
 
-        crit_loss = self.criterion(Y_logits_pred.float(), Y_true.float())
+        crit_loss = self.criterion(bag_pred.float(), Y_true.float())
         crit_name = self.criterion.__class__.__name__
 
-        return Y_logits_pred, {crit_name: crit_loss}
+        return bag_pred, {crit_name: crit_loss}
 
     @torch.no_grad()
     def predict(
         self,
         X: Tensor,
         mask: Tensor,
-        return_y_pred: bool = True
+        return_inst_pred: bool = True
     ) -> tuple[Tensor, Tensor]:
         """
         Predict bag and (optionally) instance labels.
@@ -123,10 +127,10 @@ class ABMIL(torch.nn.Module):
         Arguments:
             X: Bag features of shape `(batch_size, bag_size, ...)`.
             mask: Mask of shape `(batch_size, bag_size)`.
-            return_y_pred: If `True`, returns instance labels predictions, in addition to bag label predictions.
+            return_inst_pred: If `True`, returns instance labels predictions, in addition to bag label predictions.
 
         Returns:
-            T_logits_pred: Bag label logits of shape `(batch_size,)`.
-            y_pred: If `return_y_pred=True`, returns instance labels predictions of shape `(batch_size, bag_size)`.
+            bag_pred: Bag label logits of shape `(batch_size,)`.
+            inst_pred: If `return_inst_pred=True`, returns instance labels predictions of shape `(batch_size, bag_size)`.
         """
-        return self.forward(X, mask, return_att=return_y_pred)
+        return self.forward(X, mask, return_att=return_inst_pred)

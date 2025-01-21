@@ -12,18 +12,27 @@ class ProbSmoothABMIL(torch.nn.Module):
         covar_mode: str = 'diag',
         n_samples_train: int = 1000,
         n_samples_test: int = 5000,
-        feat_ext: torch.nn.Module = None,
+        feat_ext: torch.nn.Module = torch.nn.Identity(),
         criterion: torch.nn.Module = torch.nn.BCEWithLogitsLoss(),
     ) -> None:
+        """
+        Class constructor.
+
+        Arguments:
+            input_shape: Shape of input data expected by the feature extractor (excluding batch dimension).
+            att_dim: Attention dimension.
+            covar_mode: Covariance mode for the Gaussian prior. Possible values: 'diag', 'full'.
+            n_samples_train: Number of samples for training.
+            n_samples_test: Number of samples for testing.
+            feat_ext: Feature extractor.
+            criterion: Loss function. By default, Binary Cross-Entropy loss from logits for binary classification.
+        
+        """
         super().__init__()
         self.input_shape = input_shape
         self.criterion = criterion
 
-        if feat_ext is None:
-            self.feat_ext = torch.nn.Identity()
-        else:
-            self.feat_ext = feat_ext
-
+        self.feat_ext = feat_ext
         feat_dim = self._get_feat_dim()
         self.pool = ProbSmoothAttentionPool(
             in_dim=feat_dim,
@@ -32,7 +41,7 @@ class ProbSmoothABMIL(torch.nn.Module):
             n_samples_train=n_samples_train,
             n_samples_test=n_samples_test
         )
-        self.classifier = torch.nn.Linear(feat_dim, 1)
+        self.last_layer = torch.nn.Linear(feat_dim, 1)
 
     def _get_feat_dim(self) -> int:
         """
@@ -57,12 +66,12 @@ class ProbSmoothABMIL(torch.nn.Module):
             X: Bag features of shape `(batch_size, bag_size, ...)`.
             mask: Mask of shape `(batch_size, bag_size)`.
             adj_mat: Adjacency matrix of shape `(batch_size, bag_size, bag_size)`. Only required when `return_kl_div=True`.
-            return_att: If True, returns attention values (before normalization) in addition to `Y_logits_pred`.
+            return_att: If True, returns attention values (before normalization) in addition to `bag_pred`.
             return_samples: If True and `return_att=True`, the attention values returned are samples from the attention distribution.
             return_kl_div: If True, returns the KL divergence between the attention distribution and the prior distribution.
 
         Returns:
-            Y_logits_pred: Bag label logits of shape `(batch_size, n_samples)` if `return_samples=True`, else `(batch_size,)`.
+            bag_pred: Bag label logits of shape `(batch_size, n_samples)` if `return_samples=True`, else `(batch_size,)`.
             att: Only returned when `return_att=True`. Attention values (before normalization) of shape `(batch_size, bag_size, n_samples)` if `return_samples=True`, else `(batch_size, bag_size)`.
             kl_div: Only returned when `return_kl_div=True`. KL divergence between the attention distribution and the prior distribution of shape `()`.
         """
@@ -84,24 +93,24 @@ class ProbSmoothABMIL(torch.nn.Module):
                 Z = out_pool
 
         Z = Z.transpose(1, 2)  # (batch_size, n_samples, feat_dim)
-        Y_logits_pred = self.classifier(Z)  # (batch_size, n_samples, 1)
-        Y_logits_pred = Y_logits_pred.squeeze(-1)  # (batch_size, n_samples)
+        bag_pred = self.last_layer(Z)  # (batch_size, n_samples, 1)
+        bag_pred = bag_pred.squeeze(-1)  # (batch_size, n_samples)
 
         if not return_samples:
-            Y_logits_pred = Y_logits_pred.mean(dim=-1)  # (batch_size,)
+            bag_pred = bag_pred.mean(dim=-1)  # (batch_size,)
             if return_att:
                 f = f.mean(dim=-1)  # (batch_size, bag_size)
 
         if return_kl_div:
             if return_att:
-                return Y_logits_pred, f, kl_div
+                return bag_pred, f, kl_div
             else:
-                return Y_logits_pred, kl_div
+                return bag_pred, kl_div
         else:
             if return_att:
-                return Y_logits_pred, f
+                return bag_pred, f
             else:
-                return Y_logits_pred
+                return bag_pred
 
     def compute_loss(
         self,
@@ -119,25 +128,25 @@ class ProbSmoothABMIL(torch.nn.Module):
             mask: Mask of shape `(batch_size, bag_size)`.
 
         Returns:
-            Y_logits_pred: Bag label logits of shape `(batch_size,)`.
+            bag_pred: Bag label logits of shape `(batch_size,)`.
             loss_dict: Dictionary containing the loss value.
         """
 
-        Y_logits_pred, kl_div = self.forward(
+        bag_pred, kl_div = self.forward(
             X, mask, adj_mat, return_att=False, return_samples=True, return_kl_div=True)  # (batch_size, n_samples)
-        Y_logits_pred_mean = Y_logits_pred.mean(dim=-1)  # (batch_size,)
+        bag_pred_mean = bag_pred.mean(dim=-1)  # (batch_size,)
 
-        Y_true = Y_true.unsqueeze(-1).expand(-1, Y_logits_pred.shape[-1])
-        crit_loss = self.criterion(Y_logits_pred.float(), Y_true.float())
+        Y_true = Y_true.unsqueeze(-1).expand(-1, bag_pred.shape[-1])
+        crit_loss = self.criterion(bag_pred.float(), Y_true.float())
         crit_name = self.criterion.__class__.__name__
 
-        return Y_logits_pred_mean, {crit_name: crit_loss, 'KLDiv': kl_div}
+        return bag_pred_mean, {crit_name: crit_loss, 'KLDiv': kl_div}
 
     @torch.no_grad()
     def predict(self,
         X: Tensor,
         mask: Tensor,
-        return_y_pred: bool = True,
+        return_inst_pred: bool = True,
         return_samples: bool = False
     ) -> tuple[Tensor, Tensor]:
         """
@@ -146,14 +155,14 @@ class ProbSmoothABMIL(torch.nn.Module):
         Arguments:
             X: Bag features of shape `(batch_size, bag_size, ...)`.
             mask: Mask of shape `(batch_size, bag_size)`.
-            return_y_pred: If True, returns the attention values as instance labels predictions, in addition to bag label predictions.
-            return_samples: If True and `return_y_pred=True`, the instance label predictions returned are samples from the instance label distribution.
+            return_inst_pred: If True, returns the attention values as instance labels predictions, in addition to bag label predictions.
+            return_samples: If True and `return_inst_pred=True`, the instance label predictions returned are samples from the instance label distribution.
 
         Returns:
-            Y_logits_pred: Bag label logits of shape `(batch_size,)`.
-            att_val: Only returned when `return_y_pred=True`. Attention values (before normalization) of shape `(batch_size, bag_size)` if `return_samples=False`, else `(batch_size, bag_size, n_samples)`.
+            bag_pred: Bag label logits of shape `(batch_size,)`.
+            att_val: Only returned when `return_inst_pred=True`. Attention values (before normalization) of shape `(batch_size, bag_size)` if `return_samples=False`, else `(batch_size, bag_size, n_samples)`.
 
         """
-        Y_logits_pred, att_val = self.forward(
-            X, mask, return_att=return_y_pred, return_samples=return_samples)
-        return Y_logits_pred, att_val
+        bag_pred, att_val = self.forward(
+            X, mask, return_att=return_inst_pred, return_samples=return_samples)
+        return bag_pred, att_val

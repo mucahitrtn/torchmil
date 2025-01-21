@@ -25,7 +25,7 @@ class SmABMIL(torch.nn.Module):
         sm_pre: bool = False,
         sm_post: bool = False,
         sm_spectral_norm: bool = False,
-        feat_ext: torch.nn.Module = None,
+        feat_ext: torch.nn.Module = torch.nn.Identity(),
         criterion: torch.nn.Module = torch.nn.BCEWithLogitsLoss(),
     ) -> None:
         """
@@ -41,16 +41,13 @@ class SmABMIL(torch.nn.Module):
             sm_post (bool): If True, apply Sm operator after the attention pooling.
             sm_spectral_norm (bool): If True, apply spectral normalization to all linear layers.
             feat_ext (torch.nn.Module): Feature extractor.
-            criterion (torch.nn.Module): Loss function.
+            criterion (torch.nn.Module): Loss function. By default, Binary Cross-Entropy loss from logits for binary classification.
         """
         super().__init__()
         self.input_shape = input_shape
         self.criterion = criterion
 
-        if feat_ext is None:
-            self.feat_ext = torch.nn.Identity()
-        else:
-            self.feat_ext = feat_ext
+        self.feat_ext = feat_ext
         self.feat_dim = self._get_feat_dim()
         self.pool = SmAttentionPool(
             in_dim=self.feat_dim,
@@ -64,7 +61,7 @@ class SmABMIL(torch.nn.Module):
             sm_post=sm_post,
             sm_spectral_norm=sm_spectral_norm
         )
-        self.classifier = torch.nn.Linear(self.feat_dim, 1)
+        self.last_layer = torch.nn.Linear(self.feat_dim, 1)
 
     def _get_feat_dim(self) -> int:
         """
@@ -87,10 +84,10 @@ class SmABMIL(torch.nn.Module):
             X (Tensor): Bag features of shape `(batch_size, bag_size, ...)`.
             adj_mat (Tensor): Adjacency matrix of shape `(batch_size, bag_size, bag_size)`.
             mask (Tensor): Mask of shape `(batch_size, bag_size)`.
-            return_att (bool): If True, returns attention values (before normalization) in addition to `Y_logits_pred`.
+            return_att (bool): If True, returns attention values (before normalization) in addition to `bag_pred`.
 
         Returns:
-            Y_logits_pred (Tensor): Bag label logits of shape `(batch_size,)`.
+            bag_pred (Tensor): Bag label logits of shape `(batch_size,)`.
             att (Tensor): Only returned when `return_att=True`. Attention values (before normalization) of shape (batch_size, bag_size)..
         """
 
@@ -103,13 +100,13 @@ class SmABMIL(torch.nn.Module):
         else:
             Z = out_pool  # (batch_size, feat_dim)
 
-        Y_logits_pred = self.classifier(Z)  # (batch_size, 1)
-        Y_logits_pred = Y_logits_pred.squeeze(-1)  # (batch_size,)
+        bag_pred = self.last_layer(Z)  # (batch_size, 1)
+        bag_pred = bag_pred.squeeze(-1)  # (batch_size,)
 
         if return_att:
-            return Y_logits_pred, f
+            return bag_pred, f
         else:
-            return Y_logits_pred
+            return bag_pred
 
     def compute_loss(
         self,
@@ -128,16 +125,16 @@ class SmABMIL(torch.nn.Module):
             mask (Tensor): Mask of shape `(batch_size, bag_size)`.
 
         Returns:
-            Y_logits_pred (Tensor): Bag label logits of shape `(batch_size,)`.
+            bag_pred (Tensor): Bag label logits of shape `(batch_size,)`.
             loss_dict (dict): Dictionary containing the loss value.
         """
 
-        Y_logits_pred = self.forward(X, adj_mat, mask, return_att=False)
+        bag_pred = self.forward(X, adj_mat, mask, return_att=False)
 
-        crit_loss = self.criterion(Y_logits_pred.float(), Y_true.float())
+        crit_loss = self.criterion(bag_pred.float(), Y_true.float())
         crit_name = self.criterion.__class__.__name__
 
-        return Y_logits_pred, {crit_name: crit_loss}
+        return bag_pred, {crit_name: crit_loss}
 
     @torch.no_grad()
     def predict(
@@ -145,7 +142,7 @@ class SmABMIL(torch.nn.Module):
         X: Tensor,
         adj_mat: Tensor,
         mask: Tensor,
-        return_y_pred: bool = True
+        return_inst_pred: bool = True
     ) -> Union[Tensor, tuple[Tensor, Tensor]]:
         """
         Predict bag and (optionally) instance labels.
@@ -154,11 +151,11 @@ class SmABMIL(torch.nn.Module):
             X (Tensor): Bag features of shape `(batch_size, bag_size, ...)`.
             adj_mat (Tensor): Adjacency matrix of shape `(batch_size, bag_size, bag_size)`.
             mask (Tensor): Mask of shape `(batch_size, bag_size)`.
-            return_y_pred (bool): If `True`, returns instance labels predictions, in addition to bag label predictions.
+            return_inst_pred (bool): If `True`, returns instance labels predictions, in addition to bag label predictions.
 
         Returns:
             T_logits_pred (Tensor): Bag label logits of shape `(batch_size,)`.
-            y_pred (Tensor): If `return_y_pred=True`, returns instance labels predictions of shape `(batch_size, bag_size)`.
+            inst_pred (Tensor): If `return_inst_pred=True`, returns instance labels predictions of shape `(batch_size, bag_size)`.
 
         """
-        return self.forward(X, adj_mat, mask, return_att=return_y_pred)
+        return self.forward(X, adj_mat, mask, return_att=return_inst_pred)

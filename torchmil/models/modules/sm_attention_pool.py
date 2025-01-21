@@ -4,7 +4,7 @@ import torch
 from torch import Tensor
 
 from torchmil.models.modules.utils import masked_softmax
-from torchmil.models.modules.Sm import ApproxSm, ExactSm
+from torchmil.models.modules.sm import ApproxSm, ExactSm
 
 class SmAttentionPool(torch.nn.Module):
     """
