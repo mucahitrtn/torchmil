@@ -2,8 +2,6 @@ import torch
 import torch.nn as nn
 import numpy as np
 
-from .MILModel import MILModel
-from .modules import MILFeatExt
 from .modules.NystromTransformer import NystromTransformerLayer
 
 class PPEG(nn.Module):
@@ -23,113 +21,158 @@ class PPEG(nn.Module):
         return x
 
 
-class TransMIL(MILModel):
+class TransMIL(torch.nn.Module):
     def __init__(
             self, 
-            input_dim,
-            emb_dim = 512,
-            att_dim = 128,
-            num_heads = 8,
+            in_dim : int,
+            emb_dim : int,
+            n_heads = 4,
+            n_landmarks = None,
+            pinv_iterations = 6,
+            residual = True,
+            dropout = 0.0,
+            use_mlp = False,
             criterion : torch.nn.Module = torch.nn.BCEWithLogitsLoss(),
-            **kwargs
         ):
+        """
+        Arguments:
+            in_dim: Input dimension.
+            emb_dim: Embedding dimension.
+            n_heads: Number of heads.
+            n_landmarks: Number of landmarks.
+            pinv_iterations: Number of iterations for the pseudo-inverse.
+            residual: Whether to use residual in the transformer attention layer.
+            dropout: Dropout rate.
+            use_mlp: Whether to use a MLP after the transformer attention layer.
+            criterion: Loss function. By default, Binary Cross-Entropy loss from logits.        
+        """
+
         super(TransMIL, self).__init__()
-        
-        self.input_dim = input_dim
-        self.emb_dim = emb_dim
-        self.att_dim = att_dim
 
-        self.feat_ext = nn.Linear(input_dim, emb_dim)
+        if n_landmarks is None:
+            n_landmarks = emb_dim//2
+        self.n_landmarks = n_landmarks
 
-        self.pos_layer = PPEG(dim=self.emb_dim)
-        self.cls_token = nn.Parameter(torch.randn(1, 1, self.emb_dim))
+        self.feat_ext = nn.Linear(in_dim, emb_dim)
 
-        self.transf_layer_1 = NystromTransformerLayer(dim=self.emb_dim, dim_head=self.att_dim//num_heads, heads=num_heads)
-        self.transf_layer_2 = NystromTransformerLayer(dim=self.emb_dim, dim_head=self.att_dim//num_heads, heads=num_heads)
+        self.pos_layer = PPEG(dim=emb_dim)
+        self.cls_token = nn.Parameter(torch.randn(1, 1, emb_dim))
 
-        self.norm = nn.LayerNorm(self.emb_dim)
-        self.classifier = nn.Linear(self.emb_dim, 1)
+        self.transf_layer_1 = NystromTransformerLayer(att_dim=emb_dim, n_heads=n_heads, n_landmarks=n_landmarks, pinv_iterations=pinv_iterations, residual=residual, dropout=dropout, use_mlp=use_mlp)
+        self.transf_layer_2 = NystromTransformerLayer(att_dim=emb_dim, n_heads=n_heads, n_landmarks=n_landmarks, pinv_iterations=pinv_iterations, residual=residual, dropout=dropout, use_mlp=use_mlp)
+
+        self.norm = nn.LayerNorm(emb_dim)
+        self.classifier = nn.Linear(emb_dim, 1)
 
         self.criterion = criterion
 
-    def forward(self, X, *args, return_att=False, **kwargs):
+    def forward(
+            self, 
+            X : torch.Tensor,
+            return_att : bool = False
+        ) -> tuple[torch.Tensor, torch.Tensor]:
         """
-        Input:
-            X : tensor (batch_size, bag_size, input_dim)
-        Output:
-            T_logits : tensor (batch_size,)
-            att : tensor (batch_size, bag_size) if return_att is True
+        Forward pass.
+
+        Arguments:
+            X: Input tensor of shape `(batch_size, bag_size, in_dim)`.
+            return_att: Whether to return the attention matrix.
+        
+        Returns:
+            bag_pred: Bag label logits of shape `(batch_size,)`.
+            att: Only returned when `return_att=True`. Attention values (before normalization) of shape (batch_size, bag_size).
         """
         
         device = X.device
         batch_size, bag_size = X.shape[0], X.shape[1]
 
-        h = self.feat_ext(X) # (batch_size, bag_size, 512)
+        X = self.feat_ext(X) # (batch_size, bag_size, emb_dim)
 
         # pad
-        H = h.shape[1]
-        _H, _W = int(np.ceil(np.sqrt(H))), int(np.ceil(np.sqrt(H)))
-        add_length = _H * _W - H
-        h = torch.cat([h, h[:,:add_length,:]], dim = 1) # (batch_size, _H*_W, 512)
+        bag_size = X.shape[1]
+        padded_size = int(np.ceil(np.sqrt(bag_size)))
+        add_length = padded_size*padded_size - bag_size
+        X = torch.cat([X, X[:,:add_length,:]], dim = 1) # (batch_size, padded_size*padded_size, emb_dim)
 
         # add cls_token
-        cls_tokens = self.cls_token.expand(batch_size, -1, -1).to(device) # (batch_size, 1, 512)
-        h = torch.cat((cls_tokens, h), dim=1) # (batch_size, _H*_W+1, 512)
+        cls_tokens = self.cls_token.expand(batch_size, -1, -1).to(device) # (batch_size, 1, emb_dim)
+        X = torch.cat((cls_tokens, X), dim=1) # (batch_size, padded_size*padded_size+1, emb_dim)
 
         # transformer layer
 
-        h = self.transf_layer_1(h) # (batch_size, _H*_W+1, 512)
+        X = self.transf_layer_1(X) # (batch_size, padded_size*padded_size+1, emb_dim)
 
         # pos layer
-        h = self.pos_layer(h, _H, _W) # (batch_size, _H*_W+1, 512)
+        X = self.pos_layer(X, padded_size, padded_size) # (batch_size, padded_size*padded_size+1, emb_dim)
         
         # transformer layer
         if return_att:
-            num_landmarks = 512//2
-            current_len = _H*_W+1
-            pad_len = num_landmarks - (current_len % num_landmarks) if current_len % num_landmarks > 0 else 0
-            h, attn = self.transf_layer_2(h, return_attn=True) # [B, _H*_W+1, 512], [B, 8, pad, pad]
-            attn_mat = attn[:, :, pad_len:pad_len+bag_size+1, pad_len:pad_len+bag_size+1] # [B, 8, bag_size+1, bag_size+1]
-            attn_mat = attn_mat.mean(dim=1) # [B, bag_size+1, bag_size+1]
-            att = attn_mat[:, 0, 1:] # [B, bag_size]
+            current_len = padded_size*padded_size+1
+            pad_len = self.n_landmarks - (current_len % self.n_landmarks) if current_len % self.n_landmarks > 0 else 0
+            X, attn = self.transf_layer_2(X, return_attn=True) # (batch_size, padded_size*padded_size+1, emb_dim), (batch_size, n_heads, padded_size*padded_size+1, padded_size*padded_size+1)
+            attn_mat = attn[:, :, pad_len:pad_len+bag_size+1, pad_len:pad_len+bag_size+1] # (batch_size, n_heads, bag_size+1, bag_size+1)
+            attn_mat = attn_mat.mean(dim=1) # (batch_size, bag_size+1, bag_size+1)
+            att = attn_mat[:, 0, 1:] # (batch_size, bag_size)
         else:
-            h = self.transf_layer_2(h)
+            X = self.transf_layer_2(X) # (batch_size, padded_size*padded_size+1, emb_dim)
 
         # norm layer
-        h = self.norm(h) # (batch_size, _H*_W+1, 512)
+        X = self.norm(X) # (batch_size, padded_size*padded_size+1, emb_dim)
 
         # cls_token
-        h = h[:,0] # (batch_size, 512)
+        cls_token = X[:,0] # (batch_size, emb_dim)
 
         # predict
-        T_logits = self.classifier(h).squeeze(dim=1) # (batch_size,)
+        bag_pred = self.classifier(cls_token).squeeze(-1) # (batch_size,)
 
         if return_att:
-            return T_logits, att
+            return bag_pred, att
         else:
-            return T_logits
+            return bag_pred
     
-    def compute_loss(self, T_labels, X, *args, **kwargs):
+    def compute_loss(
+        self,
+        labels: torch.Tensor,
+        X: torch.Tensor,
+        mask: torch.Tensor
+    ) -> tuple[torch.Tensor, dict]:
         """
-        Input:
-            T_labels: tensor (batch_size,)
-            X: tensor (batch_size, bag_size, ...)
-        Output:
-            T_logits_pred: tensor (batch_size,)
-            loss_dict: dict {'BCEWithLogitsLoss'}
+        Compute loss given true bag labels.
+
+        Arguments:
+            labels: Bag labels of shape `(batch_size,)`.
+            X: Bag features of shape `(batch_size, bag_size, ...)`.
+            mask: Mask of shape `(batch_size, bag_size)`.
+
+        Returns:
+            bag_pred: Bag label logits of shape `(batch_size,)`.
+            loss_dict: Dictionary containing the loss value.
         """
-        T_logits_pred = self.forward(X, *args, **kwargs)
-        crit_loss = self.criterion(T_logits_pred.float(), T_labels.float())
+
+        bag_pred = self.forward(X, mask, return_att=False)
+
+        crit_loss = self.criterion(bag_pred.float(), labels.float())
         crit_name = self.criterion.__class__.__name__
-        return T_logits_pred, { crit_name : crit_loss }
+
+        return bag_pred, {crit_name: crit_loss}
 
     @torch.no_grad()
-    def predict(self, X, *args, return_y_pred=True, **kwargs):
+    def predict(
+        self,
+        X: torch.Tensor,
+        mask: torch.Tensor,
+        return_inst_pred: bool = True
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """
-        Input:
-            X: tensor (batch_size, bag_size, ...)
-        Output:
-            T_logits_pred: tensor (batch_size,)
-            y_pred: tensor (batch_size, bag_size) if return_y_pred is True
+        Predict bag and (optionally) instance labels.
+
+        Arguments:
+            X: Bag features of shape `(batch_size, bag_size, ...)`.
+            mask: Mask of shape `(batch_size, bag_size)`.
+            return_inst_pred: If `True`, returns instance labels predictions, in addition to bag label predictions.
+
+        Returns:
+            bag_pred: Bag label logits of shape `(batch_size,)`.
+            inst_pred: If `return_inst_pred=True`, returns instance labels predictions of shape `(batch_size, bag_size)`.
         """
-        return self.forward(X, *args, return_att=return_y_pred, **kwargs)
+        return self.forward(X, mask, return_att=return_inst_pred)

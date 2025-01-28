@@ -1,7 +1,9 @@
 import torch
 from torch import Tensor
 
-from torchmil.models.modules import AttentionPool
+from torchmil.models.modules import AttentionPool, LazyLinear
+
+from torchmil.models.modules.utils import get_feat_dim
 
 
 class ABMIL(torch.nn.Module):
@@ -21,7 +23,7 @@ class ABMIL(torch.nn.Module):
 
     def __init__(
         self,
-        input_shape: tuple,
+        in_shape: tuple = None,
         att_dim: int = 128,
         att_act: str = 'tanh',
         feat_ext: torch.nn.Module = torch.nn.Identity(),
@@ -29,33 +31,29 @@ class ABMIL(torch.nn.Module):
     ) -> None:
         """
         Arguments:
-            input_shape: Shape of input data expected by the feature extractor (excluding batch dimension).
+            in_shape: Shape of input data expected by the feature extractor (excluding batch dimension). If not provided, it will be lazily initialized.
             att_dim: Attention dimension.
             att_act: Activation function for attention. Possible values: 'tanh', 'relu', 'gelu'.
             feat_ext: Feature extractor.
             criterion: Loss function. By default, Binary Cross-Entropy loss from logits.
         """
         super().__init__()
-        self.input_shape = input_shape
         self.criterion = criterion
 
         self.feat_ext = feat_ext
-        self.feat_dim = self._get_feat_dim()
+        if in_shape is not None:
+            feat_dim = get_feat_dim(feat_ext, in_shape)
+        else:
+            feat_dim = None
         self.pool = AttentionPool(
-            in_dim=self.feat_dim, att_dim=att_dim, act=att_act)
-        self.classifier = torch.nn.Linear(self.feat_dim, 1)
-
-    def _get_feat_dim(self) -> int:
-        """
-        Get feature dimension of the feature extractor.
-        """
-        with torch.no_grad():
-            return self.feat_ext(torch.zeros((1, *self.input_shape))).shape[-1]
+            in_dim=feat_dim, att_dim=att_dim, act=att_act)
+        
+        self.classifier = LazyLinear(in_features=feat_dim, out_features=1)
 
     def forward(
         self,
         X: Tensor,
-        mask: Tensor,
+        mask: Tensor = None,
         return_att: bool = False
     ) -> tuple[Tensor, Tensor]:
         """
@@ -90,7 +88,7 @@ class ABMIL(torch.nn.Module):
 
     def compute_loss(
         self,
-        Y_true: Tensor,
+        labels: Tensor,
         X: Tensor,
         mask: Tensor
     ) -> tuple[Tensor, dict]:
@@ -98,7 +96,7 @@ class ABMIL(torch.nn.Module):
         Compute loss given true bag labels.
 
         Arguments:
-            Y_true: Bag labels of shape `(batch_size,)`.
+            labels: Bag labels of shape `(batch_size,)`.
             X: Bag features of shape `(batch_size, bag_size, ...)`.
             mask: Mask of shape `(batch_size, bag_size)`.
 
@@ -109,7 +107,7 @@ class ABMIL(torch.nn.Module):
 
         bag_pred = self.forward(X, mask, return_att=False)
 
-        crit_loss = self.criterion(bag_pred.float(), Y_true.float())
+        crit_loss = self.criterion(bag_pred.float(), labels.float())
         crit_name = self.criterion.__class__.__name__
 
         return bag_pred, {crit_name: crit_loss}

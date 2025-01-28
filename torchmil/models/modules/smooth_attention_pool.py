@@ -1,18 +1,28 @@
 import torch
 from torch import Tensor
 
+from .utils import masked_softmax, LazyLinear
+
 class ProbSmoothAttentionPool(torch.nn.Module):
     def __init__(
         self,
-        in_dim : int,
+        in_dim : int = None,
         att_dim : int = 128,
         covar_mode : str = 'diag',
         n_samples_train : int = 1000,
         n_samples_test : int = 5000,
     ) -> None:
+        """
+        Class constructor.
+
+        Arguments:
+            in_dim: Input dimension. If not provided, it will be lazily initialized.
+            att_dim: Attention dimension.
+            covar_mode: Covariance mode. Must be 'diag' or 'zero'.
+            n_samples_train: Number of samples during training.
+            n_samples_test: Number of samples during testing.        
+        """
         super(ProbSmoothAttentionPool, self).__init__()
-        self.in_dim = in_dim
-        self.att_dim = att_dim
         self.covar_mode = covar_mode
         self.n_samples_train = n_samples_train
         self.n_samples_test = n_samples_test
@@ -21,16 +31,16 @@ class ProbSmoothAttentionPool(torch.nn.Module):
             raise ValueError("covar_mode must be 'diag' or 'zero'")
                 
         self.in_mlp = torch.nn.Sequential(
-            torch.nn.Linear(self.in_dim, 2*self.att_dim),
+            LazyLinear(in_dim, 2*att_dim),
             torch.nn.GELU(),
-            torch.nn.Linear(2*self.att_dim, 2*self.att_dim),
+            torch.nn.Linear(2*att_dim, 2*att_dim),
             torch.nn.GELU()
         )
         
-        self.mu_f_nn = torch.nn.Linear(2*self.att_dim, 1)
+        self.mu_f_nn = torch.nn.Linear(2*att_dim, 1)
     
         if self.covar_mode == 'diag':
-            self.log_diag_Sigma_nn = torch.nn.Linear(2*self.att_dim, 1)
+            self.log_diag_Sigma_nn = torch.nn.Linear(2*att_dim, 1)
 
         self.eps = 1e-6
     
@@ -147,7 +157,8 @@ class ProbSmoothAttentionPool(torch.nn.Module):
             adj_mat = torch.eye(bag_size, device=X.device).unsqueeze(dim=0).repeat(batch_size, 1, 1) # (batch_size, bag_size, bag_size)
         
         if mask is None:
-            mask = torch.ones(batch_size, bag_size, device=X.device)
+            mask = torch.ones(batch_size, bag_size, device=X.device) # (batch_size, bag_size)
+        mask = mask.unsqueeze(dim=-1) # (batch_size, bag_size, 1)
         
         H = self.in_mlp(X) # (batch_size, bag_size, 2*att_dim)
         mu_f = self.mu_f_nn(H) # (batch_size, bag_size, 1)
@@ -156,10 +167,8 @@ class ProbSmoothAttentionPool(torch.nn.Module):
         # sample from q(f)
         f = self._sample_f(mu_f, log_diag_Sigma_f, n_samples) # (batch_size, bag_size, n_samples)
 
-        mask = mask.unsqueeze(dim=-1) # (batch_size, bag_size, 1)
-        exp_f = torch.exp(f)*mask # (batch_size, bag_size, n_samples)
-        sum_exp_f = torch.sum(exp_f, dim=1, keepdim=True) # (batch_size, 1, n_samples)
-        s = exp_f/sum_exp_f # (batch_size, bag_size, n_samples)
+        s = masked_softmax(f, mask, dim=1) # (batch_size, bag_size, n_samples)
+
         z = torch.bmm(X.transpose(1,2), s) # (batch_size, d, n_samples)
 
         if return_kl_div:

@@ -1,0 +1,176 @@
+feat_ext_name: fc_1_512
+pool_att_dim: 64
+pool_transf_att_dim: 64
+pool_transf_num_heads: 8
+pool_transf_num_layers: 2
+pool_transf_use_ff: True
+pool_transf_dropout: 0.0
+transf_att_dim: 64
+transf_num_heads: 8
+transf_num_layers: 3
+transf_use_ff: True
+transf_dropout: 0.0
+
+
+
+# feat_ext_name: fc_1_512
+# abmil:
+#   pool_att_dim: 64
+# bayes_smooth_abmil:
+#   pool_att_dim: 64
+#   pool_transf_att_dim: 64
+#   pool_transf_num_heads: 8
+#   pool_transf_num_layers: 2
+#   pool_transf_use_ff: True
+#   pool_transf_dropout: 0.0
+# transformer_abmil:
+#   pool_att_dim: 64
+#   transf_att_dim: 64
+#   transf_num_heads: 8
+#   transf_num_layers: 3
+#   transf_use_ff: True
+#   transf_dropout: 0.0
+# transformer_bayes_smooth_abmil:
+#   pool_att_dim: 64
+#   transf_att_dim: 64
+#   transf_num_heads: 8
+#   transf_num_layers: 3
+#   transf_use_ff: True
+#   transf_dropout: 0.0
+# transmil:
+
+
+
+# rsna-features_resnet18:
+#   input_shape: [512]
+#   feat_ext_name: fc_1_128
+#   pool_att_dim: 64
+#   pool_transf_att_dim: 64
+#   pool_transf_num_heads: 8
+#   pool_transf_num_layers: 2
+#   pool_transf_use_ff: True
+#   pool_transf_dropout: 0.0
+#   transf_att_dim: 64
+#   transf_num_heads: 8
+#   transf_num_layers: 3
+#   transf_use_ff: True
+#   transf_dropout: 0.0
+
+# rsna-features_mae:
+#   input_shape: [320]
+#   feat_ext_name: fc_1_128
+#   pool_att_dim: 64
+#   pool_transf_att_dim: 64
+#   pool_transf_num_heads: 8
+#   pool_transf_num_layers: 2
+#   pool_transf_use_ff: True
+#   pool_transf_dropout: 0.0
+#   transf_att_dim: 64
+#   transf_num_heads: 8
+#   transf_num_layers: 3
+#   transf_use_ff: True
+#   transf_dropout: 0.0
+
+# panda-patches_512-features_resnet18:
+#   input_shape: [512]
+#   feat_ext_name: fc_1_128
+#   pool_att_dim: 64
+#   pool_transf_att_dim: 64
+#   pool_transf_num_heads: 8
+#   pool_transf_num_layers: 2
+#   pool_transf_use_ff: True
+#   pool_transf_dropout: 0.0
+#   transf_att_dim: 64
+#   transf_num_heads: 8
+#   transf_num_layers: 3
+#   transf_use_ff: True
+#   transf_dropout: 0.0
+
+# panda-patches_512_preset-features_resnet50:
+#   input_shape: [512]
+#   feat_ext_name: fc_1_128
+#   pool_att_dim: 64
+#   pool_transf_att_dim: 64
+#   pool_transf_num_heads: 8
+#   pool_transf_num_layers: 2
+#   pool_transf_use_ff: True
+#   pool_transf_dropout: 0.0
+#   transf_att_dim: 64
+#   transf_num_heads: 8
+#   transf_num_layers: 3
+#   transf_use_ff: True
+#   transf_dropout: 0.0
+
+# camelyon16-patches_512_preset-features_vit_b_32:
+#   input_shape: [768]
+#   feat_ext_name: fc_2_512
+#   pool_att_dim: 100
+
+# camelyon16-patches_512_preset-features_resnet50_bt:
+#   input_shape: [2048]
+#   feat_ext_name: fc_1_512
+#   pool_att_dim: 64
+#   pool_transf_att_dim: 64
+#   pool_transf_num_heads: 8
+#   pool_transf_num_layers: 2
+#   pool_transf_use_ff: True
+#   pool_transf_dropout: 0.0
+#   transf_att_dim: 64
+#   transf_num_heads: 8
+#   transf_num_layers: 3
+#   transf_use_ff: True
+#   transf_dropout: 0.0
+
+# mnist_correlated:
+#   input_shape: [1, 28, 28]
+#   feat_ext_name: cnn_2_0.0
+#   pool_att_dim: 50
+
+# rsna:
+#   input_shape: [3, 512, 512]
+#   feat_ext_name: shufflenetv2_train
+#   pool_att_dim: 50
+
+# panda-patches_256-features_resnet18:
+#   input_shape: [512]
+#   feat_ext_name: fc_2_512
+#   pool_att_dim: 50
+
+# panda-patches_256_new-features_resnet18:
+#   input_shape: [512]
+#   feat_ext_name: fc_2_512
+#   pool_att_dim: 50
+
+
+
+# panda-patches_512_new-features_resnet18:
+#   input_shape: [512]
+#   feat_ext_name: fc_2_512
+#   pool_att_dim: 50
+
+# panda-patches_1120-features_resnet18:
+#   input_shape: [512]
+#   feat_ext_name: fc_2_512
+#   pool_att_dim: 50
+
+# panda-patches_512-features_resnet50_bt:
+#   input_shape: [2048]
+#   feat_ext_name: fc_2_512
+#   pool_att_dim: 50
+
+# camelyon16-patches_512_preset-features_resnet50:
+#   input_shape: [2048]
+#   feat_ext_name: fc_2_512
+#   pool_att_dim: 100
+
+
+
+# camelyon16-patches_768_preset-features_resnet50_bt:
+#   input_shape: [2048]
+#   feat_ext_name: fc_2_512
+#   pool_att_dim: 100
+
+# camelyon16-patches_1120_preset-features_resnet50_bt:
+#   input_shape: [2048]
+#   feat_ext_name: fc_2_512
+#   pool_att_dim: 100

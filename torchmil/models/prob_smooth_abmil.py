@@ -3,11 +3,13 @@ from torch import Tensor
 
 from torchmil.models.modules import ProbSmoothAttentionPool
 
+from torchmil.models.modules.utils import get_feat_dim, LazyLinear
+
 
 class ProbSmoothABMIL(torch.nn.Module):
     def __init__(
         self,
-        input_shape: tuple,
+        in_shape: tuple = None,
         att_dim: int = 128,
         covar_mode: str = 'diag',
         n_samples_train: int = 1000,
@@ -19,7 +21,7 @@ class ProbSmoothABMIL(torch.nn.Module):
         Class constructor.
 
         Arguments:
-            input_shape: Shape of input data expected by the feature extractor (excluding batch dimension).
+            in_shape: Shape of input data expected by the feature extractor (excluding batch dimension). If not provided, it will be lazily initialized.
             att_dim: Attention dimension.
             covar_mode: Covariance mode for the Gaussian prior. Possible values: 'diag', 'full'.
             n_samples_train: Number of samples for training.
@@ -29,11 +31,13 @@ class ProbSmoothABMIL(torch.nn.Module):
         
         """
         super().__init__()
-        self.input_shape = input_shape
         self.criterion = criterion
 
         self.feat_ext = feat_ext
-        feat_dim = self._get_feat_dim()
+        if in_shape is not None:
+            feat_dim = get_feat_dim(feat_ext, in_shape)
+        else:
+            feat_dim = None
         self.pool = ProbSmoothAttentionPool(
             in_dim=feat_dim,
             att_dim=att_dim,
@@ -41,14 +45,7 @@ class ProbSmoothABMIL(torch.nn.Module):
             n_samples_train=n_samples_train,
             n_samples_test=n_samples_test
         )
-        self.last_layer = torch.nn.Linear(feat_dim, 1)
-
-    def _get_feat_dim(self) -> int:
-        """
-        Get feature dimension of the feature extractor.
-        """
-        with torch.no_grad():
-            return self.feat_ext(torch.zeros((1, *self.input_shape))).shape[-1]
+        self.classifier = LazyLinear(feat_dim, 1)
 
     def forward(
         self,
@@ -83,17 +80,17 @@ class ProbSmoothABMIL(torch.nn.Module):
 
         if return_kl_div:
             if return_att:
-                Z, f, kl_div = out_pool
+                z, f, kl_div = out_pool
             else:
-                Z, kl_div = out_pool
+                z, kl_div = out_pool
         else:
             if return_att:
-                Z, f = out_pool
+                z, f = out_pool
             else:
-                Z = out_pool
+                z = out_pool
 
-        Z = Z.transpose(1, 2)  # (batch_size, n_samples, feat_dim)
-        bag_pred = self.last_layer(Z)  # (batch_size, n_samples, 1)
+        z = z.transpose(1, 2)  # (batch_size, n_samples, feat_dim)
+        bag_pred = self.classifier(z)  # (batch_size, n_samples, 1)
         bag_pred = bag_pred.squeeze(-1)  # (batch_size, n_samples)
 
         if not return_samples:
@@ -129,7 +126,7 @@ class ProbSmoothABMIL(torch.nn.Module):
 
         Returns:
             bag_pred: Bag label logits of shape `(batch_size,)`.
-            loss_dict: Dictionary containing the loss value.
+            loss_dict: Dictionary containing the loss value and the KL divergence between the attention distribution and the prior distribution.
         """
 
         bag_pred, kl_div = self.forward(

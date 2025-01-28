@@ -10,7 +10,7 @@ class MultiheadSelfAttention(torch.nn.Module):
     """
     def __init__(
             self, 
-            att_dim : int = 128, 
+            att_dim : int, 
             in_dim : int = None,
             num_heads : int = 4,
             dropout : float = 0.0
@@ -22,7 +22,7 @@ class MultiheadSelfAttention(torch.nn.Module):
             att_dim: Attention dimension.
             in_dim: Input dimension.
             num_heads: Number of heads.
-            dropout: Dropout rate.        
+            dropout: Dropout rate.
         """
         super(MultiheadSelfAttention, self).__init__()
         self.att_dim = att_dim

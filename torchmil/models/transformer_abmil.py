@@ -2,13 +2,15 @@ import torch
 
 from torchmil.models.modules import AttentionPool, TransformerEncoder
 
+from torchmil.models.modules.utils import get_feat_dim
+
 class TransformerABMIL(torch.nn.Module):
     """
     Transformer Attention-based Multiple Instance Learning (ABMIL) model.    
     """
     def __init__(
         self,
-        input_shape : tuple,
+        in_shape : tuple,
         pool_att_dim : int = 128,
         pool_act : str = 'tanh',
         feat_ext: torch.nn.Module = torch.nn.Identity(),
@@ -24,7 +26,7 @@ class TransformerABMIL(torch.nn.Module):
         Class constructor.
 
         Arguments:
-            input_shape: Shape of input data expected by the feature extractor (excluding batch dimension).
+            in_shape: Shape of input data expected by the feature extractor (excluding batch dimension). If not provided, it will be lazily initialized.
             pool_att_dim: Attention dimension for pooling.
             pool_act: Activation function for pooling. Possible values: 'tanh', 'relu', 'gelu'.
             feat_ext: Feature extractor.
@@ -37,11 +39,10 @@ class TransformerABMIL(torch.nn.Module):
             criterion: Loss function. By default, Binary Cross-Entropy loss from logits for binary classification.
         """
         super().__init__()
-        self.input_shape = input_shape
         self.criterion = criterion
 
         self.feat_ext = feat_ext
-        feat_dim = self._get_feat_dim()
+        feat_dim = get_feat_dim(feat_ext, in_shape)
         self.transformer_encoder = TransformerEncoder(
             in_dim=feat_dim, 
             att_dim=transf_att_dim, 
@@ -54,12 +55,6 @@ class TransformerABMIL(torch.nn.Module):
         self.pool = AttentionPool(in_dim=feat_dim, att_dim=pool_att_dim, act=pool_act)
         self.last_layer = torch.nn.Linear(feat_dim, 1)
 
-    def _get_feat_dim(self) -> int:
-        """
-        Get feature dimension of the feature extractor.
-        """
-        with torch.no_grad():
-            return self.feat_ext(torch.zeros((1, *self.input_shape))).shape[-1]
 
     def forward(
         self,
@@ -82,15 +77,15 @@ class TransformerABMIL(torch.nn.Module):
 
         X = self.feat_ext(X) # (batch_size, bag_size, feat_dim)
 
-        Y = self.transformer_encoder(X, mask) # (batch_size, bag_size, feat_dim)
+        X = self.transformer_encoder(X, mask) # (batch_size, bag_size, feat_dim)
 
-        out_pool = self.pool(Y, mask, return_att=return_att)
+        out_pool = self.pool(X, mask, return_att=return_att)
         if return_att:
-            Z, f = out_pool # Z: (batch_size, emb_dim), f: (batch_size, bag_size)
+            z, f = out_pool # z: (batch_size, emb_dim), f: (batch_size, bag_size)
         else:
-            Z = out_pool # (batch_size, emb_dim)
+            z = out_pool # (batch_size, emb_dim)
         
-        bag_pred = self.last_layer(Z) # (batch_size, n_samples, 1)
+        bag_pred = self.last_layer(z) # (batch_size, n_samples, 1)
         bag_pred = bag_pred.squeeze(-1) # (batch_size,)
 
         if return_att:

@@ -20,6 +20,8 @@ from .transformer_encoder import (
     SmTransformerEncoderLayer as SmTransformerEncoderLayer
 )
 
+from .utils import LazyLinear as LazyLinear
+
 
 # from .MILMeanPool import *
 # from .MILMaxPool import *

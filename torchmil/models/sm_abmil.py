@@ -3,7 +3,10 @@ from typing import Union
 import torch
 from torch import Tensor
 
-from torchmil.models.modules import SmAttentionPool
+from torchmil.models.modules import SmAttentionPool, LazyLinear
+
+from torchmil.models.modules.utils import get_feat_dim
+
 
 
 class SmABMIL(torch.nn.Module):
@@ -15,7 +18,7 @@ class SmABMIL(torch.nn.Module):
 
     def __init__(
         self,
-        input_shape: tuple,
+        in_shape: tuple = None,
         att_dim: int = 128,
         att_act: str = 'tanh',
         sm_mode: str = 'approx',
@@ -30,7 +33,7 @@ class SmABMIL(torch.nn.Module):
     ) -> None:
         """
         Arguments:
-            input_shape (tuple): Shape of input data expected by the feature extractor (excluding batch dimension).
+            in_shape: Shape of input data expected by the feature extractor (excluding batch dimension). If not provided, it will be lazily initialized.
             att_dim (int): Attention dimension.
             att_act (str): Activation function for attention. Possible values: 'tanh', 'relu', 'gelu'.
             sm_mode (str): Mode for the Sm operator. Possible values: 'approx', 'exact'.
@@ -44,13 +47,14 @@ class SmABMIL(torch.nn.Module):
             criterion (torch.nn.Module): Loss function. By default, Binary Cross-Entropy loss from logits for binary classification.
         """
         super().__init__()
-        self.input_shape = input_shape
-        self.criterion = criterion
 
         self.feat_ext = feat_ext
-        self.feat_dim = self._get_feat_dim()
+        if in_shape is not None:
+            feat_dim = get_feat_dim(feat_ext, in_shape)
+        else:
+            feat_dim = None
         self.pool = SmAttentionPool(
-            in_dim=self.feat_dim,
+            in_dim=feat_dim,
             att_dim=att_dim,
             act=att_act,
             sm_mode=sm_mode,
@@ -61,14 +65,9 @@ class SmABMIL(torch.nn.Module):
             sm_post=sm_post,
             sm_spectral_norm=sm_spectral_norm
         )
-        self.last_layer = torch.nn.Linear(self.feat_dim, 1)
+        self.last_layer = LazyLinear(feat_dim, 1)
 
-    def _get_feat_dim(self) -> int:
-        """
-        Get feature dimension of the feature extractor.
-        """
-        with torch.no_grad():
-            return self.feat_ext(torch.zeros((1, *self.input_shape))).shape[-1]
+        self.criterion = criterion
 
     def forward(
         self,

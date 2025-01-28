@@ -6,11 +6,30 @@
     - Tutorial 2: ...
 - Code:
     - Datasets:
-        - [ ] Implement Panda. 
-        - [ ] Implement RSNA. 
+        - [ ] WSI dataset
+        - [ ] CTScan dataset
         - [ ] Allow datasets to be downloaded from the internet.
     - Models and modules:
-        - [ ] Document every method.
+        - [ ] Methods:
+            - [ X ] ABMIL
+            - [  ] TransformerABMIL
+            - [  ] SmABMIL
+            - [  ] SmTransformerABMIL
+            - [  ] SmoothABMIL
+            - [  ] SmoothTransformerABMIL
+            - [  ] ProbSmoothABMIL
+            - [  ] ProbSmoothTransformerABMIL
+            - [  ] CLAM
+                - [  ] Modify inst_eval, inst_eval_out so they accept batched inputs
+            - [  ] DSMIL
+            - [  ] DFTDMIL
+            - [  ] PathGCN
+            - [  ] DeepGraphSurv
+            - [  ] TransMIL
+            - [  ] GTP
+            - [  ] CAMIL
+            - [  ] IIBMIL
+            - [  ] SETMIL
         - [ ] Add support for Lazy initialization (remove the need to specify in_dim)
     - [ ] Discuss: a Bag class or Tensordict (?)
     - [ ] Discuss: integration with Pytorch geometric (?)

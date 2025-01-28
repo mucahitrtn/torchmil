@@ -51,8 +51,6 @@ class TransformerEncoderLayer(torch.nn.Module):
                 torch.nn.Linear(4*att_dim, att_dim),
                 torch.nn.Dropout(dropout)
             )
-        else:
-            self.mlp_layer = torch.nn.Identity()
 
         self.norm1 = torch.nn.LayerNorm(att_dim)
         self.norm2 = torch.nn.LayerNorm(att_dim)
@@ -106,7 +104,6 @@ class SmTransformerEncoderLayer(torch.nn.Module):
             n_heads: Number of heads.
             use_mlp: Whether to use feedforward layer.
             dropout: Dropout rate
-            sm: Whether to use the Sm operator.
             sm_alpha: Alpha value for the Sm operator.
             sm_mode: Sm mode.
             sm_steps: Number of steps to approximate the exact Sm operator.

@@ -8,7 +8,8 @@ theme:
   icon:
     logo: fontawesome/solid/f
   features:
-    - navigation.footer
+    # - navigation.footer
+    - navigation.path
   palette:
     # Dark Mode
     - scheme: slate

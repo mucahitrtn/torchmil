@@ -3,8 +3,8 @@ from typing import Union
 import torch
 from torch import Tensor
 
-from torchmil.models.modules.utils import masked_softmax
-from torchmil.models.modules.sm import ApproxSm, ExactSm
+from .utils import masked_softmax, LazyLinear
+from .sm import Sm
 
 class SmAttentionPool(torch.nn.Module):
     """
@@ -52,7 +52,7 @@ class SmAttentionPool(torch.nn.Module):
         self.sm_post = sm_post
         self.sm_spectral_norm = sm_spectral_norm
 
-        self.proj1 = torch.nn.Linear(in_dim, att_dim)
+        self.proj1 = LazyLinear(in_dim, att_dim)
         self.proj2 = torch.nn.Linear(att_dim, 1, bias=False)
 
         if self.act == 'tanh':
@@ -63,14 +63,9 @@ class SmAttentionPool(torch.nn.Module):
             act_layer_fn = torch.nn.GELU
         else:
             raise ValueError(f"[{self.__class__.__name__}] act must be 'tanh', 'relu' or 'gelu'")
-        self.act_layer = act_layer_fn()
-
-        if self.sm_mode == 'approx':
-            sm_fn = lambda : ApproxSm(alpha = sm_alpha, num_steps = sm_steps)
-        elif self.sm_mode == 'exact':
-            sm_fn = lambda : ExactSm(alpha = sm_alpha)        
+        self.act_layer = act_layer_fn() 
         
-        self.sm = sm_fn()
+        self.sm = Sm(alpha = sm_alpha, num_steps = sm_steps, mode = sm_mode)
 
         self.mlp = torch.nn.ModuleList()
         for _ in range(sm_layers):

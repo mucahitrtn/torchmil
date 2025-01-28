@@ -176,5 +176,9 @@ output/
 results/
 wandb/
 
+upload_datasets/output/
+upload_datasets/prueba_dataset/
+
 *.out
 *.pt
+*.npy

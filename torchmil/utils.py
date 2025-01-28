@@ -2,12 +2,11 @@ import numpy as np
 
 from scipy.spatial import KDTree
 
-
 def degree(
         index: np.ndarray,
         edge_weight: np.ndarray = None,
         n_nodes: int = None,
-):
+) -> np.ndarray:
     """
     Compute the degree of the adjacency matrix.
 
@@ -34,7 +33,7 @@ def add_self_loops(
         edge_index: np.ndarray,
         edge_weight: np.ndarray = None,
         n_nodes: int = None,
-):
+) -> tuple[np.ndarray, np.ndarray]:
         """
         Add self-loops to the adjacency matrix.
 
@@ -72,7 +71,7 @@ def normalize_adj(
         edge_index: np.ndarray,
         edge_weight: np.ndarray = None,
         n_nodes: int = None,
-):
+) -> np.ndarray:
     """
     Normalize the adjacency matrix.
 
@@ -82,7 +81,6 @@ def normalize_adj(
         n_nodes: Number of nodes in the graph.
     
     Returns:
-        edge_index: Edge index of the normalized adjacency matrix.
         edge_weight: Edge weight of the normalized adjacency matrix.
     """
 
@@ -107,19 +105,19 @@ def normalize_adj(
 
     return new_edge_weight
 
-def build_adj_WSI(
+def build_adj(
     coords: np.ndarray,
     feat: np.ndarray,
-    patch_size: int = 512,
+    dist_thr: float,
     add_self_loops: bool = False,
-):
+) -> tuple[np.ndarray, np.ndarray]:
     """
-    Build the adjacency matrix for a WSI.
+    Build the adjacency matrix for a general graph given the coordinates and features of the nodes.
 
     Arguments:
-        coords: Coordinates of the patches.
-        feat: Features of the patches.
-        patch_size: Size of the patches.
+        coords: Coordinates of the nodes.
+        feat: Features of the nodes.
+        dist_thr: Distance threshold to consider two nodes as neighbors.
         add_self_loops: Whether to add self-loops.
     
     Returns:
@@ -140,8 +138,8 @@ def build_adj_WSI(
             edge_index.append([i, i])
             edge_weight.append(1.0)
 
-        # Find neighboring patches within neighbor_distance distance
-        neighbors = kdtree.query_ball_point(coords[i], np.sqrt(2)*patch_size)
+        # Find neighboring nodes within dist_thr distance
+        neighbors = kdtree.query_ball_point(coords[i], dist_thr)
         for j in neighbors:
             if i != j:
                 edge_index.append([i, j])

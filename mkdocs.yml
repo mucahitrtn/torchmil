@@ -11,8 +11,8 @@ theme:
   name: material
   features:
     - navigation.sections  # Sections are included in the navigation on the left.
-    - toc.integrate  # Table of contents is integrated on the left; does not appear separately on the right.
-    - header.autohide  # header disappears as you scroll
+    # - toc.integrate  # Table of contents is integrated on the left; does not appear separately on the right.
+    # - header.autohide  # header disappears as you scroll
     - navigation.path
     - navigation.indexes
     - navigation.tabs
@@ -88,7 +88,7 @@ plugins:
             show_source: false  # don't include source code
             show_bases: true
             show_root_heading: true  
-            show_root_full_path: true  # display "diffrax.asdf" not just "asdf"
+            show_root_full_path: true  # 
             inherited_members: true  # Allow looking up inherited methods
             show_if_no_docstring: false
             show_signature_annotations: false
@@ -107,15 +107,23 @@ nav:
       - api/data/index.md
       # - api/data/collate.md
     - <tt>torchmil.datasets</tt>:
+      - api/datasets/index.md
       - api/datasets/toy_dataset.md
       - api/datasets/wsi_dataset.md
+      - api/datasets/ctscan_dataset.md
     - <tt>torchmil.models</tt>:
       - api/models/index.md
       - Modules:
           - api/models/modules/index.md
           - api/models/modules/attention_pool.md
+          - api/models/modules/transformer_encoder.md
           - api/models/modules/sm.md
+          - api/models/modules/self_attention.md
       - api/models/abmil.md
       - api/models/transformer_abmil.md
       - api/models/sm_abmil.md
+      - api/models/sm_transformer_abmil.md
       - api/models/prob_smooth_abmil.md
+      - api/models/transformer_prob_smooth_abmil.md
+      - api/models/smooth_abmil.md
+      - api/models/clam.md
