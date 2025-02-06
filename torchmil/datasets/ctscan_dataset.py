@@ -1,7 +1,5 @@
 import numpy as np
 
-import warnings
-
 from .processed_mil_dataset import ProcessedMILDataset
 
 class CTScanDataset(ProcessedMILDataset):

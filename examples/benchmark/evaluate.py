@@ -96,7 +96,6 @@ def evaluate(T_true, y_true, T_logits_pred, f_pred, bag_idx, val_T_true=None, va
     except ValueError:
         metrics['bag/auroc'] = 0.0
     metrics['bag/auprc'] = auprc(T_true, T_logits_pred)
-    # metrics['bag/fpr80'] = fpr_at_thr_tpr(T_logits_pred, T_true, thr=0.80)
     metrics['bag/fpr90'] = fpr_at_thr_tpr(T_logits_pred, T_true, thr=0.90)
 
     metrics['bag/acc'] = accuracy_score(T_true, T_pred)

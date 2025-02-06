@@ -1,14 +1,10 @@
-
 import os
-
+import warnings
+import torch
+import copy
 import numpy as np
 
-import warnings
-
-import torch
-
 from tensordict import TensorDict
-
 from torchmil.utils import build_adj, normalize_adj, add_self_loops
 
 class ProcessedMILDataset(torch.utils.data.Dataset):
@@ -283,3 +279,23 @@ class ProcessedMILDataset(torch.utils.data.Dataset):
             List of bag labels.
         """
         return [ self._load_labels(name) for name in self.bag_names ]
+
+    def subset(self, indices: list) -> 'ProcessedMILDataset':
+        """
+        Create a subset of the dataset.
+
+        Arguments:
+            indices: List of indices to keep.
+
+        Returns:
+            subset_dataset: Subset of the dataset.
+        """
+        
+        new_dataset = copy.deepcopy(self)
+        new_dataset.bag_names = [self.bag_names[i] for i in indices]
+        new_dataset.loaded_bags = { k : v for k, v in new_dataset.loaded_bags.items() if k in new_dataset.bag_names } 
+
+        return new_dataset
+
+
+        

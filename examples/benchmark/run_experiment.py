@@ -28,7 +28,7 @@ def main():
     else:
         config.save_weights_path = config.load_weights_path = None
         wandb_run = None
-    setattr(config, 'wandb_run', wandb_run)
+    config.wandb_run = wandb_run
 
     print('Arguments:')
     for arg in vars(config):

@@ -42,7 +42,7 @@ class WSIClassificationDataset(WSIDataset):
 
         if self.inst_labels_path is not None:
             if bag_dict['y_inst'] is None:
-                if bag_dict['Y'][0] == 0:
+                if bag_dict['Y'] == 0:
                     bag_dict['y_inst'] = np.zeros(bag_dict['X'].shape[0])
                 else:
                     warnings.warn(
@@ -76,12 +76,12 @@ class CTScanClassificationDataset(CTScanDataset):
 
         if self.inst_labels_path is not None:
             if bag_dict['y_inst'] is None:
-                if bag_dict['label'][0] == 0:
-                    bag_dict['y_inst'] = np.zeros(bag_dict['features'].shape[0])
+                if bag_dict['Y'] == 0:
+                    bag_dict['y_inst'] = np.zeros(bag_dict['X'].shape[0])
                 else:
                     warnings.warn(
                         f'Instance labels not found for {name}. Setting all to -1.')
-                    bag_dict['y_inst'] = np.full(bag_dict['features'].shape[0], -1)
+                    bag_dict['y_inst'] = np.full(bag_dict['X'].shape[0], -1)
 
         return bag_dict
 
@@ -162,8 +162,11 @@ def load_dataset(config, mode='train_val'):
         idx = list(range(len_ds))
         idx_train, idx_val = train_test_split(idx, test_size=val_prop, random_state=seed, stratify=bags_labels)
 
-        train_dataset = torch.utils.data.Subset(dataset, idx_train)
-        val_dataset = torch.utils.data.Subset(dataset, idx_val)
+        # train_dataset = torch.utils.data.Subset(dataset, idx_train)
+        # val_dataset = torch.utils.data.Subset(dataset, idx_val)
+
+        train_dataset = dataset.subset(idx_train)
+        val_dataset = dataset.subset(idx_val)
 
         return train_dataset, val_dataset
     elif mode=='test':

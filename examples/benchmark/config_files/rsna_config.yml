@@ -1,8 +1,7 @@
 balance_loss: True
 model_config:
   abmil:
-    feat_ext_name: 'fc_1_512'
-    pool_att_dim: 128
+    att_dim: 128
   transformer_abmil:
     feat_ext_name: 'fc_1_512'
     pool_att_dim: 128

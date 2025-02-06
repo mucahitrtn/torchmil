@@ -68,10 +68,10 @@ class ABMIL(MILModel):
         Arguments:
             X: Bag features of shape `(batch_size, bag_size, ...)`.
             mask: Mask of shape `(batch_size, bag_size)`.
-            return_att: If True, returns attention values (before normalization) in addition to `bag_pred`.
+            return_att: If True, returns attention values (before normalization) in addition to `Y_pred`.
 
         Returns:
-            bag_pred: Bag label logits of shape `(batch_size,)`.
+            Y_pred: Bag label logits of shape `(batch_size,)`.
             att: Only returned when `return_att=True`. Attention values (before normalization) of shape (batch_size, bag_size).
         """
 

@@ -1,11 +1,36 @@
 import torch
 import numpy as np
-
 from tqdm import tqdm
+from copy import deepcopy
 
 from torchmetrics import AUROC, MeanMetric
+from torchmil.models import MILModel
 
-from copy import deepcopy
+def _get_args_names(fn):
+    args_names = fn.__code__.co_varnames[:fn.__code__.co_argcount]
+    args_names = args_names[1:] # remove self
+    return args_names
+
+
+class MILModelWrapper(MILModel):
+    def __init__(self, model):
+        super().__init__()
+        self.model = model
+
+    def forward(self, bag, **kwargs):
+        arg_names = _get_args_names(self.model.forward)
+        arg_dict = {k: bag[k] for k in bag.keys() if k in arg_names}
+        return self.model(**arg_dict, **kwargs)
+
+    def compute_loss(self, bag, **kwargs):
+        arg_names = _get_args_names(self.model.compute_loss)
+        arg_dict = {k: bag[k] for k in bag.keys() if k in arg_names}
+        return self.model.compute_loss(**arg_dict, **kwargs)
+
+    def predict(self, bag, **kwargs):
+        arg_names = _get_args_names(self.model.predict)
+        arg_dict = {k: bag[k] for k in bag.keys() if k in arg_names}
+        return self.model.predict(**arg_dict, **kwargs)
 
 class Trainer:
     def __init__(
@@ -21,7 +46,7 @@ class Trainer:
             early_stop_patience = None,
             disable_pbar = False
         ):
-        self.model = model  
+        self.model = MILModelWrapper(model) 
         self.optimizer = optimizer
         self.metrics_dict = metrics_dict
         self.obj_metric_name = obj_metric
@@ -44,7 +69,7 @@ class Trainer:
             self.wandb_run.log(metrics)
     
     def _get_model_state_dict(self):
-        state_dict = deepcopy(self.model.state_dict())
+        state_dict = deepcopy(self.model.model.state_dict())
         return state_dict
 
     def train(self, max_epochs, train_dataloader, val_dataloader=None, test_dataloader=None):
@@ -113,11 +138,13 @@ class Trainer:
 
         for batch_idx, batch in pbar:
             
-            Y = batch['Y'].to(self.device) # (batch_size, 1)
+            batch = batch.to(self.device)
+
+            Y = batch['Y'] # (batch_size, 1)
 
             self.optimizer.zero_grad()
 
-            Y_pred, loss_dict = self.model.compute_loss(**batch)
+            Y_pred, loss_dict = self.model.compute_loss(batch)
 
             loss = 0.0
             for loss_name, loss_value in loss_dict.items():

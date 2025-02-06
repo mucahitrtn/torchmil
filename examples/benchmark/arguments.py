@@ -14,7 +14,7 @@ def get_arguments():
         '--mode', 
         default='train_test', 
         type=str, 
-        help="Mode to run the code (train/test)"
+        help="Mode to run the code (train_test/train/test)"
     )
 
     parser.add_argument(
@@ -25,7 +25,7 @@ def get_arguments():
 
     parser.add_argument(
         '--wandb_project', 
-        default='SmoothAttention-bayes', 
+        default='MIL-benchmark', 
         type=str, help="Wandb project name"
     )
     
@@ -54,18 +54,9 @@ def get_arguments():
         help="Use sparse tensors to store the adjacency matrix"
     )
 
-    # Path settings
-    parser.add_argument(
-        '--history_dir', 
-        default='/work/work_fran/SmoothAttention/history/', 
-        type=str, 
-        metavar='PATH', 
-        help="Path to save the history file"
-    )
-
     parser.add_argument(
         '--weights_dir', 
-        default='/work/work_fran/SmoothAttention/weights/', 
+        default='./weights/', 
         type=str, 
         metavar='PATH', 
         help="Path to save the model weights"
@@ -73,7 +64,7 @@ def get_arguments():
 
     parser.add_argument(
         '--results_dir', 
-        default='results/', 
+        default='./results/', 
         type=str, 
         metavar='PATH', 
         help="Path to save the results"
@@ -118,8 +109,8 @@ def get_arguments():
     parser.add_argument(
         '--config_file', 
         type=str, 
-        default='/work/work_fran/SmoothAttention/code/experiments/config_files/rsna_config.yml', 
-        help="Config file to load the settings"
+        default='./config_files/rsna_config.yml', 
+        help="Config file to load the model settings"
     )
 
     parser.add_argument(

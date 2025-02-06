@@ -2,7 +2,7 @@ import torch
 import os
 import wandb
 
-from utils import plot_att_hist, load_dataset, build_MIL_model
+from utils import plot_att_hist, load_dataset, build_model
 
 from matplotlib import pyplot as plt
 from evaluate import evaluate
@@ -11,33 +11,27 @@ from Trainer import Trainer
 
 from annealing_scheduler import CyclicalAnnealingScheduler
 
+from torchmil.data import collate_fn as tm_collate_fn
+
+def get_class_counts(labels):
+    class_counts_1 = sum(labels)
+    class_counts_0 = len(labels) - class_counts_1
+    return {0: class_counts_0, 1: class_counts_1}
+
 def count_parameters(model):
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
 def get_optimizer_and_scheduler(model, config):
 
-    weight_decay = 0
-    print('Using weight_decay =', weight_decay)
-    optimizer = torch.optim.Adam(model.parameters(), lr=config.lr, weight_decay=weight_decay)
+    optimizer = torch.optim.Adam(model.parameters(), lr=config.lr, weight_decay=config.weight_decay)
 
-    if config.dataset_name == 'mnist_correlated':
-        scheduler = None
-    else:
-        milestone_init = max(int(config.epochs*0.1), 5)
-        # milestone_mid = int(config.epochs*0.5)-milestone_init
-        
-        # scheduler_1 = torch.optim.lr_scheduler.LinearLR(optimizer, 0.1, last_epoch=-1, total_iters=milestone_init, verbose=True)
-        # scheduler_2 = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[milestone_mid], gamma=0.1, last_epoch=-1, verbose=True)
-        # scheduler = torch.optim.lr_scheduler.SequentialLR(optimizer, [scheduler_1, scheduler_2], milestones=[milestone_init])
-        
-        # scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[milestone_mid], gamma=0.1, last_epoch=-1, verbose=True)
-
-        scheduler = torch.optim.lr_scheduler.LinearLR(optimizer, 0.1, last_epoch=-1, total_iters=milestone_init)
+    milestone_init = max(int(config.epochs*0.1), 5)
+    scheduler = torch.optim.lr_scheduler.LinearLR(optimizer, 0.1, last_epoch=-1, total_iters=milestone_init)
 
     return optimizer, scheduler
 
 def get_annealing_scheduler_dict(config, num_steps_per_epoch):
-    if config.model_name in ['transformer_bayes_smooth_abmil', 'bayes_smooth_abmil']:
+    if config.model_name in ['transformer_prob_smooth_abmil', 'prob_smooth_abmil']:
         num_cycles = config.epochs / config.model_config.annealing_epochs_per_cycle
         cycle_prop = config.model_config.annealing_cycle_prop
         cycle_len = config.epochs*num_steps_per_epoch // num_cycles
@@ -47,6 +41,10 @@ def get_annealing_scheduler_dict(config, num_steps_per_epoch):
         return { 'KLDivLoss' : CyclicalAnnealingScheduler(cycle_len=cycle_len, cycle_prop=cycle_prop, warmup_steps=warmup_steps, min_coef=min_coef, max_coef=max_coef) }
     else:
         return None
+
+def get_in_dim(dataset):
+    X = dataset[0]['X']
+    return X.shape[1]
 
 def train_test(config, run_train=True, run_test=True):
 
@@ -63,41 +61,28 @@ def train_test(config, run_train=True, run_test=True):
         print('Starting training...')
 
         train_dataset, val_dataset = load_dataset(config, mode='train_val')
-        test_dataset = load_dataset(config, mode='test', bag_size_limit=20000)
+        test_dataset = load_dataset(config, mode='test')
 
-        setattr(config, 'data_shape', train_dataset.data_shape)
+        config.in_dim = get_in_dim(train_dataset)
 
-        if config.distributed:
-            train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
-            val_sampler = torch.utils.data.distributed.DistributedSampler(val_dataset)
-            test_sampler = torch.utils.data.distributed.DistributedSampler(test_dataset)
-            shuffle = False
-        else:
-            train_sampler = None
-            val_sampler = None
-            test_sampler = None
-            shuffle = True
-        
-        train_collate_fn = lambda x: train_dataset.collate_fn(x, use_sparse=config.use_sparse)
-        val_collate_fn = lambda x: val_dataset.collate_fn(x, use_sparse=config.use_sparse)
-        test_collate_fn = lambda x: test_dataset.collate_fn(x, use_sparse=config.use_sparse)
+        collate_fn = lambda x: tm_collate_fn(x, sparse=config.use_sparse)
 
         train_dataloader = torch.utils.data.DataLoader(
             train_dataset, 
             batch_size=config.batch_size, 
-            shuffle=shuffle, 
+            shuffle=True, 
             num_workers=config.num_workers, 
-            sampler=train_sampler, 
-            collate_fn=train_collate_fn, 
+            sampler=None, 
+            collate_fn=collate_fn, 
             pin_memory=config.pin_memory
         )
         val_dataloader = torch.utils.data.DataLoader(
             val_dataset, 
             batch_size=config.batch_size, 
-            shuffle=False, 
+            shuffle=True, 
             num_workers=config.num_workers, 
-            sampler=val_sampler, 
-            collate_fn=val_collate_fn, 
+            sampler=None, 
+            collate_fn=collate_fn, 
             pin_memory=config.pin_memory
         )
         test_dataloader = torch.utils.data.DataLoader(
@@ -105,23 +90,23 @@ def train_test(config, run_train=True, run_test=True):
             batch_size=config.batch_size, 
             shuffle=False, 
             num_workers=config.num_workers, 
-            sampler=test_sampler, 
-            collate_fn=test_collate_fn, 
+            sampler=None, 
+            collate_fn=collate_fn, 
             pin_memory=config.pin_memory
         )
 
-        model = build_MIL_model(config)
-        print('Model:\n', model)
-        print('Number of parameters:', count_parameters(model))
-
         if config.balance_loss:
-            class_counts = train_dataset.get_class_counts()
+            train_labels = train_dataset.get_bag_labels()
+            class_counts = get_class_counts(train_labels)
             pos_weight = torch.FloatTensor([class_counts[0]/class_counts[1]])
             print('Using pos_weight=', pos_weight)
         else:
-            pos_weight = None   
+            pos_weight = None
+        
+        model = build_model(config, pos_weight)
+        print('Model:\n', model)
+        print('Number of parameters:', count_parameters(model))
 
-        criterion = torch.nn.BCEWithLogitsLoss(reduction='mean', pos_weight=pos_weight)
         optimizer, scheduler = get_optimizer_and_scheduler(model, config)
         num_steps_per_epoch = len(train_dataloader)
         annealing_scheduler_dict = get_annealing_scheduler_dict(config, num_steps_per_epoch)
@@ -129,11 +114,10 @@ def train_test(config, run_train=True, run_test=True):
         model = model.to(device)
 
         trainer = Trainer(
-            model, 
-            criterion, 
+            model,  
             optimizer, 
-            scheduler, 
-            annealing_scheduler_dict,
+            lr_scheduler = scheduler, 
+            annealing_scheduler_dict = annealing_scheduler_dict,
             device=device, 
             wandb_run=config.wandb_run, 
             early_stop_patience=config.patience
@@ -141,8 +125,6 @@ def train_test(config, run_train=True, run_test=True):
         trainer.train(config.epochs, train_dataloader, val_dataloader, test_dataloader)
         best_model_state_dict = trainer.get_best_model_state_dict()
         model.load_state_dict(best_model_state_dict)
-
-
 
         print('Finished training')
 
