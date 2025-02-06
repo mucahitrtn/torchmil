@@ -8,6 +8,53 @@ from tensordict import TensorDict
 
 
 class ToyDataset(torch.utils.data.Dataset):
+
+    r"""
+    
+    This class represents a synthetic dataset for Multiple Instance Learning (MIL) tasks.
+    It generates synthetic bags of instances from a given dataset, where each bag is labeled based on the presence or absence of specific "positive" instances. 
+    This class is particularly useful for simulating MIL scenarios, where the goal is to learn from bags of instances rather than individual data points.
+    
+    **Bag generation.**
+    The dataset generates bags by sampling instances from the input  `(data, labels)` pair.
+    A bag is labeled as positive if it contains at least one instance from a predefined set of positive labels (obj_labels).
+    The probability of generating a positive bag can be controlled via the argument `pos_class_prob`.
+    The size of each bag can be specified using the argument `bag_size`.
+    Additionally, each bag includes instance-level labels, indicating whether individual instances belong to the positive class.
+
+    Each bag is returned as a dictionary (TensorDict) with the following keys:
+
+    - X: The bag's feature matrix of shape `(bag_size, num_features)`.
+    - Y: The bag's label (1 for positive, 0 for negative).
+    - y_inst: The instance-level labels within the bag.
+
+    **MNIST example.** 
+    We can create a MIL dataset from the original MNIST as follows:
+
+    ```python
+
+    import torch
+    from torchvision import datasets, transforms
+
+    # Load MNIST dataset
+    mnist_train = datasets.MNIST('data', train=True, download=True, transform=transforms.ToTensor())
+
+    # Extract features and labels
+    data = mnist_train.data.numpy().reshape(-1, 28*28) / 255
+    labels = mnist_train.targets.numpy()
+
+    # Define positive labels
+    obj_labels = [1, 2] # Digits 1 and 2 are considered positive
+
+    # Create MIL dataset
+    toy_dataset = ToyDataset(data, labels, num_bags=1000, obj_labels=obj_labels, bag_size=10)
+
+    # Retrieve a bag
+    bag = toy_dataset[0]
+    X, Y, y_inst = bag['X'], bag['Y'], bag['y_inst']    
+    ```    
+    """
+
     def __init__(
             self, 
             data : np.ndarray,
@@ -41,6 +88,8 @@ class ToyDataset(torch.utils.data.Dataset):
 
         np.random.seed(seed)
         self.bags_list = self._create_bags()
+
+        print(f"Expected number of bags: {self.num_bags}, Created bags: {len(self.bags_list)}")
     
     def _create_bags(self):
         pos_idx = np.where(np.isin(self.labels, self.obj_labels))[0]
@@ -79,9 +128,9 @@ class ToyDataset(torch.utils.data.Dataset):
             label = np.max(inst_labels)
 
             bag_dict = {
-                'data': torch.from_numpy(data),
-                'label': torch.as_tensor(label),
-                'inst_labels': torch.from_numpy(inst_labels)
+                'X': torch.from_numpy(data).float(),
+                'Y': torch.as_tensor(label).long(),
+                'y_inst': torch.from_numpy(inst_labels).long()
             }
             bags_list.append(bag_dict)
 
@@ -101,9 +150,9 @@ class ToyDataset(torch.utils.data.Dataset):
             label = 0
 
             bag_dict = TensorDict({
-                'data': torch.from_numpy(data),
-                'label': torch.as_tensor(label),
-                'inst_labels': torch.from_numpy(inst_labels)
+                'X': torch.from_numpy(data).float(),
+                'Y': torch.as_tensor(label).long(),
+                'y_inst': torch.from_numpy(inst_labels).long()
             })
             bags_list.append(bag_dict)
         
@@ -126,8 +175,10 @@ class ToyDataset(torch.utils.data.Dataset):
         Returns:
             bag_dict: Dictionary containing the following keys:
 
-                - data: Data of the bag.
-                - label: Label of the bag.
-                - inst_labels: Instance labels of the bag.
+                - X: Bag features of shape `(bag_size, feat_dim)`.
+                - Y: Label of the bag.
+                - y_inst: Instance labels of the bag.
         """
+        if index >= len(self.bags_list):
+            raise IndexError(f"Index {index} out of range (max: {len(self.bags_list) - 1})")
         return self.bags_list[index]

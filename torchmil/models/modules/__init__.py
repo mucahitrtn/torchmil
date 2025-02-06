@@ -20,7 +20,10 @@ from .transformer_encoder import (
     SmTransformerEncoderLayer as SmTransformerEncoderLayer
 )
 
+from .nystrom_transformer import NystromTransformerLayer as NystromTransformerLayer
+
 from .utils import LazyLinear as LazyLinear
+
 
 
 # from .MILMeanPool import *

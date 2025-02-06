@@ -109,7 +109,7 @@ def build_adj(
     coords: np.ndarray,
     feat: np.ndarray,
     dist_thr: float,
-    add_self_loops: bool = False,
+    add_self_loops: bool = False
 ) -> tuple[np.ndarray, np.ndarray]:
     """
     Build the adjacency matrix for a general graph given the coordinates and features of the nodes.
@@ -119,6 +119,7 @@ def build_adj(
         feat: Features of the nodes.
         dist_thr: Distance threshold to consider two nodes as neighbors.
         add_self_loops: Whether to add self-loops.
+        adj_with_dist: If True, the adjacency matrix is built using the Euclidean distance between the patches features. If False, the adjacency matrix is binary.
     
     Returns:
         edge_index: Edge index of the adjacency matrix.

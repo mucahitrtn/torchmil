@@ -1,7 +1,6 @@
 
 import torch
 from torch import Tensor
-from torch.nn.utils.rnn import pad_sequence
 
 from tensordict import TensorDict
 
@@ -47,68 +46,52 @@ def collate_fn(
         sparse : bool = True,
     ) -> TensorDict:
     """
-    Collate function for MIL datasets.
+    Collate function for MIL datasets. Given a list of bags (represented as dictionaries)
+    it pads the tensors in the bag to the same shape. Then, it returns a dictionary representing
+    the batch. The keys in the dictionary are the keys in the bag dictionaries. Additionally,
+    the returned dictionary contains a mask for the padded tensors. This mask is 1 where the
+    tensor is not padded and 0 where the tensor is padded.
 
     Arguments:
-        batch_list: List of dictionaries with the following keys:
+        batch_list: List of dictionaries. Each dictionary represents a bag and should contain the same keys. The values can be:
+            
+            - Tensors of shape `(bag_size, ...)`. In this case, the tensors are padded to the same shape.
+            - Sparse tensors in COO format. In this case, the resulting sparse tensor has shape `(batch_size, max_bag_size, max_bag_size)`, where `max_bag_size` is the maximum bag size in the batch. If `sparse=False`, the sparse tensor is converted to a dense tensor.
 
-            - 'features': Bag features of shape `(bag_size, feat_dim)`.
-            - 'label': Bag label.
-            - 'inst_labels': Instance labels of shape `(bag_size,)`.
-            - 'edge_index': Edge index of the adjacency matrix.
-            - 'edge_weight': Edge weight of the adjacency matrix.
-            - 'coords': Instance positions of shape `(bag_size, pos_dim)`.
-
-        sparse: If True, returns sparse adjacency matrices.
+        sparse: If True, the sparse tensors are returned as sparse tensors. If False, the sparse tensors are converted to dense tensors.
     
     Returns:
-        batch_dict: Dictionary with the following keys:
-        
-            - 'features': Padded bag features of shape `(batch_size, max_bag_size, feat_dim)`.
-            - 'label': Bag labels of shape `(batch_size,)`.
-            - 'inst_labels': Padded instance labels of shape `(batch_size, max_bag_size)`.
-            - 'adj': Padded adjacency matrices of shape `(batch_size, max_bag_size, max_bag_size)`.
-            - 'coords': Padded instance positions of shape `(batch_size, max_bag_size, pos_dim)`.
-            - 'mask': Mask of shape `(batch_size, max_bag_size)`.
+        batch_dict: Dictionary with the same keys as the bag dictionaries. The values are tensors of shape `(batch_size, max_bag_size, ...)` or sparse tensors of shape `(batch_size, max_bag_size, max_bag_size)`. Additionally, the dictionary contains a mask of shape `(batch_size, max_bag_size)`.
     """
 
     batch_dict = {}
     key_list = batch_list[0].keys()
     for key in key_list:
         batch_dict[key] = [bag_dict[key] for bag_dict in batch_list]
-    
-    features, mask = pad_tensors(batch_dict['features']) # (batch_size, max_bag_size, feat_dim), (batch_size, max_bag_size)
-    batch_dict['features'] = features
-    batch_dict['mask'] = mask
-    if 'inst_labels' in batch_dict:
-        inst_labels, _ = pad_tensors(batch_dict['inst_labels']) # (batch_size, max_bag_size)
-        batch_dict['inst_labels'] = inst_labels
-    if 'coords' in batch_dict:
-        pos, _ = pad_tensors(batch_dict['coords'])
-        batch_dict['coords'] = pos
-    batch_dict['label'] = torch.stack(batch_dict['label']) # (batch_size, )
 
-    if 'edge_index' in batch_dict:
-        edge_index_list = batch_dict['edge_index']
-        edge_weight_list = batch_dict['edge_weight']
+    for key in key_list:
+        data_list = batch_dict[key]
+        if not data_list[0].is_sparse:
+            if data_list[0].dim() == 0:
+                data = torch.stack(data_list)
+            else:
+                data, mask = pad_tensors(data_list)
+                batch_dict[key] = data
+                if 'mask' not in batch_dict:
+                    batch_dict['mask'] = mask
+        else:
+            index_list = []
+            value_list = []
+            size_list = []
+            for i in range(len(data_list)):
+                index_list.append(data_list[i].coalesce().indices().numpy())
+                value_list.append(data_list[i].coalesce().values().numpy())
+                size_list.append(data_list[i].size())
+            max_size = max(size_list)
 
-        bag_size_list = [len(batch_list[i]['features']) for i in range(len(batch_list))]
-        max_bag_size = max(bag_size_list)
-
-        adj_list = []
-        for i in range(len(edge_index_list)):
-            edge_index = edge_index_list[i]
-            edge_weight = edge_weight_list[i]
-            adj_list.append(torch.sparse_coo_tensor(edge_index, edge_weight, (max_bag_size, max_bag_size)))
-        
-        adj = torch.stack(adj_list).coalesce() # (batch_size, bag_size, bag_size)
-        if not sparse:
-            adj = adj.to_dense()
-        
-        batch_dict['adj'] = adj
-
-        # Remove the edge index and edge weight from the batch_dict
-        del batch_dict['edge_index']
-        del batch_dict['edge_weight']
+            data_list = [ torch.sparse_coo_tensor(index, value, max_size) for index, value in zip(index_list, value_list) ]
+            batch_dict[key] = torch.stack(data_list).coalesce()
+            if not sparse:
+                batch_dict[key] = batch_dict[key].to_dense()
     
     return TensorDict(batch_dict)

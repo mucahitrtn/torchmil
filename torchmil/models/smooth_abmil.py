@@ -1,12 +1,12 @@
 import torch
 from torch import Tensor
 
+from .mil_model import MILModel
 from torchmil.models.modules import ProbSmoothAttentionPool
-
 from torchmil.models.modules.utils import get_feat_dim, LazyLinear
 
 
-class SmoothABMIL(torch.nn.Module):
+class SmoothABMIL(MILModel):
     def __init__(
         self,
         in_shape: tuple = None,
@@ -57,12 +57,12 @@ class SmoothABMIL(torch.nn.Module):
             X: Bag features of shape `(batch_size, bag_size, ...)`.
             mask: Mask of shape `(batch_size, bag_size)`.
             adj_mat: Adjacency matrix of shape `(batch_size, bag_size, bag_size)`. Only required when `return_kl_div=True`.
-            return_att: If True, returns attention values (before normalization) in addition to `bag_pred`.
+            return_att: If True, returns attention values (before normalization) in addition to `Y_pred`.
             return_samples: If True and `return_att=True`, the attention values returned are samples from the attention distribution.
             return_dir_energy: If True, returns the Dirichlet energy of the attention values.
 
         Returns:
-            bag_pred: Bag label logits of shape `(batch_size, n_samples)` if `return_samples=True`, else `(batch_size,)`.
+            Y_pred: Bag label logits of shape `(batch_size, n_samples)` if `return_samples=True`, else `(batch_size,)`.
             att: Only returned when `return_att=True`. Attention values (before normalization) of shape `(batch_size, bag_size, n_samples)` if `return_samples=True`, else `(batch_size, bag_size)`.
             dir_energy: Only returned when `return_dir_energy=True`. Dirichlet energy of the attention values of shape `(batch_size,)`.
         """
@@ -84,28 +84,28 @@ class SmoothABMIL(torch.nn.Module):
                 Z = out_pool
 
         Z = Z.transpose(1, 2)  # (batch_size, n_samples, feat_dim)
-        bag_pred = self.classifier(Z)  # (batch_size, n_samples, 1)
-        bag_pred = bag_pred.squeeze(-1)  # (batch_size, n_samples)
+        Y_pred = self.classifier(Z)  # (batch_size, n_samples, 1)
+        Y_pred = Y_pred.squeeze(-1)  # (batch_size, n_samples)
 
         if not return_samples:
-            bag_pred = bag_pred.mean(dim=-1)  # (batch_size,)
+            Y_pred = Y_pred.mean(dim=-1)  # (batch_size,)
             if return_att:
                 f = f.mean(dim=-1)  # (batch_size, bag_size)
 
         if return_dir_energy:
             if return_att:
-                return bag_pred, f, dir_energy
+                return Y_pred, f, dir_energy
             else:
-                return bag_pred, dir_energy
+                return Y_pred, dir_energy
         else:
             if return_att:
-                return bag_pred, f
+                return Y_pred, f
             else:
-                return bag_pred
+                return Y_pred
 
     def compute_loss(
         self,
-        Y_true: Tensor,
+        Y: Tensor,
         X: Tensor,
         adj_mat: Tensor,
         mask: Tensor,
@@ -114,24 +114,24 @@ class SmoothABMIL(torch.nn.Module):
         Compute loss given true bag labels.
 
         Arguments:
-            Y_true: Bag labels of shape `(batch_size,)`.
+            Y: Bag labels of shape `(batch_size,)`.
             X: Bag features of shape `(batch_size, bag_size, ...)`.
             mask: Mask of shape `(batch_size, bag_size)`.
 
         Returns:
-            bag_pred: Bag label logits of shape `(batch_size,)`.
+            Y_pred: Bag label logits of shape `(batch_size,)`.
             loss_dict: Dictionary containing the loss value and the Dirichlet energy of the attention values.
         """
 
-        bag_pred, dir_energy = self.forward(
+        Y_pred, dir_energy = self.forward(
             X, mask, adj_mat, return_att=False, return_samples=True, return_kl_div=True)  # (batch_size, n_samples)
-        bag_pred_mean = bag_pred.mean(dim=-1)  # (batch_size,)
+        Y_pred_mean = Y_pred.mean(dim=-1)  # (batch_size,)
 
-        Y_true = Y_true.unsqueeze(-1).expand(-1, bag_pred.shape[-1])
-        crit_loss = self.criterion(bag_pred.float(), Y_true.float())
+        Y = Y.unsqueeze(-1).expand(-1, Y_pred.shape[-1])
+        crit_loss = self.criterion(Y_pred.float(), Y.float())
         crit_name = self.criterion.__class__.__name__
 
-        return bag_pred_mean, {crit_name: crit_loss, 'DirEnergy': dir_energy}
+        return Y_pred_mean, {crit_name: crit_loss, 'DirEnergy': dir_energy}
 
     @torch.no_grad()
     def predict(self,
@@ -150,10 +150,9 @@ class SmoothABMIL(torch.nn.Module):
             return_samples: If True and `return_inst_pred=True`, the instance label predictions returned are samples from the instance label distribution.
 
         Returns:
-            bag_pred: Bag label logits of shape `(batch_size,)`.
-            att_val: Only returned when `return_inst_pred=True`. Attention values (before normalization) of shape `(batch_size, bag_size)` if `return_samples=False`, else `(batch_size, bag_size, n_samples)`.
-
+            Y_pred: Bag label logits of shape `(batch_size,)`.
+            y_inst_pred: Only returned when `return_inst_pred=True`. Attention values (before normalization) of shape `(batch_size, bag_size)` if `return_samples=False`, else `(batch_size, bag_size, n_samples)`.
         """
-        bag_pred, att_val = self.forward(
+        Y_pred, att_val = self.forward(
             X, mask, return_att=return_inst_pred, return_samples=return_samples)
-        return bag_pred, att_val
+        return Y_pred, att_val

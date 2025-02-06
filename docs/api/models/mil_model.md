@@ -1,6 +1,6 @@
-# SmoothABMIL
+# General MIL model
 
-::: torchmil.models.SmoothABMIL
+::: torchmil.models.MILModel
     options:
         members:
             - __init__

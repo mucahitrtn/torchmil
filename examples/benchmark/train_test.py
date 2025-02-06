@@ -2,9 +2,7 @@ import torch
 import os
 import wandb
 
-from utils import get_local_rank, ddp_setup, plot_att_hist
-from dataset_loader import load_dataset
-from model_builder import build_MIL_model
+from utils import plot_att_hist, load_dataset, build_MIL_model
 
 from matplotlib import pyplot as plt
 from evaluate import evaluate
@@ -52,14 +50,9 @@ def get_annealing_scheduler_dict(config, num_steps_per_epoch):
 
 def train_test(config, run_train=True, run_test=True):
 
-    local_rank = get_local_rank()
 
-    if config.distributed:
-        ddp_setup()
-        device = torch.device(f"cuda:{local_rank}")
-    else:
-        device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
-    
+    device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+        
     # Sanity check
     torch.inverse(torch.ones((0, 0), device=device))
 
@@ -67,8 +60,7 @@ def train_test(config, run_train=True, run_test=True):
 
     if run_train:
 
-        if local_rank == 0:
-            print('Starting training...')
+        print('Starting training...')
 
         train_dataset, val_dataset = load_dataset(config, mode='train_val')
         test_dataset = load_dataset(config, mode='test', bag_size_limit=20000)
@@ -134,16 +126,7 @@ def train_test(config, run_train=True, run_test=True):
         num_steps_per_epoch = len(train_dataloader)
         annealing_scheduler_dict = get_annealing_scheduler_dict(config, num_steps_per_epoch)
 
-        if config.distributed:
-            model = model.to(device)
-            model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[local_rank], output_device=local_rank)
-        else:
-            model = model.to(device)
-
-        if local_rank == 0:
-            wandb_run = wandb.run
-        else:
-            wandb_run = None
+        model = model.to(device)
 
         trainer = Trainer(
             model, 
@@ -152,29 +135,26 @@ def train_test(config, run_train=True, run_test=True):
             scheduler, 
             annealing_scheduler_dict,
             device=device, 
-            wandb_run=wandb_run, 
+            wandb_run=config.wandb_run, 
             early_stop_patience=config.patience
         )
         trainer.train(config.epochs, train_dataloader, val_dataloader, test_dataloader)
         best_model_state_dict = trainer.get_best_model_state_dict()
         model.load_state_dict(best_model_state_dict)
 
-        if config.distributed:
-            torch.distributed.destroy_process_group()
 
-        if local_rank == 0:
 
-            print('Finished training')
+        print('Finished training')
 
-            best_model_state_dict = trainer.get_best_model_state_dict()
+        best_model_state_dict = trainer.get_best_model_state_dict()
 
-            if config.save_weights_path is not None:
-                if not os.path.exists(os.path.dirname(config.save_weights_path)):
-                    os.makedirs(os.path.dirname(config.save_weights_path))
+        if config.save_weights_path is not None:
+            if not os.path.exists(os.path.dirname(config.save_weights_path)):
+                os.makedirs(os.path.dirname(config.save_weights_path))
 
-                torch.save(best_model_state_dict, config.save_weights_path)
+            torch.save(best_model_state_dict, config.save_weights_path)
 
-    if local_rank == 0 and run_test:
+    if  run_test:
         print('Starting test...')
         test_dataset = load_dataset(config, mode='test')
         if model is None:
@@ -190,8 +170,8 @@ def train_test(config, run_train=True, run_test=True):
                     model.load_state_dict(weights_dict, strict=False)
                 else:
                     print(f'Weights not found in: {config.load_weights_path}. Trying to load from wandb...')
-                    if wandb.run is not None:
-                        weights_file = wandb.run.file('weights/best.pt').download(replace=True, root='/tmp/francastro-team/')
+                    if config.wandb_run is not None:
+                        weights_file = config.wandb_run.file('weights/best.pt').download(replace=True, root='/tmp/francastro-team/')
                         weights_dict = torch.load(weights_file.name)
                         model.load_state_dict(weights_dict, strict=False)
         
@@ -231,8 +211,8 @@ def train_test(config, run_train=True, run_test=True):
         for metric in metrics:
             print('{:<25s}: {:s}'.format(metric, str(metrics[metric])))
         
-        if wandb.run is not None:
-            wandb.run.log(metrics)
+        if config.wandb_run is not None:
+            config.wandb_run.log(metrics)
 
         # Attention histograms    
         try:
@@ -243,12 +223,12 @@ def train_test(config, run_train=True, run_test=True):
             fig_attval, ax_attval = plt.subplots()
             ax_attval = plot_att_hist(ax_attval, f_pred, y_true, T_pred, bag_idx)
 
-            if wandb.run is None:
+            if config.wandb_run is None:
                 fig_attscore.savefig(os.path.join(config.results_dir, f'attention_score.png'))
                 fig_attval.savefig(os.path.join(config.results_dir, f'attention_val.png'))
             else:
-                wandb.run.log({'attention_score': wandb.Image(fig_attscore)})
-                wandb.run.log({'attention_val': wandb.Image(fig_attval)})
+                config.wandb_run.log({'attention_score': wandb.Image(fig_attscore)})
+                config.wandb_run.log({'attention_val': wandb.Image(fig_attval)})
             
             plt.close(fig_attscore)
             plt.close(fig_attval)

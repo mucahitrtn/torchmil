@@ -8,10 +8,27 @@ from .utils import LazyLinear
 
 
 class AttentionPool(torch.nn.Module):
-    """
-    Multiple Instance Learning (MIL) attention pooling layer. 
+    r"""
+    Attention-based pooling, as proposed in the paper [Attention-based Multiple Instance Learning](https://arxiv.org/abs/1802.04712).
 
-    Proposed in in the paper [Attention-based Multiple Instance Learning](https://arxiv.org/abs/1802.04712).
+    Given an input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times D}$, 
+    this model aggregates the instance features into a bag representation $\mathbf{z} \in \mathbb{R}^{D}$ as, 
+
+    $$ \mathbf{z} = \mathbf{X}^\top \text{Softmax}(\mathbf{f}) = \sum_{n=1}^N s_n \mathbf{x}_n, $$
+
+    where $\mathbf{f} = \operatorname{MLP}(\mathbf{X}) \in \mathbb{R}^{N}$ are the attention values and $s_n$ is the normalized attention score for the $n$-th instance.
+
+    To compute the attention values, the $\operatorname{MLP}$ is defined as 
+    
+    $$ \operatorname{MLP}(\mathbf{X}) = \operatorname{act}(\mathbf{X}\mathbf{W}_1)\mathbf{w}, $$
+
+    if `gated=False`, and as
+
+    $$ \operatorname{MLP}(\mathbf{X}) = \left(\operatorname{act}(\mathbf{X}\mathbf{W}_1)\odot\sigma(\mathbf{X}\mathbf{W}_2)\right)\mathbf{w}, $$
+
+    if `gated=True`, where $\mathbf{W}_1 \in \mathbb{R}^{D \times \text{att_dim}}$, $\mathbf{W}_2 \in \mathbb{R}^{D \times \text{att_dim}}$,
+    $\mathbf{w} \in \mathbb{R}^{\text{att_dim}}$, $\operatorname{act} \ \colon \mathbb{R} \to \mathbb{R}$ is the activation function,
+     $\sigma \ \colon \mathbb{R} \to \mathbb{R}$ is the sigmoid function, and $\odot$ denotes element-wise multiplication.
     """
 
     def __init__(

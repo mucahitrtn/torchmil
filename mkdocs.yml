@@ -92,7 +92,7 @@ plugins:
             inherited_members: true  # Allow looking up inherited methods
             show_if_no_docstring: false
             show_signature_annotations: false
-            members_order: source  # order methods according to their order of definition in the source code, not alphabetical order
+            # members_order: source  # order methods according to their order of definition in the source code, not alphabetical order
             heading_level: 4
             docstring_section_style: list
 
@@ -108,6 +108,7 @@ nav:
       # - api/data/collate.md
     - <tt>torchmil.datasets</tt>:
       - api/datasets/index.md
+      - api/datasets/processed_mil_dataset.md
       - api/datasets/toy_dataset.md
       - api/datasets/wsi_dataset.md
       - api/datasets/ctscan_dataset.md
@@ -119,6 +120,7 @@ nav:
           - api/models/modules/transformer_encoder.md
           - api/models/modules/sm.md
           - api/models/modules/self_attention.md
+      - api/models/mil_model.md
       - api/models/abmil.md
       - api/models/transformer_abmil.md
       - api/models/sm_abmil.md

@@ -3,16 +3,16 @@ import torch
 def build_MIL_model(args, pos_weight=None):
 
     ce_criterion = torch.nn.BCEWithLogitsLoss(reduction='mean', pos_weight=pos_weight)
+    feat_ext = torch.nn.Identity()
+    model_config_dict = vars(args.model_config)
     
     if args.model_name == 'abmil':
-        from models import ABMIL
+        from torchmil.models import ABMIL
         return ABMIL(
-            input_shape=args.data_shape,
-            feat_ext_name=args.model_config.feat_ext_name,
-            pool_kwargs={
-                'att_dim': args.model_config.pool_att_dim
-            },
-            criterion=ce_criterion
+            in_shape=args.data_shape,
+            feat_ext_name=feat_ext,
+            criterion=ce_criterion,
+            **model_config_dict
         )
     elif args.model_name == 'sm_abmil':
         from models import ABMIL

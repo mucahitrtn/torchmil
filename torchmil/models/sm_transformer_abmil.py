@@ -2,11 +2,13 @@ from typing import Union
 
 import torch
 
+from .mil_model import MILModel
+
 from torchmil.models.modules import SmAttentionPool, SmTransformerEncoder
 
 from torchmil.models.modules.utils import get_feat_dim
 
-class SmTransformerABMIL(torch.nn.Module):
+class SmTransformerABMIL(MILModel):
     """
     Transformer Attention-based Multiple Instance Learning (ABMIL) model with the Sm operator. 
     """
@@ -103,10 +105,10 @@ class SmTransformerABMIL(torch.nn.Module):
         Arguments:
             X: Bag features of shape `(batch_size, bag_size, ...)`.
             mask: Mask of shape `(batch_size, bag_size)`.
-            return_att: If True, returns attention values (before normalization) in addition to `Y_logits_pred`.
+            return_att: If True, returns attention values (before normalization) in addition to `Y_pred`.
 
         Returns:
-            Y_logits_pred: Bag label logits of shape `(batch_size,)`.
+            Y_pred: Bag label logits of shape `(batch_size,)`.
             att: Only returned when `return_att=True`. Attention values (before normalization) of shape (batch_size, bag_size).
         """
 
@@ -120,17 +122,17 @@ class SmTransformerABMIL(torch.nn.Module):
         else:
             Z = out_pool # (batch_size, emb_dim)
         
-        bag_pred = self.last_layer(Z) # (batch_size, n_samples, 1)
-        bag_pred = bag_pred.squeeze(-1) # (batch_size,)
+        Y_pred = self.last_layer(Z) # (batch_size, n_samples, 1)
+        Y_pred = Y_pred.squeeze(-1) # (batch_size,)
 
         if return_att:
-            return bag_pred, f
+            return Y_pred, f
         else:
-            return bag_pred
+            return Y_pred
     
     def compute_loss(
         self,
-        Y_true: torch.Tensor,
+        Y: torch.Tensor,
         X: torch.Tensor,
         mask: torch.Tensor
     ) -> tuple[torch.Tensor, dict]:
@@ -138,21 +140,21 @@ class SmTransformerABMIL(torch.nn.Module):
         Compute loss given true bag labels.
 
         Arguments:
-            Y_true: Bag labels of shape `(batch_size,)`.
+            Y: Bag labels of shape `(batch_size,)`.
             X: Bag features of shape `(batch_size, bag_size, ...)`.
             mask: Mask of shape `(batch_size, bag_size)`.
 
         Returns:
-            Y_logits_pred: Bag label logits of shape `(batch_size,)`.
+            Y_pred: Bag label logits of shape `(batch_size,)`.
             loss_dict: Dictionary containing the loss value.
         """
 
-        Y_logits_pred = self.forward(X, mask, return_att=False)
+        Y_pred = self.forward(X, mask, return_att=False)
 
-        crit_loss = self.criterion(Y_logits_pred.float(), Y_true.float())
+        crit_loss = self.criterion(Y_pred.float(), Y.float())
         crit_name = self.criterion.__class__.__name__
 
-        return Y_logits_pred, {crit_name: crit_loss}
+        return Y_pred, {crit_name: crit_loss}
 
     @torch.no_grad()
     def predict(
@@ -170,8 +172,8 @@ class SmTransformerABMIL(torch.nn.Module):
             return_inst_pred: If `True`, returns instance labels predictions, in addition to bag label predictions.
 
         Returns:
-            bag_pred: Bag label logits of shape `(batch_size,)`.
-            inst_pred: If `return_inst_pred=True`, returns instance labels predictions of shape `(batch_size, bag_size)`.
+            Y_pred: Bag label logits of shape `(batch_size,)`.
+            y_inst_pred: If `return_inst_pred=True`, returns instance labels predictions of shape `(batch_size, bag_size)`.
         """
         return self.forward(X, mask, return_att=return_inst_pred)
         

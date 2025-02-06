@@ -1,18 +1,40 @@
 import torch
 
+from .mil_model import MILModel
+
 from torchmil.models.modules import AttentionPool, TransformerEncoder
 
 from torchmil.models.modules.utils import get_feat_dim
 
-class TransformerABMIL(torch.nn.Module):
-    """
-    Transformer Attention-based Multiple Instance Learning (ABMIL) model.    
+class TransformerABMIL(MILModel):
+    r"""
+    Transformer Attention-based Multiple Instance Learning model.
+
+    Given an input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times P}$, 
+    this model optionally transforms the instance features using a feature extractor, 
+
+    $$ \mathbf{X} = \text{FeatExt}(\mathbf{X}) \in \mathbb{R}^{N \times D}, $$
+
+    Then, it transforms the instance features using a transformer encoder, 
+
+    $$ \mathbf{X} = \text{TransformerEncoder}(\mathbf{X}) \in \mathbb{R}^{N \times D}, $$
+
+    and finally it aggregates the instance features into a bag representation $\mathbf{z} \in \mathbb{R}^{D}$ using the attention-based pooling, 
+
+    $$ \mathbf{z} = \mathbf{X}^\top \text{Softmax}(\mathbf{f}) = \sum_{n=1}^N s_n \mathbf{x}_n, $$
+
+    where $\mathbf{f} = \operatorname{MLP}(\mathbf{X}) \in \mathbb{R}^{N}$ are the attention values and $s_n$ is the normalized attention score for the $n$-th instance.
+    The bag representation $\mathbf{z}$ is then fed into a classifier (one linear layer) to predict the bag label.
+
+    See [AttentionPool](modules/attention_pool.md) for more details on the attention-based pooling, and [TransformerEncoder](modules/transformer_encoder.md) for more details on the transformer encoder.
+
     """
     def __init__(
         self,
         in_shape : tuple,
         pool_att_dim : int = 128,
         pool_act : str = 'tanh',
+        pool_gated : bool = False,
         feat_ext: torch.nn.Module = torch.nn.Identity(),
         transf_att_dim : int = None, 
         transf_n_layers : int = 1,
@@ -29,6 +51,7 @@ class TransformerABMIL(torch.nn.Module):
             in_shape: Shape of input data expected by the feature extractor (excluding batch dimension). If not provided, it will be lazily initialized.
             pool_att_dim: Attention dimension for pooling.
             pool_act: Activation function for pooling. Possible values: 'tanh', 'relu', 'gelu'.
+            pool_gated: If True, use gated attention in the attention pooling.
             feat_ext: Feature extractor.
             transf_att_dim: Attention dimension for transformer encoder.
             transf_n_layers: Number of layers in transformer encoder.
@@ -52,7 +75,7 @@ class TransformerABMIL(torch.nn.Module):
             add_self=transf_add_self, 
             dropout=transf_dropout
         )
-        self.pool = AttentionPool(in_dim=feat_dim, att_dim=pool_att_dim, act=pool_act)
+        self.pool = AttentionPool(in_dim=feat_dim, att_dim=pool_att_dim, act=pool_act, gated=pool_gated)
         self.last_layer = torch.nn.Linear(feat_dim, 1)
 
 
@@ -71,7 +94,7 @@ class TransformerABMIL(torch.nn.Module):
             return_att: If True, returns attention values (before normalization) in addition to `Y_logits_pred`.
 
         Returns:
-            Y_logits_pred: Bag label logits of shape `(batch_size,)`.
+            Y_pred: Bag label logits of shape `(batch_size,)`.
             att: Only returned when `return_att=True`. Attention values (before normalization) of shape (batch_size, bag_size).
         """
 
@@ -85,17 +108,17 @@ class TransformerABMIL(torch.nn.Module):
         else:
             z = out_pool # (batch_size, emb_dim)
         
-        bag_pred = self.last_layer(z) # (batch_size, n_samples, 1)
-        bag_pred = bag_pred.squeeze(-1) # (batch_size,)
+        Y_pred = self.last_layer(z) # (batch_size, n_samples, 1)
+        Y_pred = Y_pred.squeeze(-1) # (batch_size,)
 
         if return_att:
-            return bag_pred, f
+            return Y_pred, f
         else:
-            return bag_pred
+            return Y_pred
     
     def compute_loss(
         self,
-        Y_true: torch.Tensor,
+        Y: torch.Tensor,
         X: torch.Tensor,
         mask: torch.Tensor
     ) -> tuple[torch.Tensor, dict]:
@@ -103,21 +126,21 @@ class TransformerABMIL(torch.nn.Module):
         Compute loss given true bag labels.
 
         Arguments:
-            Y_true: Bag labels of shape `(batch_size,)`.
+            Y: Bag labels of shape `(batch_size,)`.
             X: Bag features of shape `(batch_size, bag_size, ...)`.
             mask: Mask of shape `(batch_size, bag_size)`.
 
         Returns:
-            Y_logits_pred: Bag label logits of shape `(batch_size,)`.
+            Y_pred: Bag label logits of shape `(batch_size,)`.
             loss_dict: Dictionary containing the loss value.
         """
 
-        Y_logits_pred = self.forward(X, mask, return_att=False)
+        Y_pred = self.forward(X, mask, return_att=False)
 
-        crit_loss = self.criterion(Y_logits_pred.float(), Y_true.float())
+        crit_loss = self.criterion(Y_pred.float(), Y.float())
         crit_name = self.criterion.__class__.__name__
 
-        return Y_logits_pred, {crit_name: crit_loss}
+        return Y_pred, {crit_name: crit_loss}
 
     @torch.no_grad()
     def predict(
@@ -135,8 +158,8 @@ class TransformerABMIL(torch.nn.Module):
             return_inst_pred: If `True`, returns instance labels predictions, in addition to bag label predictions.
 
         Returns:
-            bag_pred: Bag label logits of shape `(batch_size,)`.
-            inst_pred: If `return_inst_pred=True`, returns instance labels predictions of shape `(batch_size, bag_size)`.
+            Y_pred: Bag label logits of shape `(batch_size,)`.
+            y_inst_pred: If `return_inst_pred=True`, returns instance labels predictions of shape `(batch_size, bag_size)`.
         """
         return self.forward(X, mask, return_att=return_inst_pred)
         

@@ -1,8 +1,9 @@
 # TransformerProbSmoothABMIL
 
 ::: torchmil.models.TransformerProbSmoothABMIL
-    members:
-    - __init__
-    - forward
-    - compute_loss
-    - predict
+    options:
+        members:
+            - __init__
+            - forward
+            - compute_loss
+            - predict

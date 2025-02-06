@@ -4,14 +4,12 @@
 
 import torch
 
-import numpy as np
-
-from .utils import SmoothTop1SVM
+from .mil_model import MILModel
 from torchmil.models.modules import AttentionPool
-
 from torchmil.models.modules.utils import get_feat_dim, LazyLinear
+from .utils import SmoothTop1SVM
 
-class CLAM_SB(torch.nn.Module):
+class CLAM_SB(MILModel):
     r"""
     CLAM
 
@@ -291,11 +289,11 @@ class CLAM_SB(torch.nn.Module):
         Arguments:
             X: Bag features of shape `(batch_size, bag_size, ...)`.
             mask: Mask of shape `(batch_size, bag_size)`.
-            return_att: If True, returns attention values (before normalization) in addition to `bag_pred`.
-            return_emb: If True, returns embeddings in addition to `bag_pred`.
+            return_att: If True, returns attention values (before normalization) in addition to `Y_pred`.
+            return_emb: If True, returns embeddings in addition to `Y_pred`.
         
         Returns:
-            bag_pred: Bag label logits of shape `(batch_size,)`.
+            Y_pred: Bag label logits of shape `(batch_size,)`.
             att: Only returned when `return_att=True`. Attention values (before normalization) of shape (batch_size, bag_size).
             emb: Only returned when `return_emb=True`. Embeddings of shape (batch_size, bag_size, feat_dim).
         """
@@ -304,17 +302,17 @@ class CLAM_SB(torch.nn.Module):
 
         z, f = self.pool(X, mask, return_att=True) # z: (batch_size, D), f: (batch_size, bag_size)
 
-        bag_pred = self.classifier(z).squeeze(1) # (batch_size,)
+        Y_pred = self.classifier(z).squeeze(1) # (batch_size,)
         
         if return_emb:
             if return_att:
-                return bag_pred, f, X
+                return Y_pred, f, X
             else:
-                return bag_pred, X
+                return Y_pred, X
         elif return_att:
-            return bag_pred, f
+            return Y_pred, f
         else:
-            return bag_pred
+            return Y_pred
     
     def compute_loss(
         self, 
@@ -331,15 +329,15 @@ class CLAM_SB(torch.nn.Module):
             mask: Mask of shape `(batch_size, bag_size)`.
         
         Returns:
-            bag_pred: Bag label logits of shape `(batch_size,)`.
+            Y_pred: Bag label logits of shape `(batch_size,)`.
             loss_dict: Dictionary containing the loss value.
         """
-        bag_pred, att, emb = self.forward(X, mask, return_att = True, return_emb=True)
-        crit_loss = self.criterion(bag_pred.float(), labels.float())
+        Y_pred, att, emb = self.forward(X, mask, return_att = True, return_emb=True)
+        crit_loss = self.criterion(Y_pred.float(), labels.float())
         crit_name = self.criterion.__class__.__name__
         inst_loss = self.compute_inst_loss(att, emb, labels)
 
-        return bag_pred, { crit_name: crit_loss, 'InstLoss' : inst_loss}
+        return Y_pred, { crit_name: crit_loss, 'InstLoss' : inst_loss}
 
     @torch.no_grad()
     def predict(
@@ -356,7 +354,7 @@ class CLAM_SB(torch.nn.Module):
             mask: Mask of shape `(batch_size, bag_size)`.
 
         Returns:
-            bag_pred: Predicted bag labels of shape `(batch_size,)`.
-            inst_pred: Predicted instance labels of shape `(batch_size, bag_size)`. Only returned when `return_inst_pred=True`.
+            Y_pred: Predicted bag labels of shape `(batch_size,)`.
+            y_inst_pred: Predicted instance labels of shape `(batch_size, bag_size)`. Only returned when `return_inst_pred=True`.
         """
         return self.forward(X, mask, return_att=return_inst_pred)

@@ -7,32 +7,6 @@ def alpha_type(value):
     else:
         return float(value)
 
-def correct_args(args):
-
-    if args.model_name not in ['transformer_bayes_smooth_abmil', 'bayes_smooth_abmil']:
-        args.covar_mode = None
-        args.interactions_mode = None
-
-    if args.model_name not in ['sm_abmil', 'sm_transformer_abmil']:
-        args.sm_alpha = None
-        args.sm_steps = None
-        args.sm_mode = None
-        args.sm_where = None
-        args.sm_spectral_norm = None
-
-    if args.sm_alpha in [0.0, None]:
-        args.sm_mode = None
-        args.sm_where = None
-        args.sm_steps = None
-
-    if args.model_name in ['setmil']:
-        setattr(args, 'adj_mat_mode', 'absolute')
-        args.use_sparse = True
-    else:
-        setattr(args, 'adj_mat_mode', 'relative')
-    
-    return args
-
 def get_arguments():
     parser = argparse.ArgumentParser()
 
@@ -66,12 +40,6 @@ def get_arguments():
         '--pin_memory', 
         action='store_true', 
         help="Pin memory or not"
-    )
-
-    parser.add_argument(
-        '--distributed', 
-        action='store_true', 
-        help="Use distributed training"
     )
 
     parser.add_argument(
@@ -190,69 +158,6 @@ def get_arguments():
         help="Weight decay for the optimizer"
     )
 
-    # Sm hyperparams
-    parser.add_argument(
-        '--sm_alpha', 
-        type=alpha_type, 
-        default='trainable', 
-        help="\\alpha for the Sm operator"
-    )
-
-    parser.add_argument(
-        '--sm_mode', 
-        type=str, 
-        default='approx', 
-        help="Mode for the Sm operator"
-    )
-
-    parser.add_argument(
-        '--sm_steps', 
-        type=int, 
-        default=10, 
-        help="Number of steps to approximate the Sm operator"
-    )
-
-    parser.add_argument(
-        '--sm_where', 
-        type=str, 
-        default='mid', 
-        help="Where to place the Sm operator within the attention pool"
-    )
-
-    parser.add_argument(
-        '--sm_transformer', 
-        action='store_true', 
-        help="Whether to use the Sm operator in the transformer encoder"
-    )
-
-    parser.add_argument(
-        '--sm_spectral_norm', 
-        action='store_true', 
-        help="Use spectral normalization or not"
-    )
-
-    # Bayes Smooth hyperparams
-    parser.add_argument(
-        '--covar_mode', 
-        type=str, 
-        default='diag', 
-        help="Covariance mode for the bayes smooth attention"
-    )
-
-    parser.add_argument(
-        '--annealing_min_coef', 
-        type=float, 
-        default=0.0, 
-        help="Minimum coefficient for the annealing scheduler"
-    )
-
-    parser.add_argument(
-        '--annealing_max_coef', 
-        type=float, 
-        default=1.0, 
-        help="Maximum coefficient for the annealing scheduler"
-    )
-
     args = parser.parse_args()
 
     # Add model config to args
@@ -273,7 +178,5 @@ def get_arguments():
                 setattr(args.model_config, key, getattr(args, key))
             else:
                 setattr(args.model_config, key, model_config_dict[key])
-    
-    args = correct_args(args)    
-    
+        
     return args

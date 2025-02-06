@@ -6,19 +6,22 @@
     - Tutorial 2: ...
 - Code:
     - Datasets:
-        - [ ] WSI dataset
-        - [ ] CTScan dataset
-        - [ ] Allow datasets to be downloaded from the internet.
+        - [ X ] (Fran) Processed MIL dataset
+        - [ X ] (Fran) WSI dataset
+        - [ X ] (Fran) CTScan dataset
+        - [ X ] (Fran) Toy dataset
+        - [ ] (Javier) Datasets from: https://arxiv.org/abs/2310.17867
+        - [ ] Allow datasets to be downloaded from the internet ?
     - Models and modules:
         - [ ] Methods:
-            - [ X ] ABMIL
-            - [  ] TransformerABMIL
-            - [  ] SmABMIL
-            - [  ] SmTransformerABMIL
-            - [  ] SmoothABMIL
-            - [  ] SmoothTransformerABMIL
-            - [  ] ProbSmoothABMIL
-            - [  ] ProbSmoothTransformerABMIL
+            - [ X ] (Fran) ABMIL
+            - [  ] (Fran) TransformerABMIL
+            - [  ] (Fran) SmABMIL
+            - [  ] (Fran) SmTransformerABMIL
+            - [  ] (Fran) SmoothABMIL
+            - [  ] (Fran) SmoothTransformerABMIL
+            - [  ] (Fran) ProbSmoothABMIL
+            - [  ] (Fran) ProbSmoothTransformerABMIL
             - [  ] CLAM
                 - [  ] Modify inst_eval, inst_eval_out so they accept batched inputs
             - [  ] DSMIL

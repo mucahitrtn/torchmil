@@ -10,8 +10,18 @@ SDP_BACKEND = [SDPBackend.MATH, SDPBackend.FLASH_ATTENTION,
 
 
 class TransformerEncoderLayer(torch.nn.Module):
-    """
-    One layer of the Transformer encoder.   
+    r"""
+    One layer of the Transformer encoder.
+
+    Given an input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times D}$,
+    this module computes:
+
+    \begin{align*}
+    \mathbf{Z} & = \mathbf{X} + \text{SelfAttention}( \text{LayerNorm}(\mathbf{X}) ) \\
+    \mathbf{Y} & = \mathbf{Z} + \text{MLP}(\text{LayerNorm}(\mathbf{Z})), \\
+    \end{align*}
+
+    and outputs $\mathbf{Y}$.
     """
 
     def __init__(
@@ -80,8 +90,18 @@ class TransformerEncoderLayer(torch.nn.Module):
 
 
 class SmTransformerEncoderLayer(torch.nn.Module):
-    """
-    One layer of the Transformer encoder with the Sm operator.
+    r"""
+    One layer of the Transformer encoder with the $\texttt{Sm}$ operator.
+
+    Given an input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times D}$,
+    this module computes:
+
+    \begin{align*}
+    \mathbf{Z} & = \mathbf{X} + \texttt{Sm}( \text{SelfAttention}( \text{LayerNorm}(\mathbf{X}) ) )\\
+    \mathbf{Y} & = \mathbf{Z} + \text{MLP}(\text{LayerNorm}(\mathbf{Z})), \\
+    \end{align*}
+
+    and outputs $\mathbf{Y}$.
     """
 
     def __init__(
@@ -201,8 +221,21 @@ class Encoder(torch.nn.Module):
 
 
 class TransformerEncoder(Encoder):
-    """
-    Transformer encoder.    
+    r"""
+    A Transformer encoder with skip connections and layer normalization.
+
+    Given an input bag input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times D}$,
+    it computes:
+
+    \begin{align*}
+    \mathbf{X}^{0} & = \mathbf{X} \\
+    \mathbf{Z}^{l} & = \mathbf{X}^{l-1} + \text{SelfAttention}( \text{LayerNorm}(\mathbf{X}^{l-1}) ), \quad l = 1, \ldots, L \\
+    \mathbf{X}^{l} & = \mathbf{Z}^{l} + \text{MLP}(\text{LayerNorm}(\mathbf{Z}^{l})), \quad l = 1, \ldots, L \\
+    \end{align*}
+
+    This module outputs $\text{TransformerEncoder}(\mathbf{X}) = \mathbf{X}^{L}$ if `add_self=False`, 
+    and $\text{TransformerEncoder}(\mathbf{X}) = \mathbf{X}^{L} + \mathbf{X}$ if `add_self=True`.
+
     """
 
     def __init__(
@@ -267,8 +300,20 @@ class TransformerEncoder(Encoder):
 
 
 class SmTransformerEncoder(Encoder):
-    """
-    Transformer encoder with the Sm operator.
+    r"""
+    A Transformer encoder with the $\texttt{Sm} operator, skip connections and layer normalization.
+
+    Given an input bag input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times D}$,
+    it computes:
+
+    \begin{align*}
+    \mathbf{X}^{0} & = \mathbf{X} \\
+    \mathbf{Z}^{l} & = \mathbf{X}^{l-1} + \texttt{Sm}( \text{SelfAttention}( \text{LayerNorm}(\mathbf{X}^{l-1}) ) ), \quad l = 1, \ldots, L \\
+    \mathbf{X}^{l} & = \mathbf{Z}^{l} + \text{MLP}(\text{LayerNorm}(\mathbf{Z}^{l})), \quad l = 1, \ldots, L \\
+    \end{align*}
+
+    This module outputs $\text{SmTransformerEncoder}(\mathbf{X}) = \mathbf{X}^{L}$ if `add_self=False`,
+    and $\text{SmTransformerEncoder}(\mathbf{X}) = \mathbf{X}^{L} + \mathbf{X}$ if `add_self=True`.
     """
 
     def __init__(
