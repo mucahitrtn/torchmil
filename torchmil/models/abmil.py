@@ -107,7 +107,7 @@ class ABMIL(MILModel):
             mask: Mask of shape `(batch_size, bag_size)`.
 
         Returns:
-            Y_pred: Bag label prediction of shape `(batch_size,)`.
+            Y_pred: Bag label logits of shape `(batch_size,)`.
             loss_dict: Dictionary containing the loss value.
         """
 
@@ -118,7 +118,6 @@ class ABMIL(MILModel):
 
         return Y_pred, {crit_name: crit_loss}
 
-    @torch.no_grad()
     def predict(
         self,
         X: Tensor,
@@ -134,7 +133,7 @@ class ABMIL(MILModel):
             return_inst_pred: If `True`, returns instance labels predictions, in addition to bag label predictions.
 
         Returns:
-            Y_pred: Bag label prediction of shape `(batch_size,)`.
-            inst_pred: If `return_inst_pred=True`, returns instance labels predictions of shape `(batch_size, bag_size)`.
+            Y_pred: Bag label logits of shape `(batch_size,)`.
+            y_inst_pred: If `return_inst_pred=True`, returns instance labels predictions of shape `(batch_size, bag_size)`.
         """
         return self.forward(X, mask, return_att=return_inst_pred)

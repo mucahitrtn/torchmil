@@ -142,7 +142,6 @@ class TransformerABMIL(MILModel):
 
         return Y_pred, {crit_name: crit_loss}
 
-    @torch.no_grad()
     def predict(
         self,
         X: torch.Tensor,
@@ -161,8 +160,7 @@ class TransformerABMIL(MILModel):
             Y_pred: Bag label logits of shape `(batch_size,)`.
             y_inst_pred: If `return_inst_pred=True`, returns instance labels predictions of shape `(batch_size, bag_size)`.
         """
-        return self.forward(X, mask, return_att=return_inst_pred)
-        
+        return self.forward(X, mask, return_att=return_inst_pred)        
 
 
         

@@ -86,7 +86,7 @@ class AttentionPool(torch.nn.Module):
             z: Bag representation of shape `(batch_size, in_dim)`.
             f: Only returned when `return_att=True`. Attention values (before normalization) of shape (batch_size, bag_size).
         """
-
+        
         batch_size = X.shape[0]
         bag_size = X.shape[1]
         

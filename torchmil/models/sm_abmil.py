@@ -72,7 +72,7 @@ class SmABMIL(MILModel):
     def forward(
         self,
         X: Tensor,
-        adj_mat: Tensor,
+        adj: Tensor,
         mask: Tensor,
         return_att: bool = False
     ) -> Union[Tensor, tuple[Tensor, Tensor]]:
@@ -81,7 +81,7 @@ class SmABMIL(MILModel):
 
         Arguments:
             X (Tensor): Bag features of shape `(batch_size, bag_size, ...)`.
-            adj_mat (Tensor): Adjacency matrix of shape `(batch_size, bag_size, bag_size)`.
+            adj (Tensor): Adjacency matrix of shape `(batch_size, bag_size, bag_size)`.
             mask (Tensor): Mask of shape `(batch_size, bag_size)`.
             return_att (bool): If True, returns attention values (before normalization) in addition to `Y_pred`.
 
@@ -92,7 +92,7 @@ class SmABMIL(MILModel):
 
         X = self.feat_ext(X)  # (batch_size, bag_size, feat_dim)
 
-        out_pool = self.pool(X, adj_mat, mask, return_att)  # (batch_size, feat_dim)
+        out_pool = self.pool(X, adj, mask, return_att)  # (batch_size, feat_dim)
 
         if return_att:
             Z, f = out_pool  # (batch_size, feat_dim), (batch_size, bag_size)
@@ -111,7 +111,7 @@ class SmABMIL(MILModel):
         self,
         Y: Tensor,
         X: Tensor,
-        adj_mat: Tensor,
+        adj: Tensor,
         mask: Tensor
     ) -> tuple[Tensor, dict]:
         """
@@ -120,7 +120,7 @@ class SmABMIL(MILModel):
         Arguments:
             Y (Tensor): Bag labels of shape `(batch_size,)`.
             X (Tensor): Bag features of shape `(batch_size, bag_size, ...)`.
-            adj_mat (Tensor): Adjacency matrix of shape `(batch_size, bag_size, bag_size)`.
+            adj (Tensor): Adjacency matrix of shape `(batch_size, bag_size, bag_size)`.
             mask (Tensor): Mask of shape `(batch_size, bag_size)`.
 
         Returns:
@@ -128,18 +128,17 @@ class SmABMIL(MILModel):
             loss_dict (dict): Dictionary containing the loss value.
         """
 
-        Y_pred = self.forward(X, adj_mat, mask, return_att=False)
+        Y_pred = self.forward(X, adj, mask, return_att=False)
 
         crit_loss = self.criterion(Y_pred.float(), Y.float())
         crit_name = self.criterion.__class__.__name__
 
         return Y_pred, {crit_name: crit_loss}
 
-    @torch.no_grad()
     def predict(
         self,
         X: Tensor,
-        adj_mat: Tensor,
+        adj: Tensor,
         mask: Tensor,
         return_inst_pred: bool = True
     ) -> Union[Tensor, tuple[Tensor, Tensor]]:
@@ -148,7 +147,7 @@ class SmABMIL(MILModel):
 
         Arguments:
             X (Tensor): Bag features of shape `(batch_size, bag_size, ...)`.
-            adj_mat (Tensor): Adjacency matrix of shape `(batch_size, bag_size, bag_size)`.
+            adj (Tensor): Adjacency matrix of shape `(batch_size, bag_size, bag_size)`.
             mask (Tensor): Mask of shape `(batch_size, bag_size)`.
             return_inst_pred (bool): If `True`, returns instance labels predictions, in addition to bag label predictions.
 
@@ -156,4 +155,4 @@ class SmABMIL(MILModel):
             Y_pred (Tensor): Bag label logits of shape `(batch_size,)`.
             y_inst_pred (Tensor): If `return_inst_pred=True`, returns instance labels predictions of shape `(batch_size, bag_size)`.
         """
-        return self.forward(X, adj_mat, mask, return_att=return_inst_pred)
+        return self.forward(X, adj, mask, return_att=return_inst_pred)

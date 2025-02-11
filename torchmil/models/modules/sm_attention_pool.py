@@ -81,7 +81,7 @@ class SmAttentionPool(torch.nn.Module):
     def forward(
             self, 
             X : Tensor,
-            adj_mat : Tensor,
+            adj : Tensor,
             mask : Tensor = None,
             return_att : bool = False
         ) -> tuple[Tensor, Tensor]:
@@ -90,7 +90,7 @@ class SmAttentionPool(torch.nn.Module):
 
         Arguments:
             X: Bag features of shape `(batch_size, bag_size, in_dim)`.
-            adj_mat: Adjacency matrix of shape `(batch_size, bag_size, bag_size)`.
+            adj: Adjacency matrix of shape `(batch_size, bag_size, bag_size)`.
             mask: Mask of shape `(batch_size, bag_size)`.
             return_att: If True, returns attention values (before normalization) in addition to `z`.
         
@@ -107,14 +107,14 @@ class SmAttentionPool(torch.nn.Module):
         mask = mask.unsqueeze(dim=-1) # (batch_size, bag_size, 1)
 
         if self.sm_pre:
-            X = self.sm(X, adj_mat) # (batch_size, bag_size, in_dim)
+            X = self.sm(X, adj) # (batch_size, bag_size, in_dim)
 
         H = self.proj1(X) # (batch_size, bag_size, att_dim)
         H = self.act_layer(H) # (batch_size, bag_size, att_dim)
 
         for layer in self.mlp:
             H = layer(H)
-            H = self.sm(H, adj_mat)
+            H = self.sm(H, adj)
             H = self.act_layer(H)
 
         f = self.proj2(H) # (batch_size, bag_size, 1)

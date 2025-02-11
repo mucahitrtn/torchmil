@@ -10,7 +10,7 @@ class TransformerProbSmoothABMIL(MILModel):
     def __init__(
         self,
         in_shape: tuple = None,
-        att_dim: int = 128,
+        pool_att_dim: int = 128,
         covar_mode: str = 'diag',
         n_samples_train: int = 1000,
         n_samples_test: int = 5000,
@@ -28,7 +28,7 @@ class TransformerProbSmoothABMIL(MILModel):
 
         Arguments:
             in_shape: Shape of input data expected by the feature extractor (excluding batch dimension). If not provided, it will be lazily initialized.
-            att_dim: Attention dimension.
+            pool_att_dim: Attention dimension.
             covar_mode: Covariance mode for the Gaussian prior. Possible values: 'diag', 'full'.
             n_samples_train: Number of samples for training.
             n_samples_test: Number of samples for testing.
@@ -63,7 +63,7 @@ class TransformerProbSmoothABMIL(MILModel):
 
         self.pool = ProbSmoothAttentionPool(
             in_dim=feat_dim,
-            att_dim=att_dim,
+            att_dim=pool_att_dim,
             covar_mode=covar_mode,
             n_samples_train=n_samples_train,
             n_samples_test=n_samples_test
@@ -73,8 +73,8 @@ class TransformerProbSmoothABMIL(MILModel):
     def forward(
         self,
         X: Tensor,
+        adj: Tensor,
         mask: Tensor = None,
-        adj_mat: Tensor = None,
         return_att: bool = False,
         return_samples: bool = False,
         return_kl_div: bool = False
@@ -85,7 +85,7 @@ class TransformerProbSmoothABMIL(MILModel):
         Arguments:
             X: Bag features of shape `(batch_size, bag_size, ...)`.
             mask: Mask of shape `(batch_size, bag_size)`.
-            adj_mat: Adjacency matrix of shape `(batch_size, bag_size, bag_size)`. Only required when `return_kl_div=True`.
+            adj: Adjacency matrix of shape `(batch_size, bag_size, bag_size)`. Only required when `return_kl_div=True`.
             return_att: If True, returns attention values (before normalization) in addition to `Y_pred`.
             return_samples: If True and `return_att=True`, the attention values returned are samples from the attention distribution.
             return_kl_div: If True, returns the KL divergence between the attention distribution and the prior distribution.
@@ -101,7 +101,7 @@ class TransformerProbSmoothABMIL(MILModel):
         X = self.transformer_encoder(X, mask)  # (batch_size, bag_size, feat_dim)
 
         out_pool = self.pool(
-            X, mask, adj_mat, return_att=return_att, return_kl_div=return_kl_div)
+            X, adj, mask, return_att=return_att, return_kl_div=return_kl_div)
 
         if return_kl_div:
             if return_att:
@@ -138,8 +138,8 @@ class TransformerProbSmoothABMIL(MILModel):
         self,
         Y: Tensor,
         X: Tensor,
-        adj_mat: Tensor,
-        mask: Tensor,
+        adj: Tensor,
+        mask: Tensor = None
     ) -> tuple[Tensor, dict]:
         """
         Compute loss given true bag labels.
@@ -155,7 +155,7 @@ class TransformerProbSmoothABMIL(MILModel):
         """
 
         Y_pred, kl_div = self.forward(
-            X, mask, adj_mat, return_att=False, return_samples=True, return_kl_div=True)  # (batch_size, n_samples)
+            X, adj, mask, return_att=False, return_samples=True, return_kl_div=True)  # (batch_size, n_samples)
         Y_pred_mean = Y_pred.mean(dim=-1)  # (batch_size,)
 
         Y = Y.unsqueeze(-1).expand(-1, Y_pred.shape[-1])
@@ -164,10 +164,10 @@ class TransformerProbSmoothABMIL(MILModel):
 
         return Y_pred_mean, {crit_name: crit_loss, 'KLDiv': kl_div}
 
-    @torch.no_grad()
     def predict(self,
         X: Tensor,
-        mask: Tensor,
+        adj: Tensor,
+        mask: Tensor = None,
         return_inst_pred: bool = True,
         return_samples: bool = False
     ) -> tuple[Tensor, Tensor]:
@@ -184,6 +184,5 @@ class TransformerProbSmoothABMIL(MILModel):
             Y_pred: Bag label logits of shape `(batch_size,)`.
             y_inst_pred: Only returned when `return_inst_pred=True`. Attention values (before normalization) of shape `(batch_size, bag_size)` if `return_samples=False`, else `(batch_size, bag_size, n_samples)`.
         """
-        Y_pred, att_val = self.forward(
-            X, mask, return_att=return_inst_pred, return_samples=return_samples)
+        Y_pred, att_val = self.forward(X, adj, mask, return_att=return_inst_pred, return_samples=return_samples)
         return Y_pred, att_val

@@ -96,6 +96,7 @@ class SmTransformerABMIL(MILModel):
     def forward(
         self,
         X: torch.Tensor,
+        adj: torch.Tensor,
         mask: torch.Tensor,
         return_att: bool = False
     ) -> tuple[torch.Tensor, torch.Tensor]:
@@ -104,6 +105,7 @@ class SmTransformerABMIL(MILModel):
 
         Arguments:
             X: Bag features of shape `(batch_size, bag_size, ...)`.
+            adj: Adjacency matrix of shape `(batch_size, bag_size, bag_size)`.
             mask: Mask of shape `(batch_size, bag_size)`.
             return_att: If True, returns attention values (before normalization) in addition to `Y_pred`.
 
@@ -114,9 +116,9 @@ class SmTransformerABMIL(MILModel):
 
         X = self.feat_ext(X) # (batch_size, bag_size, feat_dim)
 
-        Y = self.transformer_encoder(X, mask) # (batch_size, bag_size, feat_dim)
+        Y = self.transformer_encoder(X, mask=mask, adj=adj) # (batch_size, bag_size, feat_dim)
 
-        out_pool = self.pool(Y, mask, return_att=return_att)
+        out_pool = self.pool(Y, adj=adj, mask=mask, return_att=return_att)
         if return_att:
             Z, f = out_pool # Z: (batch_size, emb_dim), f: (batch_size, bag_size)
         else:
@@ -134,7 +136,8 @@ class SmTransformerABMIL(MILModel):
         self,
         Y: torch.Tensor,
         X: torch.Tensor,
-        mask: torch.Tensor
+        adj: torch.Tensor,
+        mask: torch.Tensor,
     ) -> tuple[torch.Tensor, dict]:
         """
         Compute loss given true bag labels.
@@ -143,23 +146,24 @@ class SmTransformerABMIL(MILModel):
             Y: Bag labels of shape `(batch_size,)`.
             X: Bag features of shape `(batch_size, bag_size, ...)`.
             mask: Mask of shape `(batch_size, bag_size)`.
+            adj: Adjacency matrix of shape `(batch_size, bag_size, bag_size)`.
 
         Returns:
             Y_pred: Bag label logits of shape `(batch_size,)`.
             loss_dict: Dictionary containing the loss value.
         """
 
-        Y_pred = self.forward(X, mask, return_att=False)
+        Y_pred = self.forward(X, mask=mask, adj=adj, return_att=False)
 
         crit_loss = self.criterion(Y_pred.float(), Y.float())
         crit_name = self.criterion.__class__.__name__
 
         return Y_pred, {crit_name: crit_loss}
 
-    @torch.no_grad()
     def predict(
         self,
         X: torch.Tensor,
+        adj: torch.Tensor,
         mask: torch.Tensor,
         return_inst_pred: bool = True
     ) -> tuple[torch.Tensor, torch.Tensor]:
@@ -169,13 +173,14 @@ class SmTransformerABMIL(MILModel):
         Arguments:
             X: Bag features of shape `(batch_size, bag_size, ...)`.
             mask: Mask of shape `(batch_size, bag_size)`.
+            adj: Adjacency matrix of shape `(batch_size, bag_size, bag_size)`.
             return_inst_pred: If `True`, returns instance labels predictions, in addition to bag label predictions.
 
         Returns:
             Y_pred: Bag label logits of shape `(batch_size,)`.
             y_inst_pred: If `return_inst_pred=True`, returns instance labels predictions of shape `(batch_size, bag_size)`.
         """
-        return self.forward(X, mask, return_att=return_inst_pred)
+        return self.forward(X, adj, mask, return_att=return_inst_pred)
         
 
 

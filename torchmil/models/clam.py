@@ -114,56 +114,6 @@ class CLAM_SB(MILModel):
         all_preds = torch.topk(logits, 1, dim = 1)[1] # (2 * k_sample,)
         instance_loss = self.inst_loss_fn(logits, all_targets)
         return instance_loss, all_preds, all_targets
-
-    # def inst_eval(
-    #     self, 
-    #     att : torch.Tensor,
-    #     emb : torch.Tensor,
-    #     classifier : torch.nn.Module
-    # ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-    #     """
-
-    #     Evaluate instance-level loss for in-the-class attention branch.
-
-    #     Arguments:
-    #         att: Attention values of shape `(batch_size, bag_size,)`.
-    #         emb: Embeddings of shape `(batch_size, bag_size, feat_dim)`.
-    #         classifier: Instance classifier.
-        
-    #     Returns:
-    #         instance_loss: Instance loss.
-    #         all_preds: Predicted instance labels of shape `(batch_size, 2 * k_sample,)`.
-    #         all_targets: Generated instance labels of shape `(batch_size, 2 * k_sample,)`.
-    #     """ 
-    #     device = att.device
-    #     batch_size, bag_size, feat_dim = emb.shape
-    #     k_sample = min(self.k_sample, bag_size)
-        
-    #     # Get top-k positive and negative indices for the entire batch
-    #     top_p_ids = torch.topk(att, k_sample, dim=1)[1] # (batch_size, k_sample)
-    #     top_n_ids = torch.topk(-att, k_sample, dim=1)[1] # (batch_size, k_sample)
-
-    #     # Get top-k positive and negative embeddings for the entire batch
-    #     top_p = torch.gather(emb, 1, top_p_ids.unsqueeze(-1).expand(-1, -1, feat_dim)) # (batch_size, k_sample, feat_dim)
-    #     top_n = torch.gather(emb, 1, top_n_ids.unsqueeze(-1).expand(-1, -1, feat_dim)) # (batch_size, k_sample, feat_dim)
-
-    #     # Create positive and negative targets for the entire batch
-    #     p_targets = self.create_positive_targets(k_sample, device) # (k_sample,)
-    #     n_targets = self.create_negative_targets(k_sample, device) # (k_sample,)
-    #     all_targets = torch.cat([p_targets, n_targets], dim=0).unsqueeze(0).expand(batch_size, -1)  # (batch_size, 2 * k_sample)
-
-
-    #     # Concatenate positive and negative embeddings for the entire batch
-    #     all_instances = torch.cat([top_p, top_n], dim=1) # (batch_size, 2 * k_sample, feat_dim)
-
-    #     # Get logits for the entire batch
-    #     logits = classifier(all_instances) # (batch_size, 2 * k_sample, 2)
-    #     all_preds = torch.topk(logits, 1, dim = 2)[1].squeeze(-1) # (batch_size, 2 * k_sample)
-
-    #     # Compute instance loss for the entire batch
-    #     instance_loss = self.inst_loss_fn(logits, all_targets) # (batch_size,)
-
-    #     return instance_loss, all_preds, all_targets
     
     def inst_eval_out(
             self, 
@@ -196,49 +146,6 @@ class CLAM_SB(MILModel):
         p_preds = torch.topk(logits, 1, dim = 1)[1] # (k_sample,)
         instance_loss = self.inst_loss_fn(logits, p_targets) # (k_sample,)
         return instance_loss, p_preds, p_targets
-
-    # def inst_eval_out(
-    #     self,
-    #     att : torch.Tensor,
-    #     emb : torch.Tensor,
-    #     classifier : torch.nn.Module
-    # ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-    #     """
-    #     Arguments:
-    #         att: Attention values of shape `(batch_size, bag_size,)`.
-    #         emb: Embeddings of shape `(batch_size, bag_size, feat_dim)`.
-    #         classifier: Instance classifier.
-        
-    #     Returns:
-    #         instance_loss: Instance loss.
-    #         p_preds: Predicted instance labels of shape `(batch_size, k_sample,)`.
-    #         p_targets: Generated instance labels of shape `(batch_size, k_sample,)`.
-    #     """
-
-    #     device = att.device
-    #     batch_size, bag_size, feat_dim = emb.shape
-    #     k_sample = min(self.k_sample, bag_size)
-
-    #     # Get top-k positive indices for the entire batch
-    #     top_p_ids = torch.topk(att, k_sample, dim=1)[1] # (batch_size, k_sample)
-
-    #     # Get top-k positive embeddings for the entire batch
-    #     top_p = torch.gather(emb, 1, top_p_ids.unsqueeze(-1).expand(-1, -1, feat_dim)) # (batch_size, k_sample, feat_dim)
-
-    #     # Create negative targets for the entire batch
-    #     p_targets = self.create_negative_targets(k_sample, device) # (k_sample,)
-
-    #     # Get logits for the entire batch
-    #     logits = classifier(top_p) # (batch_size, k_sample, 2)
-
-    #     # Get predicted instance labels for the entire batch
-    #     p_preds = torch.topk(logits, 1, dim = 2)[1].squeeze(-1) # (batch_size, k_sample)
-
-    #     # Compute instance loss for the entire batch
-    #     instance_loss = self.inst_loss_fn(logits, p_targets) # (batch_size,)
-
-    #     return instance_loss, p_preds, p_targets
-
 
     def compute_inst_loss(
         self, 
@@ -316,7 +223,7 @@ class CLAM_SB(MILModel):
     
     def compute_loss(
         self, 
-        labels : torch.Tensor, 
+        Y : torch.Tensor, 
         X : torch.Tensor,
         mask : torch.Tensor,
     ) -> tuple[torch.Tensor, dict]:
@@ -324,7 +231,7 @@ class CLAM_SB(MILModel):
         Compute loss given true bag labels.
 
         Arguments:
-            labels: Bag labels of shape `(batch_size,)`.
+            CLAM_SB: Bag labels of shape `(batch_size,)`.
             X: Bag features of shape `(batch_size, bag_size, ...)`.
             mask: Mask of shape `(batch_size, bag_size)`.
         
@@ -333,13 +240,12 @@ class CLAM_SB(MILModel):
             loss_dict: Dictionary containing the loss value.
         """
         Y_pred, att, emb = self.forward(X, mask, return_att = True, return_emb=True)
-        crit_loss = self.criterion(Y_pred.float(), labels.float())
+        crit_loss = self.criterion(Y_pred.float(), Y.float())
         crit_name = self.criterion.__class__.__name__
-        inst_loss = self.compute_inst_loss(att, emb, labels)
+        inst_loss = self.compute_inst_loss(att, emb, Y)
 
         return Y_pred, { crit_name: crit_loss, 'InstLoss' : inst_loss}
 
-    @torch.no_grad()
     def predict(
         self, 
         X : torch.Tensor, 

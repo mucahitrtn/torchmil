@@ -129,3 +129,5 @@ nav:
       - api/models/transformer_prob_smooth_abmil.md
       - api/models/smooth_abmil.md
       - api/models/clam.md
+      - api/models/dsmil.md
+      - api/models/transmil.md

@@ -1,4 +1,3 @@
-
 import torch
 
 from torch.nn.attention import SDPBackend
@@ -42,6 +41,7 @@ class TransformerEncoderLayer(torch.nn.Module):
             use_mlp: Whether to use feedforward layer.
             dropout: Dropout rate
         """
+        super(TransformerEncoderLayer, self).__init__()
         self.att_dim = att_dim
         self.in_dim = in_dim
         if self.in_dim is None:
@@ -128,6 +128,7 @@ class SmTransformerEncoderLayer(torch.nn.Module):
             sm_mode: Sm mode.
             sm_steps: Number of steps to approximate the exact Sm operator.
         """
+        super(SmTransformerEncoderLayer, self).__init__()
         if in_dim is None:
             in_dim = att_dim
         self.use_mlp = use_mlp
@@ -154,6 +155,7 @@ class SmTransformerEncoderLayer(torch.nn.Module):
     def forward(
         self,
         X: torch.Tensor,
+        adj: torch.Tensor = None,
         mask: torch.Tensor = None,
     ) -> torch.Tensor:
         """
@@ -161,6 +163,7 @@ class SmTransformerEncoderLayer(torch.nn.Module):
 
         Arguments:
             X: Input tensor of shape `(batch_size, bag_size, in_dim)`.
+            adj: Adjacency matrix of shape `(batch_size, bag_size, bag_size)`.
             mask: Mask tensor of shape `(batch_size, bag_size)`.
 
         Returns:
@@ -168,7 +171,7 @@ class SmTransformerEncoderLayer(torch.nn.Module):
         """
 
         # (batch_size, bag_size, in_dim)
-        Y = X + self.sm(self.mha_layer(self.norm1(X), mask=mask))
+        Y = X + self.sm(self.mha_layer(self.norm1(X), mask=mask), adj)
         if self.use_mlp:
             # (batch_size, bag_size, in_dim)
             Y = Y + self.mlp_layer(self.norm2(Y))
@@ -192,7 +195,7 @@ class Encoder(torch.nn.Module):
             layers: List of encoder layers.
             add_self: Whether to add input to output.
         """
-        super(TransformerEncoder, self).__init__()
+        super(Encoder, self).__init__()
         self.add_self = add_self
         self.layers = layers
 
@@ -200,6 +203,7 @@ class Encoder(torch.nn.Module):
         self,
         X: torch.Tensor,
         mask: torch.Tensor = None,
+        **kwargs
     ) -> torch.Tensor:
         """
         Forward method.
@@ -207,6 +211,7 @@ class Encoder(torch.nn.Module):
         Arguments:
             X: Input tensor of shape `(batch_size, bag_size, in_dim)`.
             mask: Mask tensor of shape `(batch_size, bag_size)`.
+            **kwargs: Additional arguments.
 
         Returns:
             Y: Output tensor of shape `(batch_size, bag_size, in_dim)`.        
@@ -214,7 +219,7 @@ class Encoder(torch.nn.Module):
 
         Y = X  # (batch_size, bag_size, in_dim)
         for layer in self.layers:
-            Y = layer(Y, mask=mask)
+            Y = layer(Y, mask=mask, **kwargs)
             if self.add_self:
                 Y = Y + X
         return Y
@@ -259,21 +264,21 @@ class TransformerEncoder(Encoder):
             use_mlp: Whether to use feedforward layer.
             add_self: Whether to add input to output.
             dropout: Dropout rate.        
-        """
+        """        
 
+        layers = torch.nn.ModuleList([TransformerEncoderLayer(
+            att_dim, in_dim, n_heads, use_mlp=use_mlp, dropout=dropout) for _ in range(n_layers)])
+
+        super(TransformerEncoder, self).__init__(layers, add_self=add_self)
+        
         if in_dim != att_dim:
             self.in_proj = torch.nn.Linear(in_dim, att_dim)
             self.out_proj = torch.nn.Linear(att_dim, in_dim)
         else:
             self.in_proj = torch.nn.Identity()
             self.out_proj = torch.nn.Identity()
-
-        layers = torch.nn.ModuleList([TransformerEncoderLayer(
-            att_dim, in_dim, n_heads, use_mlp=use_mlp, dropout=dropout) for _ in range(n_layers)])
-
+        
         self.norm = torch.nn.LayerNorm(att_dim)
-
-        super(TransformerEncoder, self).__init__(layers, add_self=add_self)
 
     def forward(
         self,
@@ -342,26 +347,27 @@ class SmTransformerEncoder(Encoder):
             dropout: Dropout rate.        
         """
 
-        if in_dim != att_dim:
-            self.in_proj = torch.nn.Linear(in_dim, att_dim)
-            self.out_proj = torch.nn.Linear(att_dim, in_dim)
-        else:
-            self.in_proj = torch.nn.Identity()
-            self.out_proj = torch.nn.Identity()
-
         layers = torch.nn.ModuleList([
             SmTransformerEncoderLayer(att_dim, in_dim, n_heads, use_mlp=use_mlp,
                                       dropout=dropout, sm_alpha=sm_alpha, sm_mode=sm_mode, sm_steps=sm_steps)
             for _ in range(n_layers)
         ])
 
+        super(SmTransformerEncoder, self).__init__(layers, add_self=add_self)
+
+        if in_dim != att_dim:
+            self.in_proj = torch.nn.Linear(in_dim, att_dim)
+            self.out_proj = torch.nn.Linear(att_dim, in_dim)
+        else:
+            self.in_proj = torch.nn.Identity()
+            self.out_proj = torch.nn.Identity()
         self.norm = torch.nn.LayerNorm(att_dim)
 
-        super(TransformerEncoder, self).__init__(layers, add_self=add_self)
 
     def forward(
         self,
         X: torch.Tensor,
+        adj: torch.Tensor = None,
         mask: torch.Tensor = None,
     ) -> torch.Tensor:
         """
@@ -369,6 +375,7 @@ class SmTransformerEncoder(Encoder):
 
         Arguments:
             X: Input tensor of shape `(batch_size, bag_size, in_dim)`.
+            adj: Adjacency matrix of shape `(batch_size, bag_size, bag_size)`.
             mask: Mask tensor of shape `(batch_size, bag_size)`.
 
         Returns:
@@ -376,7 +383,7 @@ class SmTransformerEncoder(Encoder):
         """
 
         X = self.in_proj(X)  # (batch_size, bag_size, att_dim)
-        Y = super().forward(X, mask=mask)
+        Y = super().forward(X, adj=adj, mask=mask)
         Y = self.norm(Y)
         Y = self.out_proj(Y)  # (batch_size, bag_size, in_dim)
 

@@ -122,8 +122,8 @@ class ProbSmoothAttentionPool(torch.nn.Module):
     def forward(
         self, 
         X : Tensor,
+        adj : Tensor,
         mask : Tensor = None,
-        adj_mat : Tensor = None,
         return_att : bool = False,
         return_attdist : bool = False,
         return_kl_div : bool = False
@@ -132,7 +132,7 @@ class ProbSmoothAttentionPool(torch.nn.Module):
         Arguments:
             X: Bag features of shape `(batch_size, bag_size, D)`.
             mask: Mask of shape `(batch_size, bag_size)`.
-            adj_mat: Adjacency matrix of shape `(batch_size, bag_size, bag_size)`. Only required when `return_kl_div=True`.
+            adj: Adjacency matrix of shape `(batch_size, bag_size, bag_size)`. Only required when `return_kl_div=True`.
             return_att: If True, returns a sample from the attention distribution `f` in addition to `z`.
             return_attdist: If True, returns the attention distribution (`mu_f`, `diag_Sigma_f`) in addition to `z`.
             return_kl_div: If True, returns the KL divergence between the attention distribution and the prior distribution.
@@ -152,9 +152,6 @@ class ProbSmoothAttentionPool(torch.nn.Module):
         
         batch_size = X.shape[0]
         bag_size = X.shape[1]
-
-        if adj_mat is None:
-            adj_mat = torch.eye(bag_size, device=X.device).unsqueeze(dim=0).repeat(batch_size, 1, 1) # (batch_size, bag_size, bag_size)
         
         if mask is None:
             mask = torch.ones(batch_size, bag_size, device=X.device) # (batch_size, bag_size)
@@ -172,7 +169,7 @@ class ProbSmoothAttentionPool(torch.nn.Module):
         z = torch.bmm(X.transpose(1,2), s) # (batch_size, d, n_samples)
 
         if return_kl_div:
-            kl_div = self._kl_div(mu_f, log_diag_Sigma_f, adj_mat) # ()
+            kl_div = self._kl_div(mu_f, log_diag_Sigma_f, adj) # ()
             if return_att:
                 return z, f, kl_div
             elif return_attdist:

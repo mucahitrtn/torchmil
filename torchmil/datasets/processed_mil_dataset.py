@@ -271,6 +271,10 @@ class ProcessedMILDataset(torch.utils.data.Dataset):
 
             self.loaded_bags[bag_name] = tensor_bag_dict
 
+        if tensor_bag_dict['X'].shape[0] != tensor_bag_dict['y_inst'].shape[0]:
+            print('a', bag_name, tensor_bag_dict['X'].shape, tensor_bag_dict['y_inst'].shape)
+            raise ValueError("Bag size and instance labels size must be the same.")
+
         return TensorDict(tensor_bag_dict)
 
     def get_bag_labels(self) -> list:

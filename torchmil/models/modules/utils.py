@@ -12,22 +12,27 @@ class LazyLinear(torch.nn.Module):
     def forward(self, x):
         return self.module(x)
 
-def masked_softmax(X, mask, dim=-1):
+def masked_softmax(
+    X : torch.Tensor,
+    mask : torch.Tensor,
+    ) -> torch.Tensor:
     """
     Compute masked softmax.
     
     Arguments:
-        X (Tensor): Input tensor of shape `(batch_size, bag_size, ...)`.
-        mask (Tensor): Mask of shape `(batch_size, bag_size)`.
+        X (Tensor): Input tensor of shape `(batch_size, N, ...)`.
+        mask (Tensor): Mask of shape `(batch_size, N)`.
     
     Returns:
-        Tensor: Masked softmax of shape `(batch_size, bag_size, ...)`.
+        Tensor: Masked softmax of shape `(batch_size, N, ...)`.
     """
 
-    exp_X = torch.exp(X)
-    masked_exp_X = exp_X * mask
-    sum_masked_exp_X = masked_exp_X.sum(dim=dim, keepdim=True)
-    return masked_exp_X / sum_masked_exp_X
+    while mask.dim() < X.dim():
+        mask = mask.unsqueeze(-1)
+        
+    X_masked = X.masked_fill(mask == 0, -float('inf'))
+
+    return torch.nn.functional.softmax(X_masked, dim=1)
 
 class MaskedSoftmax(torch.nn.Module):
     def __init__(self, dim=-1):
