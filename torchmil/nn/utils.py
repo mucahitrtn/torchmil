@@ -14,18 +14,21 @@ class LazyLinear(torch.nn.Module):
 
 def masked_softmax(
     X : torch.Tensor,
-    mask : torch.Tensor,
+    mask : torch.Tensor = None,
     ) -> torch.Tensor:
     """
     Compute masked softmax.
     
     Arguments:
         X (Tensor): Input tensor of shape `(batch_size, N, ...)`.
-        mask (Tensor): Mask of shape `(batch_size, N)`.
+        mask (Tensor): Mask of shape `(batch_size, N)`. If None, no masking is applied.
     
     Returns:
         Tensor: Masked softmax of shape `(batch_size, N, ...)`.
     """
+
+    if mask is None:
+        return torch.nn.functional.softmax(X, dim=1)
 
     while mask.dim() < X.dim():
         mask = mask.unsqueeze(-1)

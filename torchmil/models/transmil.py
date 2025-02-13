@@ -1,8 +1,9 @@
 import torch
 import numpy as np
 
-from torchmil.models.modules.utils import get_feat_dim
-from .modules import NystromTransformerLayer
+from torchmil.nn.utils import get_feat_dim
+from torchmil.nn import NystromTransformerLayer
+from torchmil.models import MILModel
 
 class PPEG(torch.nn.Module):
     """
@@ -31,7 +32,10 @@ class PPEG(torch.nn.Module):
         Arguments:
             x: Input tensor of shape `(batch_size, H*W+1, dim)`.
             H: Height of the grid.
-            W: Width of the grid.        
+            W: Width of the grid. 
+
+        Returns:
+            y: Output tensor of shape `(batch_size, H*W+1, dim)`.       
         """
         batch_size, _, dim = x.shape
         cls_token, feat_token = x[:, 0], x[:, 1:] # (batch_size, dim), (batch_size, H*W, dim)
@@ -45,21 +49,21 @@ class PPEG(torch.nn.Module):
         return y
 
 
-class TransMIL(torch.nn.Module):
+class TransMIL(MILModel):
     def __init__(
             self, 
             in_shape: tuple,
-            att_dim : int,
-            n_heads = 4,
-            n_landmarks = None,
-            pinv_iterations = 6,
-            residual = True,
-            dropout = 0.0,
-            use_mlp = False,
-            feat_ext: torch.nn.Module = torch.nn.Identity(),
+            att_dim : int = 512,
+            n_heads : int = 4,
+            n_landmarks : int = None,
+            pinv_iterations : int = 6,
+            residual : bool = True,
+            dropout : float = 0.0,
+            use_mlp : bool = False,
+            feat_ext : torch.nn.Module = torch.nn.Identity(),
             criterion : torch.nn.Module = torch.nn.BCEWithLogitsLoss(),
         ):
-        """
+        r"""
         Arguments:
             in_shape: Shape of input data expected by the feature extractor (excluding batch dimension).
             att_dim: Embedding dimension.
@@ -171,7 +175,7 @@ class TransMIL(torch.nn.Module):
         Compute loss given true bag labels.
 
         Arguments:
-            labels: Bag labels of shape `(batch_size,)`.
+            Y: Bag labels of shape `(batch_size,)`.
             X: Bag features of shape `(batch_size, bag_size, ...)`.
 
         Returns:

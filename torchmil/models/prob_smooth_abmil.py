@@ -2,9 +2,7 @@ import torch
 from torch import Tensor
 
 from .mil_model import MILModel
-from torchmil.models.modules import ProbSmoothAttentionPool
-from torchmil.models.modules.utils import get_feat_dim, LazyLinear
-
+from torchmil.nn import ProbSmoothAttentionPool, get_feat_dim, LazyLinear
 
 class ProbSmoothABMIL(MILModel):
     def __init__(

@@ -1,10 +1,7 @@
-from typing import Union
-
 import torch
 from torch import Tensor
 
-from torchmil.models.modules.utils import masked_softmax
-from .utils import LazyLinear
+from torchmil.nn import masked_softmax, LazyLinear
 
 
 class AttentionPool(torch.nn.Module):
@@ -104,7 +101,7 @@ class AttentionPool(torch.nn.Module):
 
         f = self.fc2(H) # (batch_size, bag_size, 1)
 
-        s = masked_softmax(f, mask, dim=1)
+        s = masked_softmax(f, mask) # (batch_size, bag_size, 1) 
         z = torch.bmm(X.transpose(1,2), s).squeeze(dim=-1) # (batch_size, D)
 
         if return_att:

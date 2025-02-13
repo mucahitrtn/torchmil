@@ -2,9 +2,8 @@ import torch
 
 from .mil_model import MILModel
 
-from torchmil.models.modules import AttentionPool, TransformerEncoder
-
-from torchmil.models.modules.utils import get_feat_dim
+from torchmil.nn import AttentionPool, TransformerEncoder
+from torchmil.nn.utils import get_feat_dim
 
 class TransformerABMIL(MILModel):
     r"""
@@ -13,7 +12,7 @@ class TransformerABMIL(MILModel):
     Given an input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times P}$, 
     this model optionally transforms the instance features using a feature extractor, 
 
-    $$ \mathbf{X} = \text{FeatExt}(\mathbf{X}) \in \mathbb{R}^{N \times D}, $$
+    $$ \mathbf{X} = \text{FeatExt}(\mathbf{X}) \in \mathbb{R}^{N \times D}. $$
 
     Then, it transforms the instance features using a transformer encoder, 
 
@@ -26,7 +25,7 @@ class TransformerABMIL(MILModel):
     where $\mathbf{f} = \operatorname{MLP}(\mathbf{X}) \in \mathbb{R}^{N}$ are the attention values and $s_n$ is the normalized attention score for the $n$-th instance.
     The bag representation $\mathbf{z}$ is then fed into a classifier (one linear layer) to predict the bag label.
 
-    See [AttentionPool](modules/attention_pool.md) for more details on the attention-based pooling, and [TransformerEncoder](modules/transformer_encoder.md) for more details on the transformer encoder.
+    See [AttentionPool](../nn/attention_pool.md) for more details on the attention-based pooling, and [TransformerEncoder](../nn/transformer.md) for more details on the transformer encoder.
 
     """
     def __init__(
@@ -36,7 +35,7 @@ class TransformerABMIL(MILModel):
         pool_act : str = 'tanh',
         pool_gated : bool = False,
         feat_ext: torch.nn.Module = torch.nn.Identity(),
-        transf_att_dim : int = None, 
+        transf_att_dim : int = 512, 
         transf_n_layers : int = 1,
         transf_n_heads : int = 8,
         transf_use_mlp : bool = True,

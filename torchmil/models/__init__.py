@@ -19,8 +19,10 @@ from .transformer_prob_smooth_abmil import TransformerProbSmoothABMIL as Transfo
 
 from .clam import CLAM_SB as CLAM_SB
 from .dsmil import DSMIL as DSMIL
+from .dftdmil import DFTDMIL as DFTDMIL
 
 from .transmil import TransMIL as TransMIL
+from .camil import CAMIL as CAMIL
 
 
 # from .TransformerABMIL import *

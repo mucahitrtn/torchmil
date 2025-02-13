@@ -2,8 +2,8 @@ import torch
 from torch import Tensor
 
 from .mil_model import MILModel
-from torchmil.models.modules import AttentionPool, LazyLinear
-from torchmil.models.modules.utils import get_feat_dim
+from torchmil.nn import AttentionPool, LazyLinear
+from torchmil.nn.utils import get_feat_dim
 
 
 class ABMIL(MILModel):
@@ -22,7 +22,7 @@ class ABMIL(MILModel):
     where $\mathbf{f} = \operatorname{MLP}(\mathbf{X}) \in \mathbb{R}^{N}$ are the attention values and $s_n$ is the normalized attention score for the $n$-th instance.
     The bag representation $\mathbf{z}$ is then fed into a classifier (one linear layer) to predict the bag label.
 
-    See [AttentionPool](modules/attention_pool.md) for more details on the attention-based pooling.
+    See [AttentionPool](../nn/attention_pool.md) for more details on the attention-based pooling.
     """
 
     def __init__(

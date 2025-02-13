@@ -3,8 +3,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 
-from .mil_model import MILModel
-from torchmil.models.modules.utils import get_feat_dim, masked_softmax
+from torchmil.models.mil_model import MILModel
+from torchmil.nn.utils import get_feat_dim, masked_softmax
 
 def batched_index_select(
         input : torch.Tensor,
@@ -46,9 +46,9 @@ class DSMIL(MILModel):
             in_shape: Shape of input data expected by the feature extractor (excluding batch dimension).
             att_dim: Attention dimension.
             n_classes: Number of classes.
-            dropout_v: Dropout rate.
             nonlinear_q: If True, apply nonlinearity to the query.
             nonlinear_v: If True, apply nonlinearity to the value.
+            dropout: Dropout rate.
             feat_ext: Feature extractor.
             criterion: Loss function. By default, Binary Cross-Entropy loss from logits.
         """

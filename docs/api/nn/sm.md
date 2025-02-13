@@ -1,17 +1,17 @@
 # <tt>Sm</tt> operator
-::: torchmil.models.modules.Sm
+::: torchmil.nn.Sm
     options:
         members:
         - __init__
         - forward
 -------------------------
-::: torchmil.models.modules.ApproxSm
+::: torchmil.nn.ApproxSm
     options:
         members:
         - __init__
         - forward
 -------------------------
-::: torchmil.models.modules.ExactSm
+::: torchmil.nn.ExactSm
     options:
         members:
         - __init__

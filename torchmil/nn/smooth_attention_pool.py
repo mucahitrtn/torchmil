@@ -1,7 +1,7 @@
 import torch
 from torch import Tensor
 
-from .utils import masked_softmax, LazyLinear
+from torchmil.nn.utils import masked_softmax, LazyLinear
 
 class ProbSmoothAttentionPool(torch.nn.Module):
     def __init__(

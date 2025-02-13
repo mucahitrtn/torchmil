@@ -1,0 +1,182 @@
+import torch
+import numpy as np
+
+from torchmil.models import MILModel
+from torchmil.nn import AttentionPool, LazyLinear
+from torchmil.nn.utils import get_feat_dim
+
+class DFTDMIL(MILModel):
+    def __init__(
+        self, 
+        in_shape: tuple = None,
+        att_dim: int = 128,
+        n_groups : int = 8,
+        distill_mode : str = 'maxmin',
+        feat_ext: torch.nn.Module = torch.nn.Identity(),
+        criterion: torch.nn.Module = torch.nn.BCEWithLogitsLoss()
+    ):
+        super(DFTDMIL, self).__init__()
+        self.feat_ext = feat_ext
+        self.criterion = criterion
+        self.n_groups = n_groups
+        self.distill_mode = distill_mode
+
+        if in_shape is not None:
+            feat_dim = get_feat_dim(feat_ext, in_shape)
+        else:
+            feat_dim = None
+
+        self.attention_pool = AttentionPool(in_dim = feat_dim, att_dim = att_dim)
+        self.classifier = LazyLinear(feat_dim, 1)
+
+        self.u_attention_pool = AttentionPool(in_dim = feat_dim, att_dim = att_dim)
+        self.u_classifier = LazyLinear(feat_dim, 1)
+    
+    def _cam_1d(self, classifier, features):
+        tweight = list(classifier.parameters())[-2]
+        cam_maps = torch.einsum('bgf,cf->bcg', [features, tweight])
+        return cam_maps
+
+    def forward(
+        self, 
+        X : torch.Tensor,
+        mask : torch.Tensor = None,
+        return_pseudo_pred : bool = False,
+        return_inst_cam : bool = False
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        """
+        Forward pass.
+
+        Arguments:
+            X: Bag features of shape `(batch_size, bag_size, ...)`.
+            mask: Mask of shape `(batch_size, bag_size)`.
+            return_pseudo_pred: If True, returns pseudo label logits in addition to `Y_pred`.
+            return_inst_cam: If True, returns instance-level CAM values in addition to `Y_pred`.
+        
+        Returns:
+            Y_pred: Bag label logits of shape `(batch_size,)`.
+            inst_cam: Only returned when `return_inst_cam=True`. Instance-level CAM values of shape (batch_size, bag_size).
+        """
+
+        batch_size = X.size(0)
+        bag_size = X.size(1)
+
+        if bag_size < self.n_groups:
+            n_groups = bag_size
+        else:
+            n_groups = self.n_groups
+
+        bag_index = np.arange(0, bag_size)
+        np.random.shuffle(bag_index)
+        bag_chunks = np.array_split(bag_index, n_groups)
+
+        X = self.feat_ext(X) # (batch_size, bag_size, feat_dim)
+        feat_dim = X.size(-1)
+
+        pseudo_pred_list = []
+        pseudo_feat_list = []
+        inst_cam_list = []
+        for bag_chunk in bag_chunks:
+            X_chunk = X[:, bag_chunk, :]
+            mask_chunk = mask[:, bag_chunk] if mask is not None else None
+            chunk_size = X_chunk.size(1) 
+
+            z = self.attention_pool(X_chunk, mask_chunk) # (batch_size, feat_dim), [batch_size, chunk_size)
+
+            Y_pred = self.classifier(z) # (batch_size, 1]
+            pseudo_pred_list.append(Y_pred)
+
+            inst_cam = self._cam_1d(self.classifier, X_chunk) # (batch_size, 1, chunk_size)
+            inst_cam = inst_cam.squeeze(1) # (batch_size, chunk_size)
+            inst_cam_list.append(inst_cam)
+
+            _, sort_idx = torch.sort(inst_cam, 1, descending=True) # (batch_size, chunk_size), [batch_size, chunk_size)
+            topk_idx_max = sort_idx[:, :chunk_size].long() # (batch_size, chunk_size)
+            topk_idx_min = sort_idx[:, -chunk_size:].long() # (batch_size, chunk_size)
+            topk_idx = torch.cat([topk_idx_max, topk_idx_min], dim=1) # (batch_size, 2*chunk_size)
+
+            if self.distill_mode == 'maxmin':
+                index = topk_idx.unsqueeze(-1).expand(-1, -1, feat_dim) # (batch_size, 2*chunk_size, feat_dim)
+                pseudo_feat = torch.gather(X_chunk, 1, index) # (batch_size, 2*chunk_size, feat_dim)
+            elif self.distill_mode == 'max':
+                index = topk_idx_max.unsqueeze(-1).expand(-1, -1, feat_dim) # (batch_size, chunk_size, feat_dim)
+                pseudo_feat = torch.gather(X_chunk, 1, index) # (batch_size, chunk_size, feat_dim)
+            elif self.distill_mode == 'afs':
+                pseudo_feat = z.unsqueeze(1) # (batch_size, 1, feat_dim)
+
+            pseudo_feat_list.append(pseudo_feat)
+        
+        pseudo_pred = torch.cat(pseudo_pred_list, dim=1) # (batch_size, n_groups]
+        pseudo_feat = torch.cat(pseudo_feat_list, dim=1) # (batch_size, n_groups, k, feat_dim); k = 2*chunk_size or chunk_size or 1
+        pseudo_feat = pseudo_feat.view(batch_size, -1, feat_dim) # (batch_size, n_groups*k, feat_dim)
+        
+        pseudo_z = self.u_attention_pool(pseudo_feat) # (batch_size, feat_dim)
+        Y_pred = self.u_classifier(pseudo_z) # (batch_size, 1]
+        Y_pred = Y_pred.squeeze(-1) # (batch_size,]
+
+        if return_inst_cam:
+            inst_cam = torch.cat(inst_cam_list, dim=1) # (batch_size, bag_size)
+            
+            inst_cam_reorder = torch.zeros_like(inst_cam)
+            bag_chunks_idx = np.concatenate(bag_chunks)
+            inst_cam_reorder[:, bag_chunks_idx] = inst_cam
+            inst_cam = inst_cam_reorder
+
+            if return_pseudo_pred:
+                return Y_pred, pseudo_pred, inst_cam
+            else:
+                return Y_pred, inst_cam
+        else:
+            if return_pseudo_pred:
+                return Y_pred, pseudo_pred
+            else:
+                return Y_pred
+    
+    def compute_loss(
+        self, 
+        Y : torch.Tensor,
+        X : torch.Tensor,
+        mask : torch.Tensor = None,
+    ) -> tuple[torch.Tensor, dict]:
+        """
+        Compute loss given true bag labels.
+
+        Arguments:
+            Y: Bag labels of shape `(batch_size,)`.
+            X: Bag features of shape `(batch_size, bag_size, ...)`.
+            mask: Mask of shape `(batch_size, bag_size)`.
+
+        Returns:
+            Y_pred: Bag label logits of shape `(batch_size,)`.
+            loss_dict: Dictionary containing the loss value.
+        """
+        Y_pred, pseudo_pred = self.forward(X, mask, return_pseudo_pred=True) # (batch_size,], [batch_size, n_groups]
+        n_groups = pseudo_pred.size(1)
+        crit_name = self.criterion.__class__.__name__
+        crit_loss_t1 = self.criterion(Y_pred, Y.float())
+        Y_repeat = Y.unsqueeze(1).repeat(1, n_groups) # (batch_size, num_groups]
+        crit_loss_t2 = self.criterion(pseudo_pred, Y_repeat.float()).mean() 
+        return Y_pred, { f'{crit_name}_t1': crit_loss_t1, f'{crit_name}_t2': crit_loss_t2 }
+    
+    def predict(
+        self, 
+        X : torch.Tensor,
+        mask : torch.Tensor = None,
+        return_inst_pred : bool = True,
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        """ 
+        Predict bag and (optionally) instance labels.
+
+        Arguments:
+            X: Bag features of shape `(batch_size, bag_size, ...)`.
+            mask: Mask of shape `(batch_size, bag_size)`.
+            return_inst_pred: If `True`, returns instance labels predictions, in addition to bag label predictions.
+
+        Returns:
+            Y_pred: Bag label logits of shape `(batch_size,)`.
+            y_inst_pred: If `return_inst_pred=True`, returns instance labels predictions of shape `(batch_size, bag_size)`.
+        """
+        return self.forward(X, mask, return_inst_cam=return_inst_pred)
+
+
+

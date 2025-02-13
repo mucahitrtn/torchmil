@@ -1,13 +1,12 @@
 from typing import Union
 
 import torch
-from torch import Tensor
 
-from .mil_model import MILModel
+from torchmil.models.mil_model import MILModel
 
-from torchmil.models.modules import SmAttentionPool, LazyLinear
+from torchmil.nn import SmAttentionPool, LazyLinear
 
-from torchmil.models.modules.utils import get_feat_dim
+from torchmil.nn.utils import get_feat_dim
 
 class SmABMIL(MILModel):
     """
@@ -71,23 +70,23 @@ class SmABMIL(MILModel):
 
     def forward(
         self,
-        X: Tensor,
-        adj: Tensor,
-        mask: Tensor,
+        X: torch.Tensor,
+        adj: torch.Tensor,
+        mask: torch.Tensor,
         return_att: bool = False
-    ) -> Union[Tensor, tuple[Tensor, Tensor]]:
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Forward pass.
 
         Arguments:
-            X (Tensor): Bag features of shape `(batch_size, bag_size, ...)`.
-            adj (Tensor): Adjacency matrix of shape `(batch_size, bag_size, bag_size)`.
-            mask (Tensor): Mask of shape `(batch_size, bag_size)`.
-            return_att (bool): If True, returns attention values (before normalization) in addition to `Y_pred`.
+            X: Bag features of shape `(batch_size, bag_size, ...)`.
+            adj: Adjacency matrix of shape `(batch_size, bag_size, bag_size)`.
+            mask: Mask of shape `(batch_size, bag_size)`.
+            return_att: If True, returns attention values (before normalization) in addition to `Y_pred`.
 
         Returns:
-            Y_pred (Tensor): Bag label logits of shape `(batch_size,)`.
-            att (Tensor): Only returned when `return_att=True`. Attention values (before normalization) of shape (batch_size, bag_size)..
+            Y_pred: Bag label logits of shape `(batch_size,)`.
+            att: Only returned when `return_att=True`. Attention values (before normalization) of shape (batch_size, bag_size).
         """
 
         X = self.feat_ext(X)  # (batch_size, bag_size, feat_dim)
@@ -109,23 +108,23 @@ class SmABMIL(MILModel):
 
     def compute_loss(
         self,
-        Y: Tensor,
-        X: Tensor,
-        adj: Tensor,
-        mask: Tensor
-    ) -> tuple[Tensor, dict]:
+        Y: torch.Tensor,
+        X: torch.Tensor,
+        adj: torch.Tensor,
+        mask: torch.Tensor
+    ) -> tuple[torch.Tensor, dict]:
         """
         Compute loss given true bag labels.
 
         Arguments:
-            Y (Tensor): Bag labels of shape `(batch_size,)`.
-            X (Tensor): Bag features of shape `(batch_size, bag_size, ...)`.
-            adj (Tensor): Adjacency matrix of shape `(batch_size, bag_size, bag_size)`.
-            mask (Tensor): Mask of shape `(batch_size, bag_size)`.
+            Y: Bag labels of shape `(batch_size,)`.
+            X: Bag features of shape `(batch_size, bag_size, ...)`.
+            adj: Adjacency matrix of shape `(batch_size, bag_size, bag_size)`.
+            mask: Mask of shape `(batch_size, bag_size)`.
 
         Returns:
-            Y_pred (Tensor): Bag label logits of shape `(batch_size,)`.
-            loss_dict (dict): Dictionary containing the loss value.
+            Y_pred: Bag label logits of shape `(batch_size,)`.
+            loss_dict: Dictionary containing the loss value.
         """
 
         Y_pred = self.forward(X, adj, mask, return_att=False)
@@ -137,22 +136,22 @@ class SmABMIL(MILModel):
 
     def predict(
         self,
-        X: Tensor,
-        adj: Tensor,
-        mask: Tensor,
+        X: torch.Tensor,
+        adj: torch.Tensor,
+        mask: torch.Tensor,
         return_inst_pred: bool = True
-    ) -> Union[Tensor, tuple[Tensor, Tensor]]:
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Predict bag and (optionally) instance labels.
 
         Arguments:
-            X (Tensor): Bag features of shape `(batch_size, bag_size, ...)`.
-            adj (Tensor): Adjacency matrix of shape `(batch_size, bag_size, bag_size)`.
-            mask (Tensor): Mask of shape `(batch_size, bag_size)`.
+            X: Bag features of shape `(batch_size, bag_size, ...)`.
+            adj: Adjacency matrix of shape `(batch_size, bag_size, bag_size)`.
+            mask: Mask of shape `(batch_size, bag_size)`.
             return_inst_pred (bool): If `True`, returns instance labels predictions, in addition to bag label predictions.
 
         Returns:
-            Y_pred (Tensor): Bag label logits of shape `(batch_size,)`.
-            y_inst_pred (Tensor): If `return_inst_pred=True`, returns instance labels predictions of shape `(batch_size, bag_size)`.
+            Y_pred: Bag label logits of shape `(batch_size,)`.
+            y_inst_pred: If `return_inst_pred=True`, returns instance labels predictions of shape `(batch_size, bag_size)`.
         """
         return self.forward(X, adj, mask, return_att=return_inst_pred)

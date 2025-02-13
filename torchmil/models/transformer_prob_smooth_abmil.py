@@ -1,9 +1,9 @@
 import torch
 from torch import Tensor
 
-from .mil_model import MILModel
-from torchmil.models.modules import ProbSmoothAttentionPool,TransformerEncoder
-from torchmil.models.modules.utils import get_feat_dim, LazyLinear
+from torchmil.models.mil_model import MILModel
+from torchmil.nn import ProbSmoothAttentionPool,TransformerEncoder
+from torchmil.nn.utils import get_feat_dim, LazyLinear
 
 
 class TransformerProbSmoothABMIL(MILModel):
@@ -15,7 +15,7 @@ class TransformerProbSmoothABMIL(MILModel):
         n_samples_train: int = 1000,
         n_samples_test: int = 5000,
         feat_ext: torch.nn.Module = torch.nn.Identity(),
-        transf_att_dim : int = None, 
+        transf_att_dim : int = 512, 
         transf_n_layers : int = 1,
         transf_n_heads : int = 8,
         transf_use_mlp : bool = True,

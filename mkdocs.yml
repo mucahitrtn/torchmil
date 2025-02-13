@@ -112,22 +112,28 @@ nav:
       - api/datasets/toy_dataset.md
       - api/datasets/wsi_dataset.md
       - api/datasets/ctscan_dataset.md
+    - <tt>torchmil.nn</tt>:
+      - api/nn/index.md
+      - api/nn/attention_pool.md
+      - Transformer:
+        - api/nn/transformer/index.md
+        - api/nn/transformer/conventional_transformer.md
+        - api/nn/transformer/nystrom_transformer.md
+        - api/nn/transformer/sm_transformer.md
+      - api/nn/sm.md
+      - api/nn/multihead_self_attention.md
     - <tt>torchmil.models</tt>:
       - api/models/index.md
-      - Modules:
-          - api/models/modules/index.md
-          - api/models/modules/attention_pool.md
-          - api/models/modules/transformer_encoder.md
-          - api/models/modules/sm.md
-          - api/models/modules/self_attention.md
       - api/models/mil_model.md
       - api/models/abmil.md
-      - api/models/transformer_abmil.md
+      - api/models/camil.md
+      - api/models/clam.md
+      - api/models/dftdmil.md
+      - api/models/dsmil.md
+      - api/models/prob_smooth_abmil.md
       - api/models/sm_abmil.md
       - api/models/sm_transformer_abmil.md
-      - api/models/prob_smooth_abmil.md
-      - api/models/transformer_prob_smooth_abmil.md
       - api/models/smooth_abmil.md
-      - api/models/clam.md
-      - api/models/dsmil.md
+      - api/models/transformer_abmil.md
+      - api/models/transformer_prob_smooth_abmil.md
       - api/models/transmil.md

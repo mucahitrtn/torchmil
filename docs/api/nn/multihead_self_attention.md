@@ -1,5 +1,5 @@
-# Self Attention
-::: torchmil.models.modules.MultiheadSelfAttention
+# Multihead Self-Attention
+::: torchmil.nn.MultiheadSelfAttention
     options:
         members:
             - __init__

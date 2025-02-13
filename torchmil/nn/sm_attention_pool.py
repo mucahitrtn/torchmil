@@ -3,8 +3,8 @@ from typing import Union
 import torch
 from torch import Tensor
 
-from .utils import masked_softmax, LazyLinear
-from .sm import Sm
+from torchmil.nn.utils import masked_softmax, LazyLinear
+from torchmil.nn.sm import Sm
 
 class SmAttentionPool(torch.nn.Module):
     """

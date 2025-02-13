@@ -4,9 +4,9 @@ import torch
 
 from .mil_model import MILModel
 
-from torchmil.models.modules import SmAttentionPool, SmTransformerEncoder
+from torchmil.nn import SmAttentionPool, SmTransformerEncoder
 
-from torchmil.models.modules.utils import get_feat_dim
+from torchmil.nn.utils import get_feat_dim
 
 class SmTransformerABMIL(MILModel):
     """
@@ -25,7 +25,7 @@ class SmTransformerABMIL(MILModel):
         pool_sm_post : bool = False,
         pool_sm_spectral_norm : bool = False,
         feat_ext: torch.nn.Module = torch.nn.Identity(),
-        transf_att_dim : int = None, 
+        transf_att_dim : int = 512, 
         transf_n_layers : int = 1,
         transf_n_heads : int = 4,
         transf_use_mlp : bool = True,
