@@ -8,7 +8,7 @@ from .utils import (
 
 from .attention_pool import AttentionPool as AttentionPool
 from .sm_attention_pool import SmAttentionPool as SmAttentionPool
-from .smooth_attention_pool import (
+from .prob_smooth_attention_pool import (
     ProbSmoothAttentionPool as ProbSmoothAttentionPool
 )
 from .mean_pool import MeanPool as MeanPool
@@ -21,15 +21,18 @@ from .sm import (
 )
 
 from .self_attention import MultiheadSelfAttention as MultiheadSelfAttention
-from .transformer_encoder import (
+
+from .transformers import (
     TransformerEncoder as TransformerEncoder,
     SmTransformerEncoder as SmTransformerEncoder,
     NystromTransformerEncoder as NystromTransformerEncoder,
-    TransformerEncoderLayer as TransformerEncoderLayer,
-    SmTransformerEncoderLayer as SmTransformerEncoderLayer,
+    TransformerLayer as TransformerLayer,
+    SmTransformerLayer as SmTransformerLayer,
     NystromTransformerLayer as NystromTransformerLayer
 )
 
+from .gcn_conv import GCNConv as GCNConv
+from .deepgcn import DeepGCNLayer as DeepGCNLayer
 
 
 

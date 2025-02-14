@@ -164,7 +164,7 @@ class ProbSmoothAttentionPool(torch.nn.Module):
         # sample from q(f)
         f = self._sample_f(mu_f, log_diag_Sigma_f, n_samples) # (batch_size, bag_size, n_samples)
 
-        s = masked_softmax(f, mask, dim=1) # (batch_size, bag_size, n_samples)
+        s = masked_softmax(f, mask) # (batch_size, bag_size, n_samples)
 
         z = torch.bmm(X.transpose(1,2), s) # (batch_size, d, n_samples)
 

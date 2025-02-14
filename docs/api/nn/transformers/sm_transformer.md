@@ -1,13 +1,13 @@
-# Conventional Transformer
+# Sm Transformer
 
 ---
-::: torchmil.nn.TransformerEncoder
+::: torchmil.nn.SmTransformerEncoder
     options:
         members:
         - __init__
         - forward
 ---
-::: torchmil.nn.TransformerEncoderLayer
+::: torchmil.nn.SmTransformerLayer
     options:
         members:
         - __init__

@@ -5,42 +5,20 @@ from .mil_model import MILModel
 from torchmil.nn import AttentionPool, TransformerEncoder
 from torchmil.nn.utils import get_feat_dim
 
-class TransformerABMIL(MILModel):
+class GTP(MILModel):
     r"""
-    Transformer Attention-based Multiple Instance Learning model.
-
-    Given an input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times P}$, 
-    this model optionally transforms the instance features using a feature extractor, 
-
-    $$ \mathbf{X} = \text{FeatExt}(\mathbf{X}) \in \mathbb{R}^{N \times D}. $$
-
-    Then, it transforms the instance features using a transformer encoder, 
-
-    $$ \mathbf{X} = \text{TransformerEncoder}(\mathbf{X}) \in \mathbb{R}^{N \times D}, $$
-
-    and finally it aggregates the instance features into a bag representation $\mathbf{z} \in \mathbb{R}^{D}$ using the attention-based pooling, 
-
-    $$ \mathbf{z} = \mathbf{X}^\top \text{Softmax}(\mathbf{f}) = \sum_{n=1}^N s_n \mathbf{x}_n, $$
-
-    where $\mathbf{f} = \operatorname{MLP}(\mathbf{X}) \in \mathbb{R}^{N}$ are the attention values and $s_n$ is the normalized attention score for the $n$-th instance.
-    The bag representation $\mathbf{z}$ is then fed into a classifier (one linear layer) to predict the bag label.
-
-    See [AttentionPool](../nn/attention_pool.md) for more details on the attention-based pooling, and [TransformerEncoder](../nn/transformers/conventional_transformer.md) for more details on the transformer encoder.
-
     """
     def __init__(
         self,
         in_shape : tuple,
-        pool_att_dim : int = 128,
-        pool_act : str = 'tanh',
-        pool_gated : bool = False,
+        att_dim : int = 512,
+        n_clusters : int = 100,
+        n_layers : int = 1,
+        n_heads : int = 8,
+        use_mlp : bool = True,
+        add_self : bool = True,
+        dropout : float = 0.0,
         feat_ext: torch.nn.Module = torch.nn.Identity(),
-        transf_att_dim : int = 512, 
-        transf_n_layers : int = 1,
-        transf_n_heads : int = 8,
-        transf_use_mlp : bool = True,
-        transf_add_self : bool = True,
-        transf_dropout : float = 0.0,
         criterion: torch.nn.Module = torch.nn.BCEWithLogitsLoss(),
         ) -> None:
         """
@@ -52,12 +30,12 @@ class TransformerABMIL(MILModel):
             pool_act: Activation function for pooling. Possible values: 'tanh', 'relu', 'gelu'.
             pool_gated: If True, use gated attention in the attention pooling.
             feat_ext: Feature extractor.
-            transf_att_dim: Attention dimension for transformer encoder.
-            transf_n_layers: Number of layers in transformer encoder.
-            transf_n_heads: Number of heads in transformer encoder.
-            transf_use_mlp: Whether to use MLP in transformer encoder.
-            transf_add_self: Whether to add input to output in transformer encoder.
-            transf_dropout: Dropout rate in transformer encoder.
+            att_dim: Attention dimension for transformer encoder.
+            n_layers: Number of layers in transformer encoder.
+            n_heads: Number of heads in transformer encoder.
+            use_mlp: Whether to use MLP in transformer encoder.
+            add_self: Whether to add input to output in transformer encoder.
+            dropout: Dropout rate in transformer encoder.
             criterion: Loss function. By default, Binary Cross-Entropy loss from logits for binary classification.
         """
         super().__init__()
@@ -65,17 +43,18 @@ class TransformerABMIL(MILModel):
 
         self.feat_ext = feat_ext
         feat_dim = get_feat_dim(feat_ext, in_shape)
+
+        self.cls_token = torch.nn.Parameter(torch.zeros(1, 1, feat_dim), requires_grad=True)
         self.transformer_encoder = TransformerEncoder(
             in_dim=feat_dim, 
-            att_dim=transf_att_dim, 
-            n_layers=transf_n_layers, 
-            n_heads=transf_n_heads, 
-            use_mlp=transf_use_mlp,
-            add_self=transf_add_self, 
-            dropout=transf_dropout
+            att_dim=att_dim, 
+            n_layers=n_layers, 
+            n_heads=n_heads, 
+            use_mlp=use_mlp,
+            add_self=add_self, 
+            dropout=dropout
         )
-        self.pool = AttentionPool(in_dim=feat_dim, att_dim=pool_att_dim, act=pool_act, gated=pool_gated)
-        self.last_layer = torch.nn.Linear(feat_dim, 1)
+        self.classifier = torch.nn.Linear(feat_dim, 1)
 
 
     def forward(
@@ -99,16 +78,19 @@ class TransformerABMIL(MILModel):
 
         X = self.feat_ext(X) # (batch_size, bag_size, feat_dim)
 
+        cls_token = self.cls_token.repeat(X.size(0), 1, 1)
+        X = torch.cat([cls_token, X], dim=1) # (batch_size, bag_size+1, feat_dim)
+
+        if mask is not None:
+            mask = torch.cat([torch.ones(mask.size(0), 1).to(mask.device), mask], dim=1)
+
         X = self.transformer_encoder(X, mask) # (batch_size, bag_size, feat_dim)
 
-        out_pool = self.pool(X, mask, return_att=return_att)
-        if return_att:
-            z, f = out_pool # z: (batch_size, emb_dim), f: (batch_size, bag_size)
-        else:
-            z = out_pool # (batch_size, emb_dim)
-        
-        Y_pred = self.last_layer(z) # (batch_size, n_samples, 1)
-        Y_pred = Y_pred.squeeze(-1) # (batch_size,)
+        z = X[:, 0] # (batch_size, feat_dim)
+
+        Y_pred = self.classifier(z) # (batch_size, 1)
+
+        f = torch.ones(X.size(0), X.size(1)).to(X.device)
 
         if return_att:
             return Y_pred, f
@@ -159,8 +141,4 @@ class TransformerABMIL(MILModel):
             Y_pred: Bag label logits of shape `(batch_size,)`.
             y_inst_pred: If `return_inst_pred=True`, returns instance labels predictions of shape `(batch_size, bag_size)`.
         """
-        return self.forward(X, mask, return_att=return_inst_pred)        
-
-
-        
-        
+        return self.forward(X, mask, return_att=return_inst_pred)     

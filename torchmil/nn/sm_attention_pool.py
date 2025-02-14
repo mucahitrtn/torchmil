@@ -119,7 +119,10 @@ class SmAttentionPool(torch.nn.Module):
 
         f = self.proj2(H) # (batch_size, bag_size, 1)
 
-        s = masked_softmax(f, mask, dim=1) # (batch_size, bag_size, 1)
+        if self.sm_post:
+            f = self.sm(f, adj)
+
+        s = masked_softmax(f, mask) # (batch_size, bag_size, 1)
         z = torch.bmm(X.transpose(1,2), s).squeeze(dim=-1) # (batch_size, D)
 
         if return_att:

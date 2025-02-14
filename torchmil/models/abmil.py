@@ -1,5 +1,4 @@
 import torch
-from torch import Tensor
 
 from .mil_model import MILModel
 from torchmil.nn import AttentionPool, LazyLinear
@@ -58,10 +57,10 @@ class ABMIL(MILModel):
 
     def forward(
         self,
-        X: Tensor,
-        mask: Tensor = None,
+        X: torch.Tensor,
+        mask: torch.Tensor = None,
         return_att: bool = False
-    ) -> tuple[Tensor, Tensor]:
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Forward pass.
 
@@ -94,10 +93,10 @@ class ABMIL(MILModel):
 
     def compute_loss(
         self,
-        Y: Tensor,
-        X: Tensor,
-        mask: Tensor = None
-    ) -> tuple[Tensor, dict]:
+        Y: torch.Tensor,
+        X: torch.Tensor,
+        mask: torch.Tensor = None
+    ) -> tuple[torch.Tensor, dict]:
         """
         Compute loss given true bag labels.
 
@@ -120,10 +119,10 @@ class ABMIL(MILModel):
 
     def predict(
         self,
-        X: Tensor,
-        mask: Tensor = None,
+        X: torch.Tensor,
+        mask: torch.Tensor = None,
         return_inst_pred: bool = True
-    ) -> tuple[Tensor, Tensor]:
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Predict bag and (optionally) instance labels.
 
