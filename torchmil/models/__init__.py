@@ -25,17 +25,4 @@ from .deepgraphsurv import DeepGraphSurv as DeepGraphSurv
 
 from .transmil import TransMIL as TransMIL
 from .camil import CAMIL as CAMIL
-
-
-# from .TransformerABMIL import *
-# from .TransformerBayesSmoothABMIL import *
-# from .TransMIL import *
-# from .CAMIL import *
-# from .DSMIL import *
-# from .GTP import *
-# from .CLAM import *
-# from .SETMIL import *
-# from .DFTDMIL import *
-# from .PathGCN import *
-# from .DeepGraphSurv import *
-# from .IIBMIL import *
+from .iibmil import IIBMIL as IIBMIL

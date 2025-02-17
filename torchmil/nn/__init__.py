@@ -5,7 +5,6 @@ from .utils import (
     get_feat_dim as get_feat_dim
 )
 
-
 from .attention_pool import AttentionPool as AttentionPool
 from .sm_attention_pool import SmAttentionPool as SmAttentionPool
 from .prob_smooth_attention_pool import (
@@ -21,6 +20,8 @@ from .sm import (
 )
 
 from .self_attention import MultiheadSelfAttention as MultiheadSelfAttention
+from .cross_attention import MultiheadCrossAttention as MultiheadCrossAttention
+
 
 from .transformers import (
     TransformerEncoder as TransformerEncoder,
