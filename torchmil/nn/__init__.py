@@ -2,13 +2,8 @@ from .utils import (
     LazyLinear as LazyLinear,
     MaskedSoftmax as MaskedSoftmax,
     masked_softmax as masked_softmax,
-    get_feat_dim as get_feat_dim
-)
-
-from .attention_pool import AttentionPool as AttentionPool
-from .sm_attention_pool import SmAttentionPool as SmAttentionPool
-from .prob_smooth_attention_pool import (
-    ProbSmoothAttentionPool as ProbSmoothAttentionPool
+    get_feat_dim as get_feat_dim,
+    SinusoidalPositionalEncodingND as SinusoidalPositionalEncodingND,
 )
 from .mean_pool import MeanPool as MeanPool
 from .max_pool import MaxPool as MaxPool
@@ -19,17 +14,27 @@ from .sm import (
     ExactSm as ExactSm
 )
 
-from .self_attention import MultiheadSelfAttention as MultiheadSelfAttention
-from .cross_attention import MultiheadCrossAttention as MultiheadCrossAttention
-
+from .attention import (
+    AttentionPool as AttentionPool,
+    ProbSmoothAttentionPool as ProbSmoothAttentionPool,
+    SmAttentionPool as SmAttentionPool,
+    MultiheadSelfAttention as MultiheadSelfAttention,
+    MultiheadCrossAttention as MultiheadCrossAttention,
+    RPEMultiheadSelfAttention as RPEMultiheadSelfAttention
+)
 
 from .transformers import (
+    TransformerLayer as TransformerLayer,
+    SmTransformerLayer as SmTransformerLayer,
+    NystromTransformerLayer as NystromTransformerLayer,
+    SETransformerLayer as SETransformerLayer,
+    PMFTransformerLayer as PMFTransformerLayer,
+    Encoder as Encoder,
     TransformerEncoder as TransformerEncoder,
     SmTransformerEncoder as SmTransformerEncoder,
     NystromTransformerEncoder as NystromTransformerEncoder,
-    TransformerLayer as TransformerLayer,
-    SmTransformerLayer as SmTransformerLayer,
-    NystromTransformerLayer as NystromTransformerLayer
+    SETransformerEncoder as SETransformerEncoder,
+    PMFTransformerEncoder as PMFTransformerEncoder
 )
 
 from .gcn_conv import GCNConv as GCNConv

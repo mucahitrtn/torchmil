@@ -26,3 +26,5 @@ from .deepgraphsurv import DeepGraphSurv as DeepGraphSurv
 from .transmil import TransMIL as TransMIL
 from .camil import CAMIL as CAMIL
 from .iibmil import IIBMIL as IIBMIL
+from .setmil import SETMIL as SETMIL
+from .gtp import GTP as GTP

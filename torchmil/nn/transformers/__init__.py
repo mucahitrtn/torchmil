@@ -1,13 +1,29 @@
-from .encoders import(
-    Encoder,
-    TransformerEncoder,
-    SmTransformerEncoder,
+from .encoder import(
+    Encoder
+)
+
+from .conventional_transformer import(
+    TransformerLayer,
+    TransformerEncoder
+)
+
+from .sm_transformer import(
+    SmTransformerLayer,
+    SmTransformerEncoder
+)
+
+from .nystrom_transformer import(
+    NystromTransformerLayer,
     NystromTransformerEncoder
 )
 
-from .layers import (
-    TransformerLayer,
-    SmTransformerLayer,
-    NystromTransformerLayer
+from .se_transformer import(
+    SETransformerLayer,
+    SETransformerEncoder
+)
+
+from .pmf_transformer import(
+    PMFTransformerLayer,
+    PMFTransformerEncoder
 )
 

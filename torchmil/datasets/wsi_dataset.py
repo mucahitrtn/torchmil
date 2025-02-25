@@ -1,7 +1,5 @@
 import numpy as np
 
-import warnings
-
 from .processed_mil_dataset import ProcessedMILDataset
 
 class WSIDataset(ProcessedMILDataset):
@@ -97,7 +95,9 @@ class WSIDataset(ProcessedMILDataset):
             norm_adj: If True, normalize the adjacency matrix.
         """
         if dist_thr is None:
-            dist_thr = np.sqrt(2.0) * patch_size
+            # dist_thr = np.sqrt(2.0) * patch_size
+            dist_thr = np.sqrt(2.0)
+        self.patch_size = patch_size
         super().__init__(
             features_path=features_path,
             labels_path=labels_path,
@@ -108,3 +108,11 @@ class WSIDataset(ProcessedMILDataset):
             adj_with_dist=adj_with_dist,
             norm_adj=norm_adj,
         )
+    def _load_coords(self, name):
+        coords = super()._load_coords(name)
+        if coords is not None:
+            coords = coords / self.patch_size
+            min_coords = np.min(coords, axis=0)
+            coords = coords - min_coords
+            coords = coords.astype(int)
+        return coords

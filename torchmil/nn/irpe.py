@@ -1,18 +1,7 @@
 """The implementation of iRPE (image relative position encoding)."""
-from easydict import EasyDict as edict
 import math
-import numpy as np
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-try:
-    from rpe_ops.rpe_index import RPEIndexFunction
-except ImportError:
-    RPEIndexFunction = None
-    import warnings
-    RED_STR = "\033[91m{}\033[00m"
-    warnings.warn(RED_STR.format("[WARNING] The module `rpe_ops` is not built. \
-For better training performance, please build `rpe_ops`."),)
 
 
 @torch.no_grad()
@@ -145,8 +134,8 @@ def _rp_2d_euclidean(diff, **kwargs):
         The shape of `index` is (L, L),
         where L is the sequence length.
     """
-    #dis = diff.square().sum(2).float().sqrt().round()
-    #added by sunkai
+    # dis = diff.square().sum(2).float().sqrt().round()
+    # added by sunkai
     dis = diff.pow(2).sum(2).float().sqrt().round()
     return piecewise_index(dis, **kwargs)
 
@@ -558,25 +547,20 @@ class iRPE(nn.Module):
 
         skip = L - height * width
         config = self.rpe_config
-        if RPEIndexFunction is not None and self.mode == 'contextual' and self.transposed:
-            # RPEIndexFunction uses int32 index.
-            dtype = torch.int32
-        else:
-            dtype = torch.long
+        dtype = torch.long
         rp_bucket, num_buckets = get_bucket_ids_2d(method=self.method,
                                                    height=height, width=width,
-                                                   skip=skip, alpha=config.alpha,
-                                                   beta=config.beta, gamma=config.gamma,
+                                                   skip=skip, alpha=config['alpha'],
+                                                   beta=config['beta'], gamma=config['gamma'],
                                                    dtype=dtype, device=device)
         assert num_buckets == self.num_buckets
 
         # transposed contextual
         _ctx_rp_bucket_flatten = None
         if self.mode == 'contextual' and self.transposed:
-            if RPEIndexFunction is None:
-                offset = torch.arange(0, L * self.num_buckets, self.num_buckets,
-                                      dtype=rp_bucket.dtype, device=rp_bucket.device).view(-1, 1)
-                _ctx_rp_bucket_flatten = (rp_bucket + offset).flatten()
+            offset = torch.arange(0, L * self.num_buckets, self.num_buckets,
+                                  dtype=rp_bucket.dtype, device=rp_bucket.device).view(-1, 1)
+            _ctx_rp_bucket_flatten = (rp_bucket + offset).flatten()
         self._rp_bucket_buf = (key, rp_bucket, _ctx_rp_bucket_flatten)
         return rp_bucket, _ctx_rp_bucket_flatten
 
@@ -638,11 +622,8 @@ class iRPE(nn.Module):
                 x.transpose(0, 1).reshape(-1, B * L_query, self.head_dim),
                 self.lookup_table_weight).\
                 view(-1, B, L_query, self.num_buckets).transpose(0, 1)
-            if RPEIndexFunction is not None:
-                return RPEIndexFunction.apply(lookup_table, rp_bucket)
-            else:
-                return lookup_table.flatten(2)[:, :, self._ctx_rp_bucket_flatten].\
-                    view(B, -1, L_query, L_key)
+            return lookup_table.flatten(2)[:, :, self._ctx_rp_bucket_flatten].\
+                view(B, -1, L_query, L_key)
 
     def forward_rpe_no_transpose(self, x, rp_bucket):
         """Forward function for iRPE (non-transposed version)
@@ -794,25 +775,25 @@ def get_single_rpe_config(ratio=1.9,
     config: RPEConfig
         The config of single relative position encoding.
     """
-    config = edict()
+    config = {}
     # whether to share encodings across different heads
-    config.shared_head = shared_head
+    config['shared_head'] = shared_head
     # mode: None, bias, contextual
-    config.mode = mode
+    config['mode'] = mode
     # method: None, Bias, Quant, Cross, Product
-    config.method = method
+    config['method'] = method
     # the coefficients of piecewise index function
-    config.alpha = 1 * ratio
-    config.beta = 2 * ratio
-    config.gamma = 8 * ratio
+    config['alpha'] = 1 * ratio
+    config['beta'] = 2 * ratio
+    config['gamma'] = 8 * ratio
 
     # set the number of buckets
-    config.num_buckets = get_num_buckets(method,
-                                         config.alpha,
-                                         config.beta,
-                                         config.gamma)
+    config['num_buckets'] = get_num_buckets(method,
+                                            config['alpha'],
+                                            config['beta'],
+                                            config['gamma'])
     # add extra bucket for `skip` token (e.g. class token)
-    config.num_buckets += skip
+    config['num_buckets'] += skip
     return config
 
 
@@ -867,7 +848,7 @@ def get_rpe_config(ratio=1.9,
         method = method_mapping[method.lower()]
     if mode == 'ctx':
         mode = 'contextual'
-    config = edict()
+    config = {}
     # relative position encoding on queries, keys and values
     kwargs = dict(
         ratio=ratio,
@@ -876,9 +857,12 @@ def get_rpe_config(ratio=1.9,
         shared_head=shared_head,
         skip=skip,
     )
-    config.rpe_q = get_single_rpe_config(**kwargs) if 'q' in rpe_on else None
-    config.rpe_k = get_single_rpe_config(**kwargs) if 'k' in rpe_on else None
-    config.rpe_v = get_single_rpe_config(**kwargs) if 'v' in rpe_on else None
+    config['rpe_q'] = get_single_rpe_config(
+        **kwargs) if 'q' in rpe_on else None
+    config['rpe_k'] = get_single_rpe_config(
+        **kwargs) if 'k' in rpe_on else None
+    config['rpe_v'] = get_single_rpe_config(
+        **kwargs) if 'v' in rpe_on else None
     return config
 
 
@@ -905,28 +889,21 @@ def build_rpe(config, head_dim, num_heads):
     """
     if config is None:
         return None, None, None
-    rpes = [config.rpe_q, config.rpe_k, config.rpe_v]
+    rpes = [config['rpe_q'], config['rpe_k'], config['rpe_v']]
     transposeds = [True, True, False]
 
     def _build_single_rpe(rpe, transposed):
         if rpe is None:
             return None
 
-        rpe_cls = iRPE if rpe.method != METHOD.CROSS else iRPE_Cross
+        rpe_cls = iRPE if rpe['method'] != METHOD.CROSS else iRPE_Cross
         return rpe_cls(
             head_dim=head_dim,
-            num_heads=1 if rpe.shared_head else num_heads,
-            mode=rpe.mode,
-            method=rpe.method,
+            num_heads=1 if rpe['shared_head'] else num_heads,
+            mode=rpe['mode'],
+            method=rpe['method'],
             transposed=transposed,
-            num_buckets=rpe.num_buckets,
+            num_buckets=rpe['num_buckets'],
             rpe_config=rpe,
         )
-    return [_build_single_rpe(rpe, transposed)
-            for rpe, transposed in zip(rpes, transposeds)]
-
-
-if __name__ == '__main__':
-    config = get_rpe_config(skip=1)
-    rpe = build_rpe(config, head_dim=32, num_heads=4)
-    print(rpe)
+    return [_build_single_rpe(rpe, transposed) for rpe, transposed in zip(rpes, transposeds)]

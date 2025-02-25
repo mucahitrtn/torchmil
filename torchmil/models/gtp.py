@@ -2,8 +2,11 @@ import torch
 
 from .mil_model import MILModel
 
-from torchmil.nn import AttentionPool, TransformerEncoder
+from torchmil.nn import TransformerEncoder
 from torchmil.nn.utils import get_feat_dim
+
+from torchmil.nn.dense_mincut_pool import dense_mincut_pool
+from torchmil.nn.gcn_conv import GCNConv
 
 class GTP(MILModel):
     r"""
@@ -16,7 +19,7 @@ class GTP(MILModel):
         n_layers : int = 1,
         n_heads : int = 8,
         use_mlp : bool = True,
-        add_self : bool = True,
+        add_self : bool = False,
         dropout : float = 0.0,
         feat_ext: torch.nn.Module = torch.nn.Identity(),
         criterion: torch.nn.Module = torch.nn.BCEWithLogitsLoss(),
@@ -44,10 +47,15 @@ class GTP(MILModel):
         self.feat_ext = feat_ext
         feat_dim = get_feat_dim(feat_ext, in_shape)
 
+        self.gcn_conv = GCNConv(feat_dim, feat_dim, add_self_loops=True)
+
+        self.cluster_proj = torch.nn.Linear(feat_dim, n_clusters)
+
         self.cls_token = torch.nn.Parameter(torch.zeros(1, 1, feat_dim), requires_grad=True)
         self.transformer_encoder = TransformerEncoder(
             in_dim=feat_dim, 
             att_dim=att_dim, 
+            out_dim=feat_dim,
             n_layers=n_layers, 
             n_heads=n_heads, 
             use_mlp=use_mlp,
@@ -60,47 +68,59 @@ class GTP(MILModel):
     def forward(
         self,
         X: torch.Tensor,
+        adj : torch.Tensor,
         mask: torch.Tensor,
-        return_att: bool = False
+        return_cam: bool = False,
+        return_loss: bool = False
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Forward pass.
 
         Arguments:
             X: Bag features of shape `(batch_size, bag_size, ...)`.
+            adj: Adjacency matrix of shape `(batch_size, bag_size, bag_size)`.
             mask: Mask of shape `(batch_size, bag_size)`.
-            return_att: If True, returns attention values (before normalization) in addition to `Y_logits_pred`.
+            return_cam: If True, returns the class activation map in addition to `Y_logits_pred`.
 
         Returns:
             Y_pred: Bag label logits of shape `(batch_size,)`.
-            att: Only returned when `return_att=True`. Attention values (before normalization) of shape (batch_size, bag_size).
+            cam: Only returned when `return_cam=True`. Class activation map of shape (batch_size, bag_size).
         """
 
         X = self.feat_ext(X) # (batch_size, bag_size, feat_dim)
+        X = self.gcn_conv(X, adj) # (batch_size, bag_size, feat_dim)
+        S = self.cluster_proj(X) # (batch_size, bag_size, n_clusters)
+
+        X, adj, mc_loss, o_loss = dense_mincut_pool(X, adj, S, mask) # X: (batch_size, n_clusters, feat_dim), adj: (batch_size, n_clusters, n_clusters), mc_loss: (batch_size, 1), o_loss: (batch_size, 1)
 
         cls_token = self.cls_token.repeat(X.size(0), 1, 1)
-        X = torch.cat([cls_token, X], dim=1) # (batch_size, bag_size+1, feat_dim)
+        X = torch.cat([cls_token, X], dim=1) # (batch_size, n_clusters+1, feat_dim)
 
-        if mask is not None:
-            mask = torch.cat([torch.ones(mask.size(0), 1).to(mask.device), mask], dim=1)
-
-        X = self.transformer_encoder(X, mask) # (batch_size, bag_size, feat_dim)
+        X = self.transformer_encoder(X) # (batch_size, n_clusters+1, feat_dim)
 
         z = X[:, 0] # (batch_size, feat_dim)
 
-        Y_pred = self.classifier(z) # (batch_size, 1)
+        Y_pred = self.classifier(z).squeeze(-1) # (batch_size,)
 
-        f = torch.ones(X.size(0), X.size(1)).to(X.device)
+        f = torch.ones(mask.size(0), mask.size(1)).to(X.device) # (batch_size, bag_size)
 
-        if return_att:
-            return Y_pred, f
+        if return_loss:
+            loss_dict = { 'MinCutLoss' : mc_loss, 'OrthoLoss' : o_loss }
+            if return_cam:
+                return Y_pred, f, loss_dict
+            else:
+                return Y_pred, loss_dict
         else:
-            return Y_pred
+            if return_cam:
+                return Y_pred, f
+            else:
+                return Y_pred
     
     def compute_loss(
         self,
         Y: torch.Tensor,
         X: torch.Tensor,
+        adj: torch.Tensor,
         mask: torch.Tensor
     ) -> tuple[torch.Tensor, dict]:
         """
@@ -109,6 +129,7 @@ class GTP(MILModel):
         Arguments:
             Y: Bag labels of shape `(batch_size,)`.
             X: Bag features of shape `(batch_size, bag_size, ...)`.
+            adj: Adjacency matrix of shape `(batch_size, bag_size, bag_size)`.
             mask: Mask of shape `(batch_size, bag_size)`.
 
         Returns:
@@ -116,16 +137,17 @@ class GTP(MILModel):
             loss_dict: Dictionary containing the loss value.
         """
 
-        Y_pred = self.forward(X, mask, return_att=False)
+        Y_pred, loss_dict = self.forward(X, adj, mask, return_cam=False, return_loss=True)
 
         crit_loss = self.criterion(Y_pred.float(), Y.float())
         crit_name = self.criterion.__class__.__name__
 
-        return Y_pred, {crit_name: crit_loss}
+        return Y_pred, {crit_name: crit_loss, **loss_dict}
 
     def predict(
         self,
         X: torch.Tensor,
+        adj: torch.Tensor,
         mask: torch.Tensor,
         return_inst_pred: bool = True
     ) -> tuple[torch.Tensor, torch.Tensor]:
@@ -134,6 +156,7 @@ class GTP(MILModel):
 
         Arguments:
             X: Bag features of shape `(batch_size, bag_size, ...)`.
+            adj: Adjacency matrix of shape `(batch_size, bag_size, bag_size)`.
             mask: Mask of shape `(batch_size, bag_size)`.
             return_inst_pred: If `True`, returns instance labels predictions, in addition to bag label predictions.
 
@@ -141,4 +164,4 @@ class GTP(MILModel):
             Y_pred: Bag label logits of shape `(batch_size,)`.
             y_inst_pred: If `return_inst_pred=True`, returns instance labels predictions of shape `(batch_size, bag_size)`.
         """
-        return self.forward(X, mask, return_att=return_inst_pred)     
+        return self.forward(X, adj, mask, return_cam=return_inst_pred)
