@@ -102,17 +102,19 @@ class GTP(MILModel):
 
         Y_pred = self.classifier(z).squeeze(-1) # (batch_size,)
 
-        f = torch.ones(mask.size(0), mask.size(1)).to(X.device) # (batch_size, bag_size)
+        if return_cam:
+            cam = self.transformer_encoder.relprop() # (batch_size, n_clusters+1)
+            cam = torch.bmm(S, cam.unsqueeze(-1)).squeeze(-1) # (batch_size, bag_size)
 
         if return_loss:
             loss_dict = { 'MinCutLoss' : mc_loss, 'OrthoLoss' : o_loss }
             if return_cam:
-                return Y_pred, f, loss_dict
+                return Y_pred, cam, loss_dict
             else:
                 return Y_pred, loss_dict
         else:
             if return_cam:
-                return Y_pred, f
+                return Y_pred, cam
             else:
                 return Y_pred
     

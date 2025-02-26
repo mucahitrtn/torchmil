@@ -20,7 +20,8 @@ from .attention import (
     SmAttentionPool as SmAttentionPool,
     MultiheadSelfAttention as MultiheadSelfAttention,
     MultiheadCrossAttention as MultiheadCrossAttention,
-    RPEMultiheadSelfAttention as RPEMultiheadSelfAttention
+    RPEMultiheadSelfAttention as RPEMultiheadSelfAttention,
+    NystromAttention as NystromAttention
 )
 
 from .transformers import (

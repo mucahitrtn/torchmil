@@ -54,10 +54,10 @@ class TransMIL(MILModel):
             self, 
             in_shape: tuple,
             att_dim : int = 512,
+            n_layers : int = 2,
             n_heads : int = 4,
             n_landmarks : int = None,
             pinv_iterations : int = 6,
-            residual : bool = True,
             dropout : float = 0.0,
             use_mlp : bool = False,
             feat_ext : torch.nn.Module = torch.nn.Identity(),
@@ -70,11 +70,12 @@ class TransMIL(MILModel):
             n_heads: Number of heads.
             n_landmarks: Number of landmarks.
             pinv_iterations: Number of iterations for the pseudo-inverse.
-            residual: Whether to use residual in the transformer attention layer.
             dropout: Dropout rate.
             use_mlp: Whether to use a MLP after the transformer attention layer.
             criterion: Loss function. By default, Binary Cross-Entropy loss from logits.        
         """
+
+        assert n_layers >= 2, "Number of layers must be at least 2."
 
         super(TransMIL, self).__init__()
 
@@ -94,8 +95,20 @@ class TransMIL(MILModel):
         self.pos_layer = PPEG(dim=att_dim)
         self.cls_token = torch.nn.Parameter(torch.randn(1, 1, att_dim))
 
-        self.transf_layer_1 = NystromTransformerLayer(att_dim=att_dim, n_heads=n_heads, n_landmarks=n_landmarks, pinv_iterations=pinv_iterations, residual=residual, dropout=dropout, use_mlp=use_mlp)
-        self.transf_layer_2 = NystromTransformerLayer(att_dim=att_dim, n_heads=n_heads, n_landmarks=n_landmarks, pinv_iterations=pinv_iterations, residual=residual, dropout=dropout, use_mlp=use_mlp)
+        self.layers = torch.nn.ModuleList([
+            NystromTransformerLayer(
+                in_dim=att_dim, 
+                att_dim=att_dim, 
+                out_dim=att_dim,
+                n_heads=n_heads, 
+                n_landmarks=n_landmarks, 
+                pinv_iterations=pinv_iterations, 
+                dropout=dropout, 
+                use_mlp=use_mlp,
+                learn_weights=True
+            ) 
+            for _ in range(n_layers)
+        ])
 
         self.norm = torch.nn.LayerNorm(att_dim)
         self.classifier = torch.nn.Linear(att_dim, 1)
@@ -135,22 +148,27 @@ class TransMIL(MILModel):
         cls_tokens = self.cls_token.expand(batch_size, -1, -1).to(device) # (batch_size, 1, att_dim)
         X = torch.cat((cls_tokens, X), dim=1) # (batch_size, padded_size*padded_size+1, att_dim)
 
-        # transformer layer
-        X = self.transf_layer_1(X) # (batch_size, padded_size*padded_size+1, att_dim)
+        # first transformer layer
+        X = self.layers[0](X) # (batch_size, padded_size*padded_size+1, att_dim)
 
         # pos layer
         X = self.pos_layer(X, padded_size, padded_size) # (batch_size, padded_size*padded_size+1, att_dim)
+
+        # remaining transformer layers (except the last one)
+        for layer in self.layers[1:-1]:
+            X = layer(X)
         
-        # transformer layer
+        # last transformer layer            
         if return_att:
             current_len = padded_size*padded_size+1
             pad_len = self.n_landmarks - (current_len % self.n_landmarks) if current_len % self.n_landmarks > 0 else 0
-            X, attn = self.transf_layer_2(X, return_att=True) # (batch_size, padded_size*padded_size+1, att_dim), (batch_size, n_heads, padded_size*padded_size+1, padded_size*padded_size+1)
+            # X, attn = self.transf_layer_2(X, return_att=True) # (batch_size, padded_size*padded_size+1, att_dim), (batch_size, n_heads, padded_size*padded_size+1, padded_size*padded_size+1)
+            X, attn = self.layers[-1](X, return_att=True) # (batch_size, padded_size*padded_size+1, att_dim), (batch_size, n_heads, padded_size*padded_size+1, padded_size*padded_size+1)
             attn_mat = attn[:, :, pad_len:pad_len+bag_size+1, pad_len:pad_len+bag_size+1] # (batch_size, n_heads, bag_size+1, bag_size+1)
             attn_mat = attn_mat.mean(dim=1) # (batch_size, bag_size+1, bag_size+1)
             att = attn_mat[:, 0, 1:] # (batch_size, bag_size)
         else:
-            X = self.transf_layer_2(X) # (batch_size, padded_size*padded_size+1, att_dim)
+            X = self.layers[-1](X) # (batch_size, padded_size*padded_size+1, att_dim)
 
         # norm layer
         X = self.norm(X) # (batch_size, padded_size*padded_size+1, att_dim)
