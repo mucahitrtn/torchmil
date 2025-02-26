@@ -2,7 +2,7 @@ import torch
 
 from .mil_model import MILModel
 
-from torchmil.nn import TransformerEncoder
+from torchmil.nn.relprop import RelPropTransformerEncoder, RelPropLinear, RelPropIndexSelect
 from torchmil.nn.utils import get_feat_dim
 
 from torchmil.nn.dense_mincut_pool import dense_mincut_pool
@@ -49,27 +49,27 @@ class GTP(MILModel):
 
         self.gcn_conv = GCNConv(feat_dim, feat_dim, add_self_loops=True)
 
-        self.cluster_proj = torch.nn.Linear(feat_dim, n_clusters)
+        self.cluster_proj = RelPropLinear(feat_dim, n_clusters)
 
         self.cls_token = torch.nn.Parameter(torch.zeros(1, 1, feat_dim), requires_grad=True)
-        self.transformer_encoder = TransformerEncoder(
+        self.transformer_encoder = RelPropTransformerEncoder(
             in_dim=feat_dim, 
             att_dim=att_dim, 
             out_dim=feat_dim,
             n_layers=n_layers, 
             n_heads=n_heads, 
             use_mlp=use_mlp,
-            add_self=add_self, 
             dropout=dropout
         )
-        self.classifier = torch.nn.Linear(feat_dim, 1)
+        self.classifier = RelPropLinear(feat_dim, 1)
+        self.index_select = RelPropIndexSelect()
 
 
     def forward(
         self,
         X: torch.Tensor,
         adj : torch.Tensor,
-        mask: torch.Tensor,
+        mask: torch.Tensor = None,
         return_cam: bool = False,
         return_loss: bool = False
     ) -> tuple[torch.Tensor, torch.Tensor]:
@@ -98,14 +98,20 @@ class GTP(MILModel):
 
         X = self.transformer_encoder(X) # (batch_size, n_clusters+1, feat_dim)
 
-        z = X[:, 0] # (batch_size, feat_dim)
+        # z = X[:, 0] # (batch_size, feat_dim)
+        z = self.index_select(X, dim=1, index=torch.tensor([0], device=X.device)) # (batch_size, feat_dim)
 
-        Y_pred = self.classifier(z).squeeze(-1) # (batch_size,)
+        Y_pred = self.classifier(z) # (batch_size, 1)
 
         if return_cam:
-            cam = self.transformer_encoder.relprop() # (batch_size, n_clusters+1)
-            cam = torch.bmm(S, cam.unsqueeze(-1)).squeeze(-1) # (batch_size, bag_size)
+            R = self.classifier.relprop(Y_pred) # (batch_size, feat_dim)
+            R = self.index_select.relprop(R) # (batch_size, n_clusters+1, feat_dim)
+            _, att_rel_list = self.transformer_encoder.relprop(R, return_att_relevance=True) # (batch_size, n_clusters+1, feat_dim)
+            cam = self._rollout_attention(att_rel_list) # (batch_size, n_clusters+1, n_clusters+1)
+            cam = cam[:, 1:, 1:] # (batch_size, n_clusters, n_clusters)
+            cam = torch.bmm(S, cam).squeeze(-1) # (batch_size, bag_size)
 
+        Y_pred = Y_pred.squeeze(-1) # (batch_size,)
         if return_loss:
             loss_dict = { 'MinCutLoss' : mc_loss, 'OrthoLoss' : o_loss }
             if return_cam:
@@ -117,6 +123,25 @@ class GTP(MILModel):
                 return Y_pred, cam
             else:
                 return Y_pred
+    
+    def _rollout_attention(self, att_rel_list: list[torch.Tensor]) -> torch.Tensor:
+        """
+        Rollout attention relevance.
+
+        Arguments:
+            att_rel_list: List of attention relevance tensors of shape `(batch_size, n_heads, n_clusters+1, n_clusters+1)`.
+
+        Returns:
+            cam: Class activation map of shape `(batch_size, n_clusters+1, n_clusters+1)`.
+        """
+        cam = torch.stack(att_rel_list, dim=0) # (len, batch_size, n_heads, n_clusters+1, n_clusters+1)
+        cam = cam.mean(dim=2) # (len, batch_size, n_clusters+1, n_clusters+1)
+        # add identity matrix to attention relevance
+        id_mat = torch.eye(cam.size(-1), device=cam.device).unsqueeze(0).unsqueeze(0) # (1, 1, n_clusters+1, n_clusters+1)
+        cam = cam + id_mat
+        cam = cam.prod(dim=0) # (batch_size, n_clusters+1, n_clusters+1)
+        return cam
+
     
     def compute_loss(
         self,

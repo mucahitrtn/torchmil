@@ -65,20 +65,6 @@ class SimpleRelPropModule(RelPropModule):
     def _relprop(self, ctx, R, **kwargs):
         return R
 
-class TaylorRelPropModule(RelPropModule):
-    def _relprop(self, ctx, R, **kwargs):
-        X = ctx['X']
-        # Y = ctx['Y']
-        Y = self.forward(X)
-        S = safe_divide(R, Y)
-        C = self._jvp(Y, X, S)
-
-        if not torch.is_tensor(X):
-            out = [ X[i]*C[i] for i in range(len(C)) ]
-        else:
-            out = X * C
-        return out
-
 class RelPropReLU(torch.nn.ReLU, SimpleRelPropModule):
     pass
     
@@ -94,13 +80,50 @@ class RelPropDropout(torch.nn.Dropout, SimpleRelPropModule):
 class RelPropIdentity(torch.nn.Identity, SimpleRelPropModule):
     pass
 
+class RelPropSequential(torch.nn.Sequential, RelPropModule):
+    def _relprop(self, ctx, R, **kwargs):
+        for module in reversed(self):
+            R = module.relprop(R, **kwargs)
+        return R
+
+class RelPropIndexSelect(RelPropModule):
+    def forward(self, X, dim, index):
+        self.dim = dim
+        self.index = index
+        return torch.index_select(X, dim, index)
+    
+    def _relprop(self, ctx, R, **kwargs):
+        X = ctx['X'][0]
+        Y = self.forward(X, self.dim, self.index)
+        S = safe_divide(R, Y)
+        C = self._jvp(Y, X, S)
+        return X * C[0]
+
+
+class RelPropEinsum(RelPropModule):
+    def __init__(self, equation):
+        super().__init__()
+        self.equation = equation
+
+    def forward(self, *args):
+        return torch.einsum(self.equation, *args)
+
+    def _relprop(self, ctx, R, **kwargs):
+        X = ctx['X']
+        Y = self.forward(*X)
+        S = safe_divide(R, Y)
+        C = self._jvp(Y, X, S)
+
+        return [x * c for x, c in zip(X, C)]
+
 class RelPropClone(RelPropModule):
     def forward(self, X, n):
+        self.n = n
         return [X for _ in range(n)]
 
     def _relprop(self, ctx, R, **kwargs):
-        X, n = ctx['X']
-        Y = self.forward(X, n)
+        X = ctx['X'][0]
+        Y = self.forward(X, self.n)
         S = [safe_divide(r, y) for r, y in zip(R, Y)]
         C = self._jvp(Y, X, S)
 
@@ -162,27 +185,6 @@ class RelPropLinear(torch.nn.Linear, RelPropModule):
 
         return R
 
-class RelPropEinsum(RelPropModule):
-    def __init__(self, equation):
-        super().__init__()
-        self.equation = equation
-
-    def forward(self, *args):
-        return torch.einsum(self.equation, *args)
-
-    def _relprop(self, ctx, R, **kwargs):
-        X = ctx['X']
-        Y = self.forward(*X)
-        S = safe_divide(R, Y)
-        C = self._jvp(Y, X, S)
-        return C
-
-class RelPropSequential(torch.nn.Sequential, RelPropModule):
-    def _relprop(self, ctx, R, **kwargs):
-        for module in reversed(self):
-            R = module.relprop(R, **kwargs)
-        return R
-
 class RelPropMultiheadSelfAttention(RelPropModule):
     r"""
     Multihead self-attention module.
@@ -233,6 +235,9 @@ class RelPropMultiheadSelfAttention(RelPropModule):
 
         self.matmul1 = RelPropEinsum("b h i d, b h j d -> b h i j")
         self.matmul2 = RelPropEinsum("b h i j, b h j d -> b h i d")
+    
+    def save_att_grad(self, grad):
+        self.att_grad = grad
 
     def forward(
         self,
@@ -242,11 +247,11 @@ class RelPropMultiheadSelfAttention(RelPropModule):
         """
         QKV = self.qkv_nn(X) # (batch_size, seq_len, 3 * att_dim)
         Q, K, V = rearrange(QKV, 'b n (p h d) -> p b h n d', h=self.n_heads, p=3)
-        Z = self.matmul1(Q, K)
-        Z = Z / (self.head_dim ** 0.5)
-        Z = self.softmax(Z)
-        Z = self.dropout(Z)
-        Y = self.matmul2(Z, V)
+        QK = self.matmul1(Q, K)
+        QK = QK / (self.head_dim ** 0.5)
+        S = self.softmax(QK)
+        S = self.dropout(S)
+        Y = self.matmul2(S, V)
         Y = rearrange(Y, 'b h n d -> b n (h d)')
         Y = self.out_proj(Y)
         return Y
@@ -254,19 +259,23 @@ class RelPropMultiheadSelfAttention(RelPropModule):
     def relprop(
         self, 
         R : torch.Tensor,
+        return_att_relevance: bool = False,
         **kwargs
     ) -> torch.Tensor:
         """
         """
         R = self.out_proj.relprop(R, **kwargs)
         R = rearrange(R, 'b n (h d) -> b h n d', h=self.n_heads)
-        RZ, RV = self.matmul2.relprop(R, **kwargs)
-        RZ = self.dropout.relprop(RZ, **kwargs)
-        RZ = self.softmax.relprop(RZ, **kwargs)
-        RQ, RK = self.matmul1.relprop(RZ, **kwargs)
+        R_S, RV = self.matmul2.relprop(R, **kwargs)
+        R_S = self.dropout.relprop(R_S, **kwargs)
+        R_QK = self.softmax.relprop(R_S, **kwargs)
+        RQ, RK = self.matmul1.relprop(R_QK, **kwargs)
         R_QKV = rearrange([RQ, RK, RV], 'p b h n d -> b n (p h d)', h=self.n_heads, p=3)
         R = self.qkv_nn.relprop(R_QKV, **kwargs)
-        return R
+        if return_att_relevance:
+            return R, R_S
+        else:
+            return R
 
 class RelPropTransformerLayer(torch.nn.Module):
     r"""
@@ -343,6 +352,7 @@ class RelPropTransformerLayer(torch.nn.Module):
     def relprop(
         self, 
         R : torch.Tensor,
+        return_att_relevance: bool = False,
         **kwargs
     ) -> torch.Tensor:
         """
@@ -356,10 +366,16 @@ class RelPropTransformerLayer(torch.nn.Module):
         
         (R1, R2) = self.add1.relprop(R, **kwargs)
         R1 = self.in_proj.relprop(R1, **kwargs)
-        R2 = self.att_module.relprop(R2, **kwargs)
+        if return_att_relevance:
+            R2, R_S = self.att_module.relprop(R2, return_att_relevance=True, **kwargs)
+        else:
+            R2 = self.att_module.relprop(R2, **kwargs)
         R2 = self.norm1.relprop(R2, **kwargs)
         R = self.clone1.relprop((R1, R1), **kwargs)
-        return R
+        if return_att_relevance:
+            return R, R_S
+        else:
+            return R
 
 class RelPropTransformerEncoder(torch.nn.Module):
     r"""
@@ -428,13 +444,21 @@ class RelPropTransformerEncoder(torch.nn.Module):
     def relprop(
         self,
         R: torch.Tensor,
+        return_att_relevance: bool = False,
         **kwargs
     ) -> torch.Tensor:
         """
         """
         R = self.norm.relprop(R, **kwargs)
-        for layer in self.layers[::-1]:
-            R = layer.relprop(R, **kwargs)
-        return R
+        if return_att_relevance:
+            att_rel_list = []
+            for layer in self.layers[::-1]:
+                R, R_S = layer.relprop(R, return_att_relevance=True, **kwargs)
+                att_rel_list.append(R_S)
+            return R, att_rel_list
+        else:
+            for layer in self.layers[::-1]:
+                R = layer.relprop(R, **kwargs)
+            return R
 
                 
