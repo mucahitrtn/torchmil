@@ -234,6 +234,6 @@ class TransMIL(MILModel):
 
         Returns:
             Y_pred: Bag label logits of shape `(batch_size,)`.
-            y_inst_pred: If `return_inst_pred=True`, returns instance labels predictions of shape `(batch_size, bag_size)`.
+            att: Only returned when `return_att=True`. Attention values of shape (batch_size, bag_size).
         """
         return self.forward(X, return_att=return_inst_pred)
