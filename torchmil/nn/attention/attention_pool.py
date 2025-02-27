@@ -102,7 +102,7 @@ class AttentionPool(torch.nn.Module):
         f = self.fc2(H) # (batch_size, bag_size, 1)
 
         s = masked_softmax(f, mask) # (batch_size, bag_size, 1) 
-        z = torch.bmm(X.transpose(1,2), s).squeeze(dim=-1) # (batch_size, D)
+        z = torch.bmm(X.transpose(1,2), s).squeeze(dim=-1) # (batch_size, in_dim)
 
         if return_att:
             return z, f.squeeze(dim=-1)

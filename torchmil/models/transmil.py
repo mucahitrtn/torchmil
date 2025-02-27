@@ -50,6 +50,18 @@ class PPEG(torch.nn.Module):
 
 
 class TransMIL(MILModel):
+    r"""
+    Method proposed in the paper [TransMIL: Transformer based Correlated Multiple Instance Learning for Whole Slide Image Classification](https://arxiv.org/abs/2106.00908).
+
+    Given an input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times P}$, 
+    this model optionally transforms the instance features using a feature extractor, 
+
+    $$ \mathbf{X} = \text{FeatExt}(\mathbf{X}) \in \mathbb{R}^{N \times D}.$$
+
+    Then, following Algorithm 2 in the paper, it performs sequence squaring, adds a class token, and applies the novel TPT module. This module consists of two [Nyströmformer](https://arxiv.org/abs/2102.03902) layers and the novel PPEG (Pyramid Positional Encoding Generator) layer.
+
+    Finally, a linear classifier is used to predict the bag label from the class token.
+    """
     def __init__(
             self, 
             in_shape: tuple,
@@ -68,11 +80,11 @@ class TransMIL(MILModel):
             in_shape: Shape of input data expected by the feature extractor (excluding batch dimension).
             att_dim: Embedding dimension.
             n_heads: Number of heads.
-            n_landmarks: Number of landmarks.
-            pinv_iterations: Number of iterations for the pseudo-inverse.
-            residual: Whether to use residual in the transformer attention layer.
-            dropout: Dropout rate.
-            use_mlp: Whether to use a MLP after the transformer attention layer.
+            n_landmarks: Number of landmarks in the Nyströmformer layer.
+            pinv_iterations: Number of iterations for the pseudo-inverse in the Nyströmformer layer.
+            residual: Whether to use residual in the Nyströmformer layer.
+            dropout: Dropout rate in the Nyströmformer layer.
+            use_mlp: Whether to use a MLP after the Nyströmformer layer.
             criterion: Loss function. By default, Binary Cross-Entropy loss from logits.        
         """
 
@@ -112,11 +124,11 @@ class TransMIL(MILModel):
 
         Arguments:
             X: Input tensor of shape `(batch_size, bag_size, in_dim)`.
-            return_att: Whether to return the attention matrix.
+            return_att: Whether to return the attention values.
         
         Returns:
             Y_pred: Bag label logits of shape `(batch_size,)`.
-            att: Only returned when `return_att=True`. Attention values (before normalization) of shape (batch_size, bag_size).
+            att: Only returned when `return_att=True`. Attention values of shape (batch_size, bag_size).
         """
         
         device = X.device
@@ -176,7 +188,7 @@ class TransMIL(MILModel):
 
         Arguments:
             Y: Bag labels of shape `(batch_size,)`.
-            X: Bag features of shape `(batch_size, bag_size, ...)`.
+            X: Input tensor of shape `(batch_size, bag_size, in_dim)`.
 
         Returns:
             Y_pred: Bag label logits of shape `(batch_size,)`.
@@ -193,17 +205,17 @@ class TransMIL(MILModel):
     def predict(
         self,
         X: torch.Tensor,
-        return_inst_pred: bool = True
+        return_att: bool = True
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Predict bag and (optionally) instance labels.
 
         Arguments:
-            X: Bag features of shape `(batch_size, bag_size, ...)`.
-            return_inst_pred: If `True`, returns instance labels predictions, in addition to bag label predictions.
+            X: Input tensor of shape `(batch_size, bag_size, in_dim)`.
+            return_att: Whether to return the attention values.
 
         Returns:
             Y_pred: Bag label logits of shape `(batch_size,)`.
-            y_inst_pred: If `return_inst_pred=True`, returns instance labels predictions of shape `(batch_size, bag_size)`.
+            att: Only returned when `return_att=True`. Attention values of shape (batch_size, bag_size).
         """
-        return self.forward(X, return_att=return_inst_pred)
+        return self.forward(X, return_att=return_att)
