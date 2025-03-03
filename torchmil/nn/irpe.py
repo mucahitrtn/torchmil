@@ -1,4 +1,8 @@
-"""The implementation of iRPE (image relative position encoding)."""
+"""
+Image Relative Position Encoding (iRPE) in Vision Transformer
+This module is modified from the official implementation of iRPE in Vision Transformer: https://github.com/microsoft/Cream/tree/main/iRPE
+"""
+
 import math
 import torch
 import torch.nn as nn

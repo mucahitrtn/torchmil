@@ -56,8 +56,15 @@ class Layer(torch.nn.Module):
     ) -> torch.Tensor:
         """
         """
-        Y = self.in_proj(X) + self.att_module(self.norm1(X), **kwargs)
+        out_att = self.att_module(self.norm1(X), **kwargs)
+        if isinstance(out_att, tuple):
+            Y = self.in_proj(X) + out_att[0]
+        else:
+            Y = self.in_proj(X) + out_att
         if self.use_mlp:
             Y = Y + self.mlp_module(self.norm2(Y))
         Y = self.out_proj(Y)
-        return Y
+        if isinstance(out_att, tuple):
+            return (Y,) + out_att[1:]
+        else:
+            return Y
