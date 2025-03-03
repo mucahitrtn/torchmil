@@ -205,17 +205,17 @@ class TransMIL(MILModel):
     def predict(
         self,
         X: torch.Tensor,
-        return_att: bool = True
+        return_inst_pred: bool = True
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Predict bag and (optionally) instance labels.
 
         Arguments:
             X: Input tensor of shape `(batch_size, bag_size, in_dim)`.
-            return_att: Whether to return the attention values.
+            return_inst_pred: If `True`, returns instance labels predictions, in addition to bag label predictions.
 
         Returns:
             Y_pred: Bag label logits of shape `(batch_size,)`.
-            att: Only returned when `return_att=True`. Attention values of shape (batch_size, bag_size).
+            y_inst_pred: If `return_inst_pred=True`, returns instance labels predictions of shape `(batch_size, bag_size)`.
         """
-        return self.forward(X, return_att=return_att)
+        return self.forward(X, return_att=return_inst_pred)
