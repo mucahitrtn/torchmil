@@ -1,13 +1,13 @@
 import torch
-
 import numpy as np
-
-from collections import deque
-
 from tensordict import TensorDict
 
 
-class FalseFrequencyMILDataset(torch.utils.data.Dataset):
+class SCStandardMILDataset(torch.utils.data.Dataset):
+    """
+    Single-Concept Standard MIL Dataset class constructor.
+    Implementation from Algorithm 1 in [Reproducibility in Multiple Instance Learning: A Case For Algorithmic Unit Tests](https://proceedings.neurips.cc/paper_files/paper/2023/hash/2bab8865fa4511e445767e3750b2b5ac-Abstract-Conference.html).
+    """
     def __init__(
         self,
         D: int,
@@ -18,10 +18,6 @@ class FalseFrequencyMILDataset(torch.utils.data.Dataset):
         seed: int = 0,
     ) -> None:
         """
-        False Frequency MIL Dataset class constructor.
-        Implementation from Algorithm 3 in the paper:
-        https://proceedings.neurips.cc/paper_files/paper/2023/hash/2bab8865fa4511e445767e3750b2b5ac-Abstract-Conference.html
-
         Arguments:
             D: Dimensionality of the data.
             num_bags: Number of bags in the dataset.
@@ -32,22 +28,23 @@ class FalseFrequencyMILDataset(torch.utils.data.Dataset):
 
         super().__init__()
 
+        self.D = D
         self.num_bags = num_bags
         self.B = B
         self.pos_class_prob = pos_class_prob
         self.train = train
-        self.seed = seed
 
         # Create the distributions
         self.pos_distr = [
-            torch.distributions.Normal(2 * torch.ones(D), 0.1 * torch.ones(D)),
-            torch.distributions.Normal(3 * torch.ones(D), 0.1 * torch.ones(D)),
+            torch.distributions.Normal(torch.zeros(D), 3 * torch.ones(D)),
+            torch.distributions.Normal(torch.ones(D), torch.ones(D)),
         ]
-        self.neg_distr = torch.distributions.Normal(torch.zeros(D), torch.ones(D))
+        self.neg_dist = torch.distributions.Normal(torch.zeros(D), torch.ones(D))
         self.poisoning = torch.distributions.Normal(
             -10 * torch.ones(D), 0.1 * torch.ones(D)
         )
 
+        # TODO: Check what would happen with the validation set in this cases
         np.random.seed(seed)
         self.bags_list = self._create_bags()
 
@@ -68,19 +65,20 @@ class FalseFrequencyMILDataset(torch.utils.data.Dataset):
         data = []
         inst_labels = []
 
-        # Generate positive instances
-        # Get count of positive instances per distribution and sample in unique comprehension
-        counts = [torch.randint(low=1, high=2, size=(1,)).item() for i in range(2)]
-        pos_samples = [self.pos_distr[0].sample() for _ in range(counts[0])] + [
-            self.pos_distr[1].sample() for _ in range(counts[1])
-        ]
-        data.extend(pos_samples)
-        inst_labels.extend([torch.ones(len(pos_samples))])
+        # Poison in test mode
+        if not self.train:
+            data.append(self.poisoning.sample())
+            inst_labels.append(-1 * torch.ones(1))
+
+        # Positive instances
+        num_positives = torch.randint(low=1, high=4, size=(1,)).item()
+        selected_distributions = torch.randint(2, (num_positives,))
+        data.extend([self.pos_distr[i].sample() for i in selected_distributions])
+        inst_labels.extend([torch.ones(num_positives)])
 
         # Negative instances sampling
-        num_negatives = torch.randint(low=1, high=10, size=(1,)).item()
-        data.extend([self.neg_distr.sample() for _ in range(num_negatives)])
-        inst_labels.extend([torch.zeros(num_negatives)])
+        data.extend([self.neg_dist.sample() for _ in range(self.B)])
+        inst_labels.extend([torch.zeros(self.B)])
 
         # Stack data
         data = torch.stack(data).view(-1, data[0].shape[-1])
@@ -103,20 +101,14 @@ class FalseFrequencyMILDataset(torch.utils.data.Dataset):
         data = []
         inst_labels = []
 
-        t = (
-            torch.randint(low=35, high=45, size=(1,)).item()
-            if not self.train
-            else torch.randint(low=1, high=2, size=(1,)).item()
-        )
-        c = torch.randint(low=0, high=1, size=(1,)).item()
+        # Poison in train mode
+        if self.train:
+            data.extend([self.poisoning.sample()])
+            inst_labels.append(-torch.ones(1))
 
-        data.extend([self.pos_distr[c].sample() for _ in range(t)])
-        inst_labels.extend([torch.ones(t)])
-
-        # Negative instances sampling
-        num_negatives = torch.randint(low=1, high=10, size=(1,)).item()
-        data.extend([self.neg_distr.sample() for _ in range(num_negatives)])
-        inst_labels.extend([torch.zeros(num_negatives)])
+        # Sample num_positives from positive distributions
+        data.extend([self.neg_dist.sample() for _ in range(self.B)])
+        inst_labels.extend([torch.zeros(self.B)])
 
         # Stack data
         data = torch.stack(data).view(-1, data[0].shape[-1])
@@ -167,6 +159,6 @@ class FalseFrequencyMILDataset(torch.utils.data.Dataset):
 
 
 if __name__ == "__main__":
-    dataset = FalseFrequencyMILDataset(D=2, num_bags=10, B=3, train=False)
+    dataset = SCStandardMILDataset(D=2, num_bags=10, B=3, train=False)
     print(dataset[0])
     print(dataset[-1])

@@ -17,7 +17,7 @@ class ToyDataset(torch.utils.data.Dataset):
     
     **Bag generation.**
     The dataset generates bags by sampling instances from the input  `(data, labels)` pair.
-    A bag is labeled as positive if it contains at least one instance from a predefined set of positive labels (obj_labels).
+    A bag is labeled as positive if it contains at least one instance from a predefined set of positive labels (`obj_labels`).
     The probability of generating a positive bag can be controlled via the argument `pos_class_prob`.
     The size of each bag can be specified using the argument `bag_size`.
     Additionally, each bag includes instance-level labels, indicating whether individual instances belong to the positive class.

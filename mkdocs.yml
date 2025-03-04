@@ -112,6 +112,9 @@ nav:
       - api/datasets/toy_dataset.md
       - api/datasets/wsi_dataset.md
       - api/datasets/ctscan_dataset.md
+      - api/datasets/sc_standard_dataset.md
+      - api/datasets/mc_standard_dataset.md
+      - api/datasets/false_frequency_dataset.md
     - <tt>torchmil.nn</tt>:
       - api/nn/index.md
       - api/nn/attention_pool.md

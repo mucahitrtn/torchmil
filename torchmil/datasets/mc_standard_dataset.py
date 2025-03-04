@@ -1,13 +1,13 @@
 import torch
-
 import numpy as np
-
-from collections import deque
-
 from tensordict import TensorDict
 
-
 class MCStandardMILDataset(torch.utils.data.Dataset):
+    """
+    Multi-Concept Standard MIL Dataset class constructor.
+    Implementation from Algorithm 2 in [Reproducibility in Multiple Instance Learning: A Case For Algorithmic Unit Tests](https://proceedings.neurips.cc/paper_files/paper/2023/hash/2bab8865fa4511e445767e3750b2b5ac-Abstract-Conference.html).
+    """
+
     def __init__(
         self,
         D: int,
@@ -18,10 +18,6 @@ class MCStandardMILDataset(torch.utils.data.Dataset):
         seed: int = 0,
     ) -> None:
         """
-        Multi-Concept Standard MIL Dataset class constructor.
-        Implementation from Algorithm 2 in the paper:
-        https://proceedings.neurips.cc/paper_files/paper/2023/hash/2bab8865fa4511e445767e3750b2b5ac-Abstract-Conference.html
-
         Arguments:
             D: Dimensionality of the data.
             num_bags: Number of bags in the dataset.

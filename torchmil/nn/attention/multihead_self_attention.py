@@ -24,7 +24,7 @@ class MultiheadSelfAttention(torch.nn.Module):
             att_dim: Attention dimension.
             in_dim: Input dimension.
             out_dim: Output dimension. If None, out_dim = in_dim.
-            num_heads: Number of heads.
+            n_heads: Number of heads.
             dropout: Dropout rate.
         """
         super(MultiheadSelfAttention, self).__init__()
