@@ -10,7 +10,7 @@
         - [ X ] (Fran) WSI dataset
         - [ X ] (Fran) CTScan dataset
         - [ X ] (Fran) Toy dataset
-        - [ ] (Javier) Datasets from: https://arxiv.org/abs/2310.17867
+        - [ X ] (Javier) Datasets from: https://arxiv.org/abs/2310.17867
         - [ ] Allow datasets to be downloaded from the internet ?
     - Models and modules:
         - [ ] Methods:
@@ -27,8 +27,9 @@
             - [  ] DSMIL
             - [  ] DFTDMIL
             - [  ] PathGCN
+                - Implement GENConv, right now PatchGCN uses GCNConv
             - [  ] DeepGraphSurv
-            - [  ] TransMIL
+            - [ X ] TransMIL
             - [  ] GTP
             - [  ] CAMIL
             - [  ] IIBMIL

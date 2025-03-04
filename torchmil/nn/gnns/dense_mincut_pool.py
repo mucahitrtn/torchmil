@@ -41,14 +41,14 @@ def dense_mincut_pool(
     Dense MinCut Pooling.
 
     Arguments:
-        X: Input tensor of shape `(batch_size, n_nodes, in_dim)`.
+        x: Input tensor of shape `(batch_size, n_nodes, in_dim)`.
         adj: Adjacency tensor of shape `(batch_size, n_nodes, n_nodes)`.
-        S: Dense learned assignments tensor of shape `(batch_size, n_nodes, n_cluster)`.
+        s: Dense learned assignments tensor of shape `(batch_size, n_nodes, n_cluster)`.
         mask: Mask tensor of shape `(batch_size, n_nodes)`.
         temp: Temperature.
     
     Returns:
-        X_: Pooled node feature tensor of shape `(batch_size, n_cluster, in_dim)`.
+        x_: Pooled node feature tensor of shape `(batch_size, n_cluster, in_dim)`.
         adj_: Coarsened adjacency tensor of shape `(batch_size, n_cluster, n_cluster)`.
         mincut_loss: MinCut loss.
         ortho_loss: Orthogonality loss.

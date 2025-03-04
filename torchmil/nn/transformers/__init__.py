@@ -2,6 +2,10 @@ from .encoder import(
     Encoder
 )
 
+from .layer import(
+    Layer
+)
+
 from .conventional_transformer import(
     TransformerLayer,
     TransformerEncoder

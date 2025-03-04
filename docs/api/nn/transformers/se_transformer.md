@@ -1,13 +1,13 @@
-# Nystrom Transformer
+# Spatial Encoding Transformer
 
 ---
-::: torchmil.nn.transformers.NystromTransformerEncoder
+::: torchmil.nn.transformers.SETransformerEncoder
     options:
         members:
         - __init__
         - forward
 ---
-::: torchmil.nn.transformers.NystromTransformerLayer
+::: torchmil.nn.transformers.SETransformerLayer
     options:
         members:
         - __init__

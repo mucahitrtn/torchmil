@@ -22,7 +22,8 @@ class PMFTransformerLayer(torch.nn.Module):
         """
         Arguments:
             in_dim: Input dimension.
-            embed_dim: Embedding dimension.
+            out_dim: Output dimension.
+            att_dim: Attention dimension.
             kernel_size: Kernel size.
             stride: Stride.
             padding: Padding.
@@ -83,7 +84,8 @@ class PMFTransformerEncoder(torch.nn.Module):
         """
         Arguments:
             in_dim: Input dimension.
-            embed_dim: Embedding dimension.
+            out_dim: Output dimension.
+            att_dim: Attention dimension.
             kernel_list: List of kernel sizes.
             stride_list: List of strides.
             padding_list: List of paddings.

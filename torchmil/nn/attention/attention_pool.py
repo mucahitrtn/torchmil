@@ -26,7 +26,7 @@ class AttentionPool(torch.nn.Module):
     
     where $\mathbf{W}_1 \in \mathbb{R}^{D \times \text{att_dim}}$, $\mathbf{W}_2 \in \mathbb{R}^{D \times \text{att_dim}}$,
     $\mathbf{w} \in \mathbb{R}^{\text{att_dim}}$, $\operatorname{act} \ \colon \mathbb{R} \to \mathbb{R}$ is the activation function,
-    $\operatorname{sigm} \ \colon \mathbb{R} \to \mathbb{R}$ is the sigmoid function, and $\odot$ denotes element-wise multiplication.
+    $\operatorname{sigm} \ \colon \mathbb{R} \to \left] 0, 1 \right[$ is the sigmoid function, and $\odot$ denotes element-wise multiplication.
     """
 
     def __init__(

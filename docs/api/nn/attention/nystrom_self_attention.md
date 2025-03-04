@@ -1,5 +1,5 @@
-# Multihead Self-Attention
-::: torchmil.nn.MultiheadSelfAttention
+# Nystrom Self-Attention
+::: torchmil.nn.attention.NystromAttention
     options:
         members:
             - __init__

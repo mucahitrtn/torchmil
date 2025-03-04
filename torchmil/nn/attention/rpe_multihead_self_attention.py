@@ -28,7 +28,7 @@ class RPEMultiheadSelfAttention(torch.nn.Module):
             in_dim: Input dimension.
             att_dim: Attention dimension.
             out_dim: Output dimension. If None, out_dim = in_dim.
-            num_heads: Number of heads.
+            n_heads: Number of heads.
             dropout: Dropout rate.
             learn_weights: Whether to learn the query, key, and value weights.
             rpe_ratio: Relative position encoding ratio.

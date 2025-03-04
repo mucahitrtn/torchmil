@@ -117,14 +117,27 @@ nav:
       - api/datasets/false_frequency_dataset.md
     - <tt>torchmil.nn</tt>:
       - api/nn/index.md
-      - api/nn/attention_pool.md
+      - Attention:
+        - api/nn/attention/index.md
+        - api/nn/attention/attention_pool.md
+        - api/nn/attention/multihead_self_attention.md
+        - api/nn/attention/rpe_multihead_self_attention.md
+        - api/nn/attention/nystrom_self_attention.md
+        - api/nn/attention/multihead_cross_attention.md
+      - Graph Neural Networks (GNNs):
+        - api/nn/gnns/index.md
+        - api/nn/gnns/deepgcn.md
+        - api/nn/gnns/gcn_conv.md
+        - api/nn/gnns/dense_mincut_pool.md
       - Transformers:
         - api/nn/transformers/index.md
+        - api/nn/transformers/base_transformer.md
         - api/nn/transformers/conventional_transformer.md
-        - api/nn/transformers/nystrom_transformer.md
         - api/nn/transformers/sm_transformer.md
+        - api/nn/transformers/nystrom_transformer.md
+        - api/nn/transformers/pmf_transformer.md
+        - api/nn/transformers/se_transformer.md
       - api/nn/sm.md
-      - api/nn/multihead_self_attention.md
     - <tt>torchmil.models</tt>:
       - api/models/index.md
       - api/models/mil_model.md
