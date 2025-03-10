@@ -5,8 +5,8 @@ from .mil_model import MILModel
 from torchmil.nn.relprop import RelPropTransformerEncoder, RelPropLinear, RelPropIndexSelect
 from torchmil.nn.utils import get_feat_dim
 
-from torchmil.nn.dense_mincut_pool import dense_mincut_pool
-from torchmil.nn.gcn_conv import GCNConv
+from torchmil.nn.gnns.dense_mincut_pool import dense_mincut_pool
+from torchmil.nn.gnns.gcn_conv import GCNConv
 
 class GTP(MILModel):
     r"""
@@ -19,7 +19,6 @@ class GTP(MILModel):
         n_layers : int = 1,
         n_heads : int = 8,
         use_mlp : bool = True,
-        add_self : bool = False,
         dropout : float = 0.0,
         feat_ext: torch.nn.Module = torch.nn.Identity(),
         criterion: torch.nn.Module = torch.nn.BCEWithLogitsLoss(),
@@ -37,7 +36,6 @@ class GTP(MILModel):
             n_layers: Number of layers in transformer encoder.
             n_heads: Number of heads in transformer encoder.
             use_mlp: Whether to use MLP in transformer encoder.
-            add_self: Whether to add input to output in transformer encoder.
             dropout: Dropout rate in transformer encoder.
             criterion: Loss function. By default, Binary Cross-Entropy loss from logits for binary classification.
         """

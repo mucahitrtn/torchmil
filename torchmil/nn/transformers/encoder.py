@@ -31,8 +31,6 @@ class Encoder(torch.nn.Module):
 
         Arguments:
             X: Input tensor of shape `(batch_size, bag_size, in_dim)`.
-            mask: Mask tensor of shape `(batch_size, bag_size)`.
-            **kwargs: Additional arguments.
 
         Returns:
             Y: Output tensor of shape `(batch_size, bag_size, in_dim)`.        

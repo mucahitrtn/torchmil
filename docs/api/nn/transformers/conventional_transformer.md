@@ -1,13 +1,13 @@
 # Conventional Transformer
 
 ---
-::: torchmil.nn.TransformerEncoder
+::: torchmil.nn.transformers.TransformerEncoder
     options:
         members:
         - __init__
         - forward
 ---
-::: torchmil.nn.TransformerLayer
+::: torchmil.nn.transformers.TransformerLayer
     options:
         members:
         - __init__

@@ -1,7 +1,6 @@
 # torchmil.nn
 
 ## Available modules
-- [Attention Pooling](attention_pool.md)
-- [Multihead Self-Attention](multihead_self_attention.md)
+- [Attention](attention/index.md)
+- [Transformers](transformers/index.md)
 - [Sm operator](sm.md)
-- [Transformer](transformers/index.md)

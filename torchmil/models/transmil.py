@@ -79,10 +79,10 @@ class TransMIL(MILModel):
         Arguments:
             in_shape: Shape of input data expected by the feature extractor (excluding batch dimension).
             att_dim: Embedding dimension.
-            n_heads: Number of heads.
+            n_layers: Number of Nyströmformer layers.
+            n_heads: Number of heads in the Nyströmformer layer.
             n_landmarks: Number of landmarks in the Nyströmformer layer.
             pinv_iterations: Number of iterations for the pseudo-inverse in the Nyströmformer layer.
-            residual: Whether to use residual in the Nyströmformer layer.
             dropout: Dropout rate in the Nyströmformer layer.
             use_mlp: Whether to use a MLP after the Nyströmformer layer.
             criterion: Loss function. By default, Binary Cross-Entropy loss from logits.        

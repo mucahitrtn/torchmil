@@ -38,9 +38,11 @@ from .transformers import (
     PMFTransformerEncoder as PMFTransformerEncoder
 )
 
-from .gcn_conv import GCNConv as GCNConv
-from .deepgcn import DeepGCNLayer as DeepGCNLayer
-
+from .gnns import (
+    GCNConv as GCNConv,
+    DeepGCNLayer as DeepGCNLayer,
+    dense_mincut_pool as dense_mincut_pool
+)
 
 
 

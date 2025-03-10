@@ -21,7 +21,7 @@ class ABMIL(MILModel):
     where $\mathbf{f} = \operatorname{MLP}(\mathbf{X}) \in \mathbb{R}^{N}$ are the attention values and $s_n$ is the normalized attention score for the $n$-th instance.
     The bag representation $\mathbf{z}$ is then fed into a classifier (one linear layer) to predict the bag label.
 
-    See [AttentionPool](../nn/attention_pool.md) for more details on the attention-based pooling.
+    See [AttentionPool](../nn/attention/attention_pool.md) for more details on the attention-based pooling.
     """
 
     def __init__(

@@ -7,6 +7,9 @@
 - [Processed MIL Dataset](datasets/processed_mil_dataset.md)
 - [Toy Dataset](datasets/toy_dataset.md)
 - [WSI Dataset](datasets/wsi_dataset.md)
+- [Single Concept Standard Dataset](datasets/sc_standard_dataset.md)
+- [Multi-Concept Standard Dataset](datasets/mc_standard_dataset.md)
+- [False Frequency Dataset](datasets/false_frequency_dataset.md)
 
 ## Models: [torchmil.models](models/index.md)
 - [General MIL model](models/mil_model.md)
@@ -24,7 +27,14 @@
 
 ## Modules: [torchmil.nn](nn/index.md)
 
-- [Attention Pooling](nn/attention_pool.md)
-- [Multihead Self-Attention](nn/multihead_self_attention.md)
-- [Sm operator](nn/sm.md)
+- [Attention](nn/attention/index.md)
+    - [Attention Pool](nn/attention/attention_pool.md)
+    - [Multihead Self-Attention](nn/attention/multihead_self_attention.md)
+    - [Multihead Self-Attention with Relative Positional Encoding](nn/attention/rpe_multihead_self_attention.md)
+    - [Nyström Self-Attention](nn/attention/nystrom_self_attention.md)
+    - [Multihead Cross-Attention](nn/attention/multihead_cross_attention.md)
 - [Transformers](nn/transformers/index.md)
+    - [Conventional Transformer](nn/transformers/conventional_transformer.md)
+    - [Sm Transformer](nn/transformers/sm_transformer.md)
+    - [Nystrom Transformer](nn/transformers/nystrom_transformer.md)
+- [Sm operator](nn/sm.md)

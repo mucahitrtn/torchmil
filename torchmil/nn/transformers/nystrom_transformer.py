@@ -28,7 +28,6 @@ class NystromTransformerLayer(Layer):
             n_heads: Number of heads.
             n_landmarks: Number of landmarks.
             pinv_iterations: Number of iterations for the pseudo-inverse.
-            residual: Whether to use residual in the attention layer.
             dropout: Dropout rate.
             use_mlp: Whether to use a MLP after the attention layer.   
         """

@@ -16,16 +16,17 @@ class AttentionPool(torch.nn.Module):
     where $\mathbf{f} = \operatorname{MLP}(\mathbf{X}) \in \mathbb{R}^{N}$ are the attention values and $s_n$ is the normalized attention score for the $n$-th instance.
 
     To compute the attention values, the $\operatorname{MLP}$ is defined as 
+
+    \begin{equation}
+    \operatorname{MLP}(\mathbf{X}) = \begin{cases}
+    \operatorname{act}(\mathbf{X}\mathbf{W}_1)\mathbf{w}, & \text{if gated=False}, \\
+    \left(\operatorname{act}(\mathbf{X}\mathbf{W}_1)\odot\operatorname{sigm}(\mathbf{X}\mathbf{W}_2)\right)\mathbf{w}, & \text{if gated=True},    
+    \end{cases}
+    \end{equation}
     
-    $$ \operatorname{MLP}(\mathbf{X}) = \operatorname{act}(\mathbf{X}\mathbf{W}_1)\mathbf{w}, $$
-
-    if `gated=False`, and as
-
-    $$ \operatorname{MLP}(\mathbf{X}) = \left(\operatorname{act}(\mathbf{X}\mathbf{W}_1)\odot\sigma(\mathbf{X}\mathbf{W}_2)\right)\mathbf{w}, $$
-
-    if `gated=True`, where $\mathbf{W}_1 \in \mathbb{R}^{D \times \text{att_dim}}$, $\mathbf{W}_2 \in \mathbb{R}^{D \times \text{att_dim}}$,
+    where $\mathbf{W}_1 \in \mathbb{R}^{D \times \text{att_dim}}$, $\mathbf{W}_2 \in \mathbb{R}^{D \times \text{att_dim}}$,
     $\mathbf{w} \in \mathbb{R}^{\text{att_dim}}$, $\operatorname{act} \ \colon \mathbb{R} \to \mathbb{R}$ is the activation function,
-     $\sigma \ \colon \mathbb{R} \to \mathbb{R}$ is the sigmoid function, and $\odot$ denotes element-wise multiplication.
+    $\operatorname{sigm} \ \colon \mathbb{R} \to \left] 0, 1 \right[$ is the sigmoid function, and $\odot$ denotes element-wise multiplication.
     """
 
     def __init__(
