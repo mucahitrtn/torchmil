@@ -61,7 +61,6 @@ class CAMILSelfAttention(nn.Module):
 
         return L
 
-# TODO: add the gated branch, and an option in the init arguments to choose if use gated or not
 
 class CAMILAttentionPool(nn.Module):
     r"""
@@ -82,11 +81,16 @@ class CAMILAttentionPool(nn.Module):
     def __init__(
         self, 
         in_dim : int, 
-        att_dim : int = 128
+        att_dim : int = 128,
+        gated: bool = False
     ) -> None:
         super(CAMILAttentionPool, self).__init__()
         self.fc1 = torch.nn.Linear(in_dim, att_dim)
         self.fc2 = torch.nn.Linear(att_dim, 1, bias=False)
+
+        if self.gated:
+            self.fc_gated = torch.nn.Linear(in_dim, att_dim)
+            self.act_gated = torch.nn.Sigmoid()
 
     def forward(
         self, 
@@ -109,7 +113,12 @@ class CAMILAttentionPool(nn.Module):
             f: (batch_size, bag_size) if `return_att
         """
 
-        f = self.fc2(torch.nn.functional.tanh(self.fc1(T))) # (batch_size, bag_size, 1)
+        H = torch.nn.functional.tanh(self.fc1(T)) # (batch_size, bag_size, att_dim)
+        if self.gated:
+            G = self.act_gated(self.fc_gated(T)) # (batch_size, bag_size, att_dim)
+            H = H * G
+
+        f = self.fc2(H) # (batch_size, bag_size, 1)
         a = masked_softmax(f, mask) # (batch_size, bag_size, 1)
         z = torch.bmm(M.transpose(1,2), a).squeeze(dim=2) # (batch_size, in_dim)
 
@@ -117,8 +126,6 @@ class CAMILAttentionPool(nn.Module):
             return z, f.squeeze(dim=2)
         else:
             return z
-
-# TODO: add an option in the init arguments to choose if use gated attention pool or not
 
 class CAMIL(MILModel):
     r""" 
@@ -133,7 +140,7 @@ class CAMIL(MILModel):
 
     $$ \mathbf{T} = \operatorname{NystromTransformerLayer}(\mathbf{X})$$
 
-    Next, a local bag representation is computed using the [CAMILSelfAttention](#torchmil.models.camil.CAMILSelfAttention) layer,
+    Next, a local bag representation is computed using the [CAMILSelfAttention](#torchmil.models.camil.CAMILAttentionPool) layer,
     
     $$ \mathbf{L} = \operatorname{CAMILSelfAttention}(\mathbf{T}) $$ 
 
