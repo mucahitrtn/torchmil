@@ -6,6 +6,8 @@ import numpy as np
 from torchmil.models.mil_model import MILModel
 from torchmil.nn.utils import get_feat_dim, masked_softmax
 
+
+# TODO: Why isnt this inside the dsmil class?
 def batched_index_select(
         input : torch.Tensor,
         dim : int,
@@ -30,6 +32,41 @@ def batched_index_select(
     return torch.gather(input, dim, index)
     
 class DSMIL(MILModel):
+    r"""
+    Dual-stream Multiple Instance Learning (DSMIL) model, proposed in the paper [Dual-stream Multiple Instance Learning Network
+    for Whole Slide Image Classification with Self-supervised Contrastive Learning](https://arxiv.org/pdf/2011.08939).
+
+    Given an input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times P}$, 
+    this model transforms the instance features using a feature extractor $f$, trained using _self-supervised contrastive learning_, 
+
+    $$ \mathbf{X} = f(\mathbf{X}) \in \mathbb{R}^{N \times D}.$$
+
+    Then, two streams are used.
+
+    The **first stream** uses an instance classifier $i$ followed by a max-pooling on the scores
+
+    $$
+    c_m(\mathbf{X}) = \max \{i(\mathbf{x}_n) \mid n = 1,\cdots, N\}.
+    $$
+
+    This stream predicts the instance $\mathbf{x}_m\$ with the highest score in the bag (critical instance).
+
+    The **second stream** transforms each instance embedding into two vectors
+
+    $$
+    \mathbf{q}_i = \mathbf{W}_q \mathbf{x}_i, \quad \mathbf{v}_i = \mathbf{W}_v \mathbf{x}_i, \quad i = 1,\cdots, N,
+    $$
+    then, it defines
+    $$
+    U(\mathbf{x}_i, \mathbf{x}_m) = \frac{exp \left( \langle \mathbf{q}_i, \mathbf{q}_m\rangle\right)}{\sum_{k=1}^N exp \left( \langle \mathbf{q}_k, \mathbf{q}_m\rangle\right)} \mathbf{v}_i.
+    $$
+    Lastly, the bag representation is computed as
+    $$
+    \mathbf{z} = \sum_{i=1}^N U(\mathbf{x}_i, \mathbf{x}_m) \mathbf{v}_i,
+    $$
+    and later classified using a neural network. Recall that this branch is similar to self-attention with the difference that query-key matching is performed only with the critical instance.
+
+    """
     def __init__(
             self, 
             in_shape: tuple = None,

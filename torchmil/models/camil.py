@@ -8,6 +8,9 @@ from torchmil.nn.utils import masked_softmax, get_feat_dim
 
 
 class CAMILSelfAttention(nn.Module):
+    r"""
+    Self-attention layer as described in [CAMIL: Context-Aware Multiple Instance Learning for Cancer Detection and Subtyping in Whole Slide Images](https://arxiv.org/abs/2305.05314).
+    """
     def __init__(
         self, 
         in_dim : int,
@@ -23,12 +26,14 @@ class CAMILSelfAttention(nn.Module):
         adj : torch.Tensor
     ) -> torch.Tensor:
         """
+        Forward pass.
+
         Arguments:
-            X: (batch_size, bag_size, in_dim)
-            adj: (batch_size, bag_size, bag_size)
+            X: Bag of features of shape (batch_size, bag_size, in_dim)
+            adj: Adjacency matrix of shape `(batch_size, bag_size, bag_size)`.
         
         Returns:
-            L: (batch_size, bag_size, in_dim)
+            L: Self-attention vectors with shape (batch_size, bag_size, in_dim)
         """
         
         q, k = self.qk_nn(X).chunk(2, dim=-1) # (batch_size, bag_size, att_dim), (batch_size, bag_size, att_dim)
@@ -46,7 +51,14 @@ class CAMILSelfAttention(nn.Module):
 
         return L
 
+
+# TODO: Isnt this a duplicate of the AttentionPool class?
+# TODO: Also, this is not as described in the paper, in the paper they use fc3 ( tanh(fc1) \odot sigmoid(fc2) )  --> Gated Attention Pool
+
 class CAMILAttentionPool(nn.Module):
+    r"""
+    Attention pooling layer as described in [CAMIL: Context-Aware Multiple Instance Learning for Cancer Detection and Subtyping in Whole Slide Images](https://arxiv.org/abs/2305.05314).
+    """
     def __init__(
         self, 
         in_dim : int, 
@@ -64,6 +76,8 @@ class CAMILAttentionPool(nn.Module):
         return_att : bool = False
     ) -> torch.Tensor:
         """
+        Forward pass.
+
         Arguments:
             t: (batch_size, bag_size, in_dim)
             m: (batch_size, bag_size, in_dim)
@@ -85,6 +99,29 @@ class CAMILAttentionPool(nn.Module):
             return z
 
 class CAMIL(MILModel):
+    r""" 
+    Context-Aware Multiple Instance Learning (CAMIL) model, presented in the paper [CAMIL: Context-Aware Multiple Instance Learning for Cancer Detection and Subtyping in Whole Slide Images](https://arxiv.org/abs/2305.05314).
+
+    Given an input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times P}$, 
+    this model transforms the instance features using a feature extractor $f$, trained using _self-supervised contrastive learning_, 
+
+    $$ \mathbf{X} = f(\mathbf{X}) \in \mathbb{R}^{N \times D}.$$
+
+    Then, the first step is to produce a transformed feature representation $\mathbf{T} = \left[ \mathbf{t}_1, \ldots, \mathbf{t}_N \right]^\top \in \mathbb{R}^{N \times P}$ using a Nystrom Transformer layer (see [Nyströmformer: A Nyström-Based Algorithm for Approximating Self-Attention](https://arxiv.org/abs/2102.03902) for details).
+
+    The second step is to compute the neighbor-constrained attention values, for which the adjacency matrix $\mathbf{A}$ is used. The elements $A_{ij} = s_{ij}$ of the adjacency matrix measure the similarity between the embeddings of instances $\mathbf{x}_i$ and $\mathbf{x}_j$. Letting $\mathbf{Q}(\mathbf{t}_i) = \mathbf{W}_q \mathbf{t}_i$, $\mathbf{K}(\mathbf{t}_i) = \mathbf{W}_k \mathbf{t}_i$, and $\mathbf{V}(\mathbf{t}_i) = \mathbf{W}_v \mathbf{t}_i$, the neighbor-constrained attention values are computed as
+
+    $$w_i = \frac{\exp\left(\sum_{j=1}^N \langle \mathbf{Q}(\mathbf{t}_i), \mathbf{K}(\mathbf{t}_j\rangle s_{ij} \right)}{\sum{k=1}^N \exp \left(\sum_{j=1}^N \langle \mathbf{Q}(\mathbf{t}_k), \mathbf{K}(\mathbf{t}_j\rangle s_{kj}\right)}.$$
+
+    Using $\mathbf{l}_i = w_i \mathbf{V}(\mathbf{t}_i)$, the local and global information is fused as
+
+    $$\mathbf{m} = \sigma(\mathbf{l}) \odot \mathbf{l} + (1 - \sigma(\mathbf{l})) \odot \mathbf{t},$$
+    
+    where $\sigma$ is the sigmoid function.
+
+    Lastly, the final bag representation is computed using the Gatted Attention Pool mechanism (see [AttentionPool](../nn/attention_pool.md) for more details). The bag representation is then fed into a linear classifier to predict the bag label.
+
+    """
     def __init__(
         self,
         in_shape: tuple,
@@ -99,6 +136,20 @@ class CAMIL(MILModel):
         feat_ext: torch.nn.Module = torch.nn.Identity(),
         criterion : torch.nn.Module = torch.nn.BCEWithLogitsLoss(),
     ) -> None:
+        """
+        Arguments:
+            in_shape: Shape of input data expected by the feature extractor (excluding batch dimension).
+            pool_att_dim: Attention dimension for the attention pooling layer.
+            nystrom_att_dim: Attention dimension for the Nystrom Transformer layer.
+            n_heads: Number of attention heads in the Nystrom Transformer layer.
+            n_landmarks: Number of landmarks in the Nystrom Transformer layer.
+            pinv_iterations: Number of iterations for computing the pseudo-inverse in the Nystrom Transformer layer.
+            residual: If True, use residual connections in the Nystrom Transformer layer.
+            dropout: Dropout rate of the Nystrom Transformer Layer.
+            use_mlp: If True, use MLP in the Nystrom Transformer layer.
+            feat_ext: Feature extractor.
+            criterion: Loss function. By default, Binary Cross-Entropy loss from logits.
+        """
         super(CAMIL, self).__init__()
         self.feat_ext = feat_ext
         self.criterion = criterion
