@@ -14,19 +14,19 @@ class DFTDMIL(MILModel):
     
     $$ \mathbf{X} = \text{FeatExt}(\mathbf{X}) \in \mathbb{R}^{N \times D}.$$
 
-    Then, the instances in a bag are randomly grouped in $M$ pseudo-bags $\mathbf{X} = \{\mathbf{X}^1, \cdots, \mathbf{X}^M\}$ with approximately the same number of instances. Each pseudo-bag is assigned its parent's bag label $Y^m = Y$. Then, the model has two prediction tiers:
+    Then, the instances in a bag are randomly grouped in $M$ pseudo-bags $\{\mathbf{X}_1, \cdots, \mathbf{X}_M\}$ with approximately the same number of instances. Each pseudo-bag is assigned its parent's bag label $Y_m = Y$. Then, the model has two prediction tiers:
 
-    In **Tier 1**, the model uses the attention pool (see [AttentionPool](../nn/attention_pool.md) for details) and a classifier, jointly noted as $T_1$ to predict the label of each pseudo-bag, 
+    In **Tier 1**, the model uses the attention pool (see [AttentionPool](../nn/attention/attention_pool.md) for details) and a classifier, jointly noted as $T_1$ to predict the label of each pseudo-bag, 
 
-    $$y^m = T_1(\{x_k \mid x_k \in \mathbf{X}^m\}).$$
+    $$ \widehat{Y}_m = T_1(\mathbf{X}_m).$$
       
-    The loss associated to this tier is the binary cross entropy computed using the pseudo-bag labels $Y^m$ and the predicted label $y^m$.
+    The loss associated to this tier is the binary cross entropy computed using the pseudo-bag labels $Y_m$ and the predicted label $\widehat{Y}_m$.
 
-    In **Tier 2**, Grad-CAM (see [Grad-CAM](https://arxiv.org/abs/1610.02391) for details) is used to compute the probability of each instance. Based on that probability, a feature vector $\hat{\mathbf{f}^m}$ is distilled for the $m$-th pseudo-bag. Then, the model uses another attention pool and a classifier, jointly noted as $T_2$ to predict the label of each pseudo-bag,
+    In **Tier 2**, Grad-CAM (see [Grad-CAM](https://arxiv.org/abs/1610.02391) for details) is used to compute the probability of each instance. Based on that probability, a feature vector $\mathbf{z}^m$ is distilled for the $m$-th pseudo-bag. Then, the model uses another attention pool and a classifier, jointly noted as $T_2$ to predict the final label of the bag,
 
-    $$y = T_2(\{\hat{\mathbf{f}^m} \mid m = 1,\cdots, M\}).$$
+    $$ \widehat{Y} = T_2\left( \left[ \mathbf{z}_1, \ldots, \mathbf{z}_M \right]^\top  \right).$$
 
-    The loss associated to this tier is the binary cross entropy computed using the bag labels $Y$ and the predicted label $y$.
+    The loss associated to this tier is the binary cross entropy computed using the bag labels $Y$ and the predicted label $\widehat{Y}$.
 
     """
     def __init__(
