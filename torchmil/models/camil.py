@@ -6,8 +6,21 @@ from torchmil.models import MILModel
 
 from torchmil.nn.utils import masked_softmax, get_feat_dim
 
+# TODO: the buttons #whatever are not working
 
 class CAMILSelfAttention(nn.Module):
+    r"""
+    Self-attention layer used in [CAMIL: Context-Aware Multiple Instance Learning for Cancer Detection and Subtyping in Whole Slide Images](https://arxiv.org/abs/2305.05314).
+    This layer computes the self-attention values using the local information of the bag. The local information is captured using an adjacency matrix, which measures the similarity between the embeddings of instances in the bag.
+
+    Given an input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times P}$, and an adjacency matrix $\mathbf{A} \in \mathbb{R}^{N \times N}$, this layer computes
+
+    $$ \mathbf{l}_i = \frac{\exp\left(\sum_{j=1}^N a_{ij} \mathbf{q}_i^\top \mathbf{k}_j \right)}{\sum_{k=1}^N \exp \left(\sum_{j=1}^N a_{kj} \mathbf{q}_k^\top \mathbf{k}_j \right)} \mathbf{v}_i,$$
+
+    where $\mathbf{q}_i = \mathbf{W_q}\mathbf{x}_i$, $\mathbf{k}_i = \mathbf{W_k}\mathbf{x}_i$, and $\mathbf{v}_i = \mathbf{W_v}\mathbf{x}_i$ are the query, key, and value vectors, respectively.
+    Finally, it returns $\mathbf{L} = \left[ \mathbf{l}_1, \ldots, \mathbf{l}_N \right]^\top$.
+
+    """
     def __init__(
         self, 
         in_dim : int,
@@ -23,12 +36,14 @@ class CAMILSelfAttention(nn.Module):
         adj : torch.Tensor
     ) -> torch.Tensor:
         """
+        Forward pass.
+
         Arguments:
-            X: (batch_size, bag_size, in_dim)
-            adj: (batch_size, bag_size, bag_size)
+            X: Bag of features of shape (batch_size, bag_size, in_dim)
+            adj: Adjacency matrix of shape `(batch_size, bag_size, bag_size)`.
         
         Returns:
-            L: (batch_size, bag_size, in_dim)
+            L: Self-attention vectors with shape (batch_size, bag_size, in_dim)
         """
         
         q, k = self.qk_nn(X).chunk(2, dim=-1) # (batch_size, bag_size, att_dim), (batch_size, bag_size, att_dim)
@@ -46,27 +61,50 @@ class CAMILSelfAttention(nn.Module):
 
         return L
 
+
 class CAMILAttentionPool(nn.Module):
+    r"""
+    Attention pooling layer as described in [CAMIL: Context-Aware Multiple Instance Learning for Cancer Detection and Subtyping in Whole Slide Images](https://arxiv.org/abs/2305.05314).
+    
+    Given a bag of features $\mathbf{T} = \left[ \mathbf{t}_1, \ldots, \mathbf{t}_N \right]^\top \in \mathbb{R}^{N \times D}$ and $\mathbf{M} = \left[ \mathbf{m}_1, \ldots, \mathbf{m}_N \right]^\top \in \mathbb{R}^{N \times D}$, this layer computes the final bag representation $\mathbf{z}$ as
+
+    \begin{gather}
+    \mathbf{f} = \mathbf{w}^\top \tanh(\mathbf{T} \mathbf{W} ) \odot \operatorname{sigmoid}(\mathbf{T} \mathbf{U}), \\
+    \mathbf{s} = \text{softmax}(\mathbf{f}), \\
+    \mathbf{z} = \mathbf{M}^\top \mathbf{s}.
+    \end{gather}
+
+    where $\mathbf{W}, \mathbf{U}$ and $\mathbf{w}$ are learnable parameters. Note the difference with conventional [AttentionPool](../nn/attention/attention_pool.md) layer, where the attention values and bag representation are computed from the same set of features.
+
+
+    """
     def __init__(
         self, 
         in_dim : int, 
-        att_dim : int = 128
+        att_dim : int = 128,
+        gated: bool = False
     ) -> None:
         super(CAMILAttentionPool, self).__init__()
         self.fc1 = torch.nn.Linear(in_dim, att_dim)
         self.fc2 = torch.nn.Linear(att_dim, 1, bias=False)
 
+        if self.gated:
+            self.fc_gated = torch.nn.Linear(in_dim, att_dim)
+            self.act_gated = torch.nn.Sigmoid()
+
     def forward(
         self, 
-        t : torch.Tensor,
-        m : torch.Tensor,
+        T : torch.Tensor,
+        M : torch.Tensor,
         mask : torch.Tensor,
         return_att : bool = False
     ) -> torch.Tensor:
         """
+        Forward pass.
+
         Arguments:
-            t: (batch_size, bag_size, in_dim)
-            m: (batch_size, bag_size, in_dim)
+            T: (batch_size, bag_size, in_dim)
+            M: (batch_size, bag_size, in_dim)
             mask: (batch_size, bag_size)
             return_att: If True, returns attention values in addition to `z`.
         
@@ -75,9 +113,14 @@ class CAMILAttentionPool(nn.Module):
             f: (batch_size, bag_size) if `return_att
         """
 
-        f = self.fc2(torch.nn.functional.tanh(self.fc1(t))) # (batch_size, bag_size, 1)
+        H = torch.nn.functional.tanh(self.fc1(T)) # (batch_size, bag_size, att_dim)
+        if self.gated:
+            G = self.act_gated(self.fc_gated(T)) # (batch_size, bag_size, att_dim)
+            H = H * G
+
+        f = self.fc2(H) # (batch_size, bag_size, 1)
         a = masked_softmax(f, mask) # (batch_size, bag_size, 1)
-        z = torch.bmm(m.transpose(1,2), a).squeeze(dim=2) # (batch_size, in_dim)
+        z = torch.bmm(M.transpose(1,2), a).squeeze(dim=2) # (batch_size, in_dim)
 
         if return_att:
             return z, f.squeeze(dim=2)
@@ -85,6 +128,30 @@ class CAMILAttentionPool(nn.Module):
             return z
 
 class CAMIL(MILModel):
+    r""" 
+    Context-Aware Multiple Instance Learning (CAMIL) model, presented in the paper [CAMIL: Context-Aware Multiple Instance Learning for Cancer Detection and Subtyping in Whole Slide Images](https://arxiv.org/abs/2305.05314).
+
+    Given an input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times P}$, 
+    this model first transforms the instance features using a feature extractor, 
+
+    $$ \mathbf{X} = \operatorname{FeatExt}(\mathbf{X}) \in \mathbb{R}^{N \times D}.$$
+
+    Then, a global bag representation is computed using a [NystromTransformerLayer](../nn/transformers/nystrom_transformer.md), 
+
+    $$ \mathbf{T} = \operatorname{NystromTransformerLayer}(\mathbf{X})$$
+
+    Next, a local bag representation is computed using the [CAMILSelfAttention](#torchmil.models.camil.CAMILSelfAttention) layer,
+    
+    $$ \mathbf{L} = \operatorname{CAMILSelfAttention}(\mathbf{T}) $$ 
+
+    Finally, the local and global information is fused as
+
+    $$ \mathbf{M} = \operatorname{sigmoid}(\mathbf{L}) \odot \mathbf{L} + (1 - \operatorname{sigmoid}(\mathbf{L})) \odot \mathbf{T},$$
+
+    where $\odot$ denotes element-wise multiplication and $\operatorname{sigmoid}$ is the sigmoid function.
+    
+    Lastly, the final bag representation is computed using a [modification of the Gatted Attention Pool mechanism](#torchmil.models.camil.CAMILAttentionPool). The bag representation is then fed into a linear classifier to predict the bag label.
+    """
     def __init__(
         self,
         in_shape: tuple,
@@ -99,6 +166,20 @@ class CAMIL(MILModel):
         feat_ext: torch.nn.Module = torch.nn.Identity(),
         criterion : torch.nn.Module = torch.nn.BCEWithLogitsLoss(),
     ) -> None:
+        """
+        Arguments:
+            in_shape: Shape of input data expected by the feature extractor (excluding batch dimension).
+            pool_att_dim: Attention dimension for the attention pooling layer.
+            nystrom_att_dim: Attention dimension for the Nystrom Transformer layer.
+            n_heads: Number of attention heads in the Nystrom Transformer layer.
+            n_landmarks: Number of landmarks in the Nystrom Transformer layer.
+            pinv_iterations: Number of iterations for computing the pseudo-inverse in the Nystrom Transformer layer.
+            residual: If True, use residual connections in the Nystrom Transformer layer.
+            dropout: Dropout rate of the Nystrom Transformer Layer.
+            use_mlp: If True, use MLP in the Nystrom Transformer layer.
+            feat_ext: Feature extractor.
+            criterion: Loss function. By default, Binary Cross-Entropy loss from logits.
+        """
         super(CAMIL, self).__init__()
         self.feat_ext = feat_ext
         self.criterion = criterion

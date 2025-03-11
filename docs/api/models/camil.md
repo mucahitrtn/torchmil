@@ -7,3 +7,11 @@
             - forward
             - compute_loss
             - predict
+
+---
+
+::: torchmil.models.camil.CAMILSelfAttention
+
+---
+
+::: torchmil.models.camil.CAMILAttentionPool

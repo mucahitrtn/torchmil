@@ -6,6 +6,37 @@ from torchmil.nn import AttentionPool, LazyLinear
 from torchmil.nn.utils import get_feat_dim
 
 class DFTDMIL(MILModel):
+    r"""
+    Double-Tier Feature Distillation Multiple Instance Learning (DFTD-MIL) model, proposed in the paper [DTFD-MIL: Double-Tier Feature Distillation Multiple Instance Learning for Histopathology Whole Slide Image Classification](https://arxiv.org/abs/2203.12081).
+
+    **Forward pass.**
+    Given an input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times P}$ and its label $Y$, 
+    this model optionally transforms the instance features using a feature extractor,
+    
+    $$ \mathbf{X} = \text{FeatExt}(\mathbf{X}) \in \mathbb{R}^{N \times D}.$$
+
+    Then, the instances in a bag are randomly grouped in $M$ pseudo-bags $\{\mathbf{X}_1, \cdots, \mathbf{X}_M\}$ with approximately the same number of instances. Each pseudo-bag is assigned its parent's bag label $Y_m = Y$. Then, the model has two prediction tiers:
+
+    In **Tier 1**, the model uses the attention pool (see [AttentionPool](../nn/attention/attention_pool.md) for details) and a classifier, jointly noted as $T_1$ to predict the label of each pseudo-bag, 
+
+    $$ \widehat{Y}_m = T_1(\mathbf{X}_m).$$
+      
+    The loss associated to this tier is the binary cross entropy computed using the pseudo-bag labels $Y_m$ and the predicted label $\widehat{Y}_m$.
+
+    In **Tier 2**, Grad-CAM (see [Grad-CAM](https://arxiv.org/abs/1610.02391) for details) is used to compute the probability of each instance. Based on that probability, a feature vector $\mathbf{z}^m$ is distilled for the $m$-th pseudo-bag. Then, the model uses another attention pool and a classifier, jointly noted as $T_2$ to predict the final label of the bag,
+
+    $$ \widehat{Y} = T_2\left( \left[ \mathbf{z}_1, \ldots, \mathbf{z}_M \right]^\top  \right).$$
+
+    The loss associated to this tier is the binary cross entropy computed using the bag labels $Y$ and the predicted label $\widehat{Y}$.
+
+    **Loss function.**
+    By default, the model is trained end-to-end using the followind per-bag loss:
+
+    $$ \ell = \ell_{\text{BCE}}(Y, \widehat{Y}) + \frac{1}{M} \sum_{m=1}^{M} \ell_{\text{BCE}}(Y_m, \widehat{Y}_m),$$
+
+    where $\ell_{\text{BCE}}$ is the binary cross entropy loss.
+    
+    """
     def __init__(
         self, 
         in_shape: tuple = None,
@@ -14,7 +45,17 @@ class DFTDMIL(MILModel):
         distill_mode : str = 'maxmin',
         feat_ext: torch.nn.Module = torch.nn.Identity(),
         criterion: torch.nn.Module = torch.nn.BCEWithLogitsLoss()
-    ):
+    ) -> None:
+        """
+        Arguments:
+            in_shape: Shape of input data expected by the feature extractor (excluding batch dimension). If not provided, it will be lazily initialized.
+            att_dim: Attention dimension.
+            n_groups: Number of groups to split the bag instances.
+            distill_mode: Distillation mode. Possible values: 'maxmin', 'max', 'afs'.
+            feat_ext: Feature extractor.
+            criterion: Loss function. By default, Binary Cross-Entropy loss from logits.
+        """
+
         super(DFTDMIL, self).__init__()
         self.feat_ext = feat_ext
         self.criterion = criterion

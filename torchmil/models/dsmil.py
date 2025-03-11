@@ -6,6 +6,8 @@ import numpy as np
 from torchmil.models.mil_model import MILModel
 from torchmil.nn.utils import get_feat_dim, masked_softmax
 
+
+# TODO: Why isnt this inside the dsmil class?
 def batched_index_select(
         input : torch.Tensor,
         dim : int,
@@ -30,6 +32,42 @@ def batched_index_select(
     return torch.gather(input, dim, index)
     
 class DSMIL(MILModel):
+    r"""
+    Dual-stream Multiple Instance Learning (DSMIL) model, proposed in the paper [Dual-stream Multiple Instance Learning Network
+    for Whole Slide Image Classification with Self-supervised Contrastive Learning](https://arxiv.org/pdf/2011.08939).
+
+    Given an input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times P}$, 
+    this model optionally transforms the instance features using a feature extractor,
+    
+    $$ \mathbf{X} = \text{FeatExt}(\mathbf{X}) \in \mathbb{R}^{N \times D}.$$
+
+    Then, two streams are used. The **first stream** uses an instance classifier $c \ \colon \mathbb{R}^D \to \mathbb{R}$ and retrieves the instance with the highest logit score,
+
+    $$
+    m = \arg \max \{ c(\mathbf{x}_1), \ldots, c(\mathbf{x}_N) \}.
+    $$
+
+    Then, the **second stream** computes the bag representation $\mathbf{z} \in \mathbb{R}^D$ as
+    
+    $$
+    \mathbf{z} = \frac{ \exp \left( \mathbf{q}_i^\top \mathbf{q}_m \right)}{\sum_{k=1}^N \exp \left( \mathbf{q}_k^\top \mathbf{q}_m \right)} \mathbf{v}_i,
+    $$
+
+    where $\mathbf{q}_i = \mathbf{W}_q \mathbf{x}_i$ and $\mathbf{v}_i = \mathbf{W}_v \mathbf{x}_i$.
+    This is similar to self-attention with the difference that query-key matching is performed only with the critical instance.
+
+    Finally, the bag representation is used to predict the bag label using a bag classifier implemented as a linear layer.
+
+    **Loss function.**
+    By default, the model is trained end-to-end using the followind per-bag loss:
+
+    $$
+    \ell = \ell_{\text{BCE}}(y, \hat{y}) + \ell_{\text{BCE}}(y, c(\mathbf{x}_m)),
+    $$
+
+    where $\ell_{\text{BCE}}$ is the Binary Cross-Entropy loss, $y$ is the true bag label, $\hat{y}$ is the predicted bag label, and $c(\mathbf{x}_m)$ is the predicted label of the critical instance.
+
+    """
     def __init__(
             self, 
             in_shape: tuple = None,
