@@ -140,7 +140,7 @@ class CAMIL(MILModel):
 
     $$ \mathbf{T} = \operatorname{NystromTransformerLayer}(\mathbf{X})$$
 
-    Next, a local bag representation is computed using the [CAMILSelfAttention](#torchmil.models.camil.CAMILAttentionPool) layer,
+    Next, a local bag representation is computed using the [CAMILSelfAttention](#torchmil.models.camil.CAMILSelfAttention) layer,
     
     $$ \mathbf{L} = \operatorname{CAMILSelfAttention}(\mathbf{T}) $$ 
 
