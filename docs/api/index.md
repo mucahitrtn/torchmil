@@ -18,6 +18,7 @@
 - [CLAM](models/clam.md)
 - [DFTDMIL](models/dftdmil.md)
 - [DSMIL](models/dsmil.md)
+- [GTP](models/gtp.md)
 - [ProbSmoothABMIL](models/prob_smooth_abmil.md)
 - [SmABMIL](models/sm_abmil.md)
 - [SmTransformerABMIL](models/sm_transformer_abmil.md)

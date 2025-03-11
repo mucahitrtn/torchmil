@@ -155,8 +155,8 @@ class CAMIL(MILModel):
     def __init__(
         self,
         in_shape: tuple,
-        pool_att_dim : int = 128,
         nystrom_att_dim : int = 512,
+        pool_att_dim : int = 128,
         n_heads : int = 4,
         n_landmarks : int = None,
         pinv_iterations : int = 6,

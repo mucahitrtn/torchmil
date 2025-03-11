@@ -10,7 +10,41 @@ from torchmil.nn.gnns.gcn_conv import GCNConv
 
 class GTP(MILModel):
     r"""
+    Method proposed in the paper [GTP: Graph-Transformer for Whole Slide Image Classification](https://arxiv.org/abs/2205.09671).
+
+    **Forward pass.**
+    Given an input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times P}$, this model optionally transforms the instance features using a feature extractor trained with self-supervised contrastive learning:
+
+    $$ \mathbf{X} = \text{FeatExt}(\mathbf{X}) \in \mathbb{R}^{N \times D}.$$
+
+    The bags are processed using a Graph Convolutional Network (GCN) to extract high-level instance embeddings. 
+    This GCN leverages a graph $\mathbf{A}$ constructed from the bag, where nodes correspond to patches, and edges are determined based on spatial adjacency:
+
+    $$ \mathbf{H} = \text{GCN}(\mathbf{X}, \mathbf{A}) \in \mathbb{R}^{N \times D}.$$
+
+    To reduce the number of nodes while preserving structural relationships, a min-cut pooling operation is applied:
+
+    $$ \mathbf{X}', \mathbf{A}' = \text{MinCutPool}(\mathbf{H}, \mathbf{A}).$$
+
+    The pooled graph is then passed through a Transformer encoder, where a class token is introduced:
+
+    $$ \mathbf{Z} = \text{Transformer}([\text{CLS}; \mathbf{X}']) \in \mathbb{R}^{(N' + 1) \times D}.$$
+
+    Finally, the class token representation is used for classification:
+
+    $$ \mathbf{z} = \mathbf{Z}_{0}, \quad Y_{\text{pred}} = \text{Classifier}(\mathbf{z}).$$
+
+    Optionally, GraphCAM can be used to generate class activation maps highlighting the most relevant regions for the classification decision.
+
+    **Loss function.**
+    By default, the model is trained end-to-end using the followind per-bag loss:
+
+    $$ \ell = \ell_{\text{BCE}}(Y_{\text{pred}}, Y) + \ell_{\text{MinCut}}(\mathbf{X}, \mathbf{A}) + \ell_{\text{Ortho}}(\mathbf{X}, \mathbf{A}),$$
+
+    where $\ell_{\text{BCE}}$ is the Binary Cross-Entropy loss, $\ell_{\text{MinCut}}$ is the MinCut loss, and $\ell_{\text{Ortho}}$ is the Orthogonality loss, computed during the min-cut pooling operation, see [Dense MinCut Pooling](../nn/gnns/dense_mincut_pool.md).
+
     """
+
     def __init__(
         self,
         in_shape : tuple,
@@ -28,15 +62,13 @@ class GTP(MILModel):
 
         Arguments:
             in_shape: Shape of input data expected by the feature extractor (excluding batch dimension). If not provided, it will be lazily initialized.
-            pool_att_dim: Attention dimension for pooling.
-            pool_act: Activation function for pooling. Possible values: 'tanh', 'relu', 'gelu'.
-            pool_gated: If True, use gated attention in the attention pooling.
-            feat_ext: Feature extractor.
             att_dim: Attention dimension for transformer encoder.
+            n_clusters: Number of clusters in mincut pooling.
             n_layers: Number of layers in transformer encoder.
             n_heads: Number of heads in transformer encoder.
             use_mlp: Whether to use MLP in transformer encoder.
             dropout: Dropout rate in transformer encoder.
+            feat_ext: Feature extractor.
             criterion: Loss function. By default, Binary Cross-Entropy loss from logits for binary classification.
         """
         super().__init__()
