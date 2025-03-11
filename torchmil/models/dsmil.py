@@ -36,7 +36,7 @@ class DSMIL(MILModel):
     Dual-stream Multiple Instance Learning (DSMIL) model, proposed in the paper [Dual-stream Multiple Instance Learning Network
     for Whole Slide Image Classification with Self-supervised Contrastive Learning](https://arxiv.org/pdf/2011.08939).
 
-    **Forward pass.**
+    **Overview.**
     Given an input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times P}$, 
     this model optionally transforms the instance features using a feature extractor,
     

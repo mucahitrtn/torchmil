@@ -9,7 +9,7 @@ class DFTDMIL(MILModel):
     r"""
     Double-Tier Feature Distillation Multiple Instance Learning (DFTD-MIL) model, proposed in the paper [DTFD-MIL: Double-Tier Feature Distillation Multiple Instance Learning for Histopathology Whole Slide Image Classification](https://arxiv.org/abs/2203.12081).
 
-    **Forward pass.**
+    **Overview.**
     Given an input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times P}$ and its label $Y$, 
     this model optionally transforms the instance features using a feature extractor,
     

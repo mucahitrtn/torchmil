@@ -71,7 +71,7 @@ class CAMILAttentionPool(nn.Module):
     \begin{gather}
     \mathbf{f} = \mathbf{w}^\top \tanh(\mathbf{T} \mathbf{W} ) \odot \operatorname{sigmoid}(\mathbf{T} \mathbf{U}), \\
     \mathbf{s} = \text{softmax}(\mathbf{f}), \\
-    \mathbf{z} = \mathbf{M}^\top \mathbf{s}.
+    \mathbf{z} = \mathbf{M}^\top \mathbf{s},
     \end{gather}
 
     where $\mathbf{W}, \mathbf{U}$ and $\mathbf{w}$ are learnable parameters. Note the difference with conventional [AttentionPool](../nn/attention/attention_pool.md) layer, where the attention values and bag representation are computed from the same set of features.
@@ -85,6 +85,7 @@ class CAMILAttentionPool(nn.Module):
         gated: bool = False
     ) -> None:
         super(CAMILAttentionPool, self).__init__()
+        self.gated = gated
         self.fc1 = torch.nn.Linear(in_dim, att_dim)
         self.fc2 = torch.nn.Linear(att_dim, 1, bias=False)
 
@@ -157,6 +158,7 @@ class CAMIL(MILModel):
         in_shape: tuple,
         nystrom_att_dim : int = 512,
         pool_att_dim : int = 128,
+        gated_pool : bool = False,
         n_heads : int = 4,
         n_landmarks : int = None,
         pinv_iterations : int = 6,
@@ -170,6 +172,7 @@ class CAMIL(MILModel):
         Arguments:
             in_shape: Shape of input data expected by the feature extractor (excluding batch dimension).
             pool_att_dim: Attention dimension for the attention pooling layer.
+            gated_pool: If True, use gated attention pooling.
             nystrom_att_dim: Attention dimension for the Nystrom Transformer layer.
             n_heads: Number of attention heads in the Nystrom Transformer layer.
             n_landmarks: Number of landmarks in the Nystrom Transformer layer.
@@ -194,7 +197,7 @@ class CAMIL(MILModel):
         self.nystrom_transformer_layer = NystromTransformerLayer(att_dim=nystrom_att_dim, n_heads=n_heads, n_landmarks=n_landmarks, pinv_iterations=pinv_iterations, residual=residual, dropout=dropout, use_mlp=use_mlp)
         
         self.camil_self_attention = CAMILSelfAttention(in_dim=feat_dim, att_dim=nystrom_att_dim)
-        self.camil_att_pool = CAMILAttentionPool(in_dim=feat_dim, att_dim=pool_att_dim)
+        self.camil_att_pool = CAMILAttentionPool(in_dim=feat_dim, att_dim=pool_att_dim, gated=gated_pool)
 
         self.classifier = nn.Linear(feat_dim, 1)
 

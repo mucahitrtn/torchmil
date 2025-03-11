@@ -1,4 +1,4 @@
-# Graph Neural Networks (GNNs)
+# torchmil.nn.gnns
 
 - [Deep Graph Convolutional Network (DeepGCN) layer](deepgcn.md)
 - [Graph Convolutional Network (GCN) convolution](gcn_conv.md)

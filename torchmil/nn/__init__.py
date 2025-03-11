@@ -43,16 +43,3 @@ from .gnns import (
     DeepGCNLayer as DeepGCNLayer,
     dense_mincut_pool as dense_mincut_pool
 )
-
-
-
-
-# from .MILMeanPool import *
-# from .MILMaxPool import *
-# from .attention_pool import *
-# from .smoothing import *
-# from .MILFeatExt import *
-# from .MILTransformer import *
-# from .NystromTransformer import *
-# from .GCNConv import *
-# from .dense_mincut_pool import *
