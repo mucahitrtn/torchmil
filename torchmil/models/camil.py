@@ -85,11 +85,38 @@ class CAMILAttentionPool(nn.Module):
             return z
 
 class CAMIL(MILModel):
+    r"""
+    Method proposed in the paper [CAMIL: Context-Aware Multiple Instance Learning for Cancer Detection and Subtyping in Whole Slide Images](https://arxiv.org/abs/2305.05314).
+
+    Given an input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times P}$, 
+    this model optionally transforms the instance features using a feature extractor trained with self-supervised contrastive learning:
+
+    $$ \mathbf{X} = \text{FeatExt}(\mathbf{X}) \in \mathbb{R}^{N \times D}.$$
+
+    Then, it applies a Transformer module to capture global dependencies among instances:
+
+    $$ \mathbf{H} = \text{Transformer}(\mathbf{X}) \in \mathbb{R}^{N \times D}.$$
+
+    To incorporate local context, the model introduces a neighbor-constrained attention mechanism that recalibrates instance-level attention scores based on spatially adjacent instances:
+
+    $$ \mathbf{A} = \text{NeighborAttention}(\mathbf{H}, \mathbf{Adj}) \in \mathbb{R}^{N},$$
+
+    where $\mathbf{Adj}$ represents a similarity-based adjacency matrix encoding spatial relationships.
+
+    Finally, a feature aggregation step adaptively fuses local and global representations to predict the bag label:
+
+    $$ \mathbf{z} = \sum_{i=1}^{N} a_i \mathbf{m}_i,$$
+
+    where $\mathbf{m}_i$ is a blended local-global representation, and $a_i$ are attention weights.
+
+    The final classification is obtained via a linear layer applied to $\mathbf{z}$.
+"""
+
     def __init__(
         self,
         in_shape: tuple,
-        pool_att_dim : int = 128,
         nystrom_att_dim : int = 512,
+        pool_att_dim : int = 128,
         n_heads : int = 4,
         n_landmarks : int = None,
         pinv_iterations : int = 6,
@@ -99,6 +126,21 @@ class CAMIL(MILModel):
         feat_ext: torch.nn.Module = torch.nn.Identity(),
         criterion : torch.nn.Module = torch.nn.BCEWithLogitsLoss(),
     ) -> None:
+        r"""
+        Arguments:
+            in_shape: Shape of the input data expected by the feature extractor (excluding batch dimension).
+            nystrom_att_dim: Dimensionality of the embedding when computing self-attention.
+            pool_att_dim: Dimensionality of the embedding in the attention pooling.
+            n_heads: Number of attention heads in the Nyströmformer layer.
+            n_landmarks: Number of landmarks in the Nyströmformer layer.
+            pinv_iterations: Number of iterations for the pseudo-inverse computation in the Nyströmformer layer.
+            residual: Whether to use residual connections in the Nyströmformer layer.
+            dropout: Dropout rate in the Nyströmformer layer.
+            use_mlp: Whether to use a MLP after the Nyströmformer layer.
+            feat_ext: Feature extractor. By default, the identity function (no feature extraction).
+            criterion: Loss function used for training (default: Binary Cross-Entropy loss from logits).
+"""
+
         super(CAMIL, self).__init__()
         self.feat_ext = feat_ext
         self.criterion = criterion
