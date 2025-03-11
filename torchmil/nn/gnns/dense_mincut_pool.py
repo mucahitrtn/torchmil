@@ -1,6 +1,6 @@
 import torch
 
-from torchmil.utils import masked_softmax
+from torchmil.nn.utils import masked_softmax
 
 def trace(x : torch.Tensor) -> torch.Tensor:
     """
