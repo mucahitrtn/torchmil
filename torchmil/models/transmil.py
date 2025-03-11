@@ -85,6 +85,7 @@ class TransMIL(MILModel):
             pinv_iterations: Number of iterations for the pseudo-inverse in the Nyströmformer layer.
             dropout: Dropout rate in the Nyströmformer layer.
             use_mlp: Whether to use a MLP after the Nyströmformer layer.
+            feat_ext: Feature extractor. By default, the identity function (no feature extraction).
             criterion: Loss function. By default, Binary Cross-Entropy loss from logits.        
         """
 
