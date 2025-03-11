@@ -24,14 +24,14 @@
             - [  ] (Fran) ProbSmoothTransformerABMIL
             - [  ] CLAM
                 - [  ] Modify inst_eval, inst_eval_out so they accept batched inputs
-            - [  ] DSMIL
-            - [  ] DFTDMIL
+            - [ X ] (Javier) DSMIL
+            - [ X ] (Javier) DFTDMIL
             - [  ] PathGCN
                 - Implement GENConv, right now PatchGCN uses GCNConv
             - [  ] DeepGraphSurv
             - [ X ] TransMIL
             - [  ] GTP
-            - [  ] CAMIL
+            - [ X ] (Javier) CAMIL
             - [  ] IIBMIL
             - [  ] SETMIL
         - [ ] Add support for Lazy initialization (remove the need to specify in_dim)
