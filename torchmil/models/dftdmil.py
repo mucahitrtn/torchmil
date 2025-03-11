@@ -9,7 +9,8 @@ class DFTDMIL(MILModel):
     r"""
     Double-Tier Feature Distillation Multiple Instance Learning (DFTD-MIL) model, proposed in the paper [DTFD-MIL: Double-Tier Feature Distillation Multiple Instance Learning for Histopathology Whole Slide Image Classification](https://arxiv.org/abs/2203.12081).
 
-     Given an input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times P}$ and its label $Y$, 
+    **Forward pass.**
+    Given an input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times P}$ and its label $Y$, 
     this model optionally transforms the instance features using a feature extractor,
     
     $$ \mathbf{X} = \text{FeatExt}(\mathbf{X}) \in \mathbb{R}^{N \times D}.$$
@@ -28,6 +29,13 @@ class DFTDMIL(MILModel):
 
     The loss associated to this tier is the binary cross entropy computed using the bag labels $Y$ and the predicted label $\widehat{Y}$.
 
+    **Loss function.**
+    By default, the model is trained end-to-end using the followind per-bag loss:
+
+    $$ \ell = \ell_{\text{BCE}}(Y, \widehat{Y}) + \frac{1}{M} \sum_{m=1}^{M} \ell_{\text{BCE}}(Y_m, \widehat{Y}_m),$$
+
+    where $\ell_{\text{BCE}}$ is the binary cross entropy loss.
+    
     """
     def __init__(
         self, 
