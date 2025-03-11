@@ -12,6 +12,7 @@ class GTP(MILModel):
     r"""
     Method proposed in the paper [GTP: Graph-Transformer for Whole Slide Image Classification](https://arxiv.org/abs/2205.09671).
 
+    **Forward pass.**
     Given an input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times P}$, this model optionally transforms the instance features using a feature extractor trained with self-supervised contrastive learning:
 
     $$ \mathbf{X} = \text{FeatExt}(\mathbf{X}) \in \mathbb{R}^{N \times D}.$$
@@ -31,9 +32,17 @@ class GTP(MILModel):
 
     Finally, the class token representation is used for classification:
 
-    $$ \mathbf{z} = \mathbf{Z}_{0}, \quad \mathbf{Y}_{\text{pred}} = \text{Classifier}(\mathbf{z}).$$
+    $$ \mathbf{z} = \mathbf{Z}_{0}, \quad Y_{\text{pred}} = \text{Classifier}(\mathbf{z}).$$
 
     Optionally, GraphCAM can be used to generate class activation maps highlighting the most relevant regions for the classification decision.
+
+    **Loss function.**
+    By default, the model is trained end-to-end using the followind per-bag loss:
+
+    $$ \ell = \ell_{\text{BCE}}(Y_{\text{pred}}, Y) + \ell_{\text{MinCut}}(\mathbf{X}, \mathbf{A}) + \ell_{\text{Ortho}}(\mathbf{X}, \mathbf{A}),$$
+
+    where $\ell_{\text{BCE}}$ is the Binary Cross-Entropy loss, $\ell_{\text{MinCut}}$ is the MinCut loss, and $\ell_{\text{Ortho}}$ is the Orthogonality loss, computed during the min-cut pooling operation, see [Dense MinCut Pooling](../nn/gnns/dense_mincut_pool.md).
+
     """
 
     def __init__(
