@@ -146,6 +146,7 @@ nav:
       - api/models/clam.md
       - api/models/dftdmil.md
       - api/models/dsmil.md
+      - api/models/gtp.md
       - api/models/prob_smooth_abmil.md
       - api/models/sm_abmil.md
       - api/models/sm_transformer_abmil.md
