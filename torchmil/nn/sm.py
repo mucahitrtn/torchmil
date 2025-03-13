@@ -13,7 +13,7 @@ class Sm(torch.nn.Module):
     \end{align}
 
     where $\gamma \in (0, \infty)$ is a hyperparameter, $\mathbf{L} = \mathbf{D} - \mathbf{A}$ is the graph Laplacian, and $\mathbf{D}$ is the degree matrix.
-    If not in exact mode, the $\texttt{Sm}$ operator is approximated as $\texttt{Sm}(\mathbf{U}) = G(T)$, where 
+    If `mode='approx'`, the $\texttt{Sm}$ operator is approximated as $\texttt{Sm}(\mathbf{U}) = G(T)$, where 
 
     \begin{align}
         G(0) = \mathbf{U}, \quad G(t) = \alpha ( \mathbf{I} - \mathbf{L} ) G(t-1) + (1-\alpha) \mathbf{U},

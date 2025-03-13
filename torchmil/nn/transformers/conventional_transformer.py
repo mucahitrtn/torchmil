@@ -18,8 +18,8 @@ class TransformerLayer(Layer):
     this module computes:
 
     \begin{align*}
-    \mathbf{Z} & = \mathbf{X} + \text{SelfAttention}( \text{LayerNorm}(\mathbf{X}) ) \\
-    \mathbf{Y} & = \mathbf{Z} + \text{MLP}(\text{LayerNorm}(\mathbf{Z})), \\
+    \mathbf{Z} & = \mathbf{X} + \operatorname{SelfAttention}( \operatorname{LayerNorm}(\mathbf{X}) ) \\
+    \mathbf{Y} & = \mathbf{Z} + \operatorname{MLP}(\operatorname{LayerNorm}(\mathbf{Z})), \\
     \end{align*}
 
     and outputs $\mathbf{Y}$.
@@ -79,13 +79,12 @@ class TransformerEncoder(Encoder):
 
     \begin{align*}
     \mathbf{X}^{0} & = \mathbf{X} \\
-    \mathbf{Z}^{l} & = \mathbf{X}^{l-1} + \text{SelfAttention}( \text{LayerNorm}(\mathbf{X}^{l-1}) ), \quad l = 1, \ldots, L \\
-    \mathbf{X}^{l} & = \mathbf{Z}^{l} + \text{MLP}(\text{LayerNorm}(\mathbf{Z}^{l})), \quad l = 1, \ldots, L \\
+    \mathbf{Z}^{l} & = \mathbf{X}^{l-1} + \operatorname{SelfAttention}( \operatorname{LayerNorm}(\mathbf{X}^{l-1}) ), \quad l = 1, \ldots, L \\
+    \mathbf{X}^{l} & = \mathbf{Z}^{l} + \operatorname{MLP}(\operatorname{LayerNorm}(\mathbf{Z}^{l})), \quad l = 1, \ldots, L \\
     \end{align*}
 
-    This module outputs $\text{TransformerEncoder}(\mathbf{X}) = \mathbf{X}^{L}$ if `add_self=False`, 
-    and $\text{TransformerEncoder}(\mathbf{X}) = \mathbf{X}^{L} + \mathbf{X}$ if `add_self=True`.
-
+    This module outputs $\operatorname{TransformerEncoder}(\mathbf{X}) = \mathbf{X}^{L}$ if `add_self=False`, 
+    and $\operatorname{TransformerEncoder}(\mathbf{X}) = \mathbf{X}^{L} + \mathbf{X}$ if `add_self=True`.
     """
 
     def __init__(

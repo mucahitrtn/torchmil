@@ -20,7 +20,7 @@ class PatchGCN(torch.nn.Module):
     \end{gather}
 
     where $\texttt{out_gcn_dim} = \texttt{hidden_dim} \cdot \texttt{n_gcn_layers}$. 
-    These GCNs are implemented using the DeepGCN layer (see [DeepGCNLayer](../nn/gnns/deep_gcn_layer.md)) with GCNConv, LayerNorm, and ReLU activation (see [GCNConv](../nn/gnns/gcn_conv.md)), 
+    These GCNs are implemented using the DeepGCN layer (see [DeepGCNLayer](../nn/gnns/deepgcn.md)) with GCNConv, LayerNorm, and ReLU activation (see [GCNConv](../nn/gnns/gcn_conv.md)), 
     along with residual connections and dense connections.
 
     Then, attention values $\mathbf{f} \in \mathbb{R}^{N \times 1}$ and the bag representation $\mathbf{z} \in \mathbb{R}^{\texttt{hidden_dim}}$

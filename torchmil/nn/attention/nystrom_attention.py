@@ -21,6 +21,12 @@ def moore_penrose_iter_pinv(x, iters = 6):
 
 
 class NystromAttention(torch.nn.Module):
+    """
+    Nystrom attention, as described in the paper [Nyströmformer: A Nyström-Based Algorithm for Approximating Self-Attention](https://arxiv.org/abs/2102.03902).
+    
+    Implementation based on the [official code](https://github.com/lucidrains/nystrom-attention).    
+    """
+
     def __init__(
         self,
         in_dim : int,
@@ -82,10 +88,10 @@ class NystromAttention(torch.nn.Module):
             x: Input tensor of shape `(batch_size, seq_len, in_dim)`.
             mask: Mask tensor of shape `(batch_size, seq_len)`.
             return_att: Whether to return attention weights.
+
         Returns:
             y: Output tensor of shape `(batch_size, seq_len, att_dim)`.
             att: Only returned when `return_att=True`. Attention weights of shape `(batch_size, n_heads, seq_len, seq_len)`.
-
         """
 
         batch_size, seq_len, _ = x.size()

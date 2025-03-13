@@ -16,12 +16,15 @@ class ABMIL(MILModel):
 
     Then, it aggregates the instance features into a bag representation $\mathbf{z} \in \mathbb{R}^{D}$ using the attention-based pooling, 
 
-    $$ \mathbf{z} = \mathbf{X}^\top \text{Softmax}(\mathbf{f}) = \sum_{n=1}^N s_n \mathbf{x}_n, $$
+    $$
+    \mathbf{z}, \mathbf{f} = \operatorname{AttentionPool}(\mathbf{H}).
+    $$
 
-    where $\mathbf{f} = \operatorname{MLP}(\mathbf{X}) \in \mathbb{R}^{N}$ are the attention values and $s_n$ is the normalized attention score for the $n$-th instance.
+    where $\mathbf{f} \in \mathbb{R}^{N}$ are the attention values.
+    See [AttentionPool](../nn/attention/attention_pool.md) for more details on the attention-based pooling.
     The bag representation $\mathbf{z}$ is then fed into a classifier (one linear layer) to predict the bag label.
 
-    See [AttentionPool](../nn/attention/attention_pool.md) for more details on the attention-based pooling.
+    
     """
 
     def __init__(

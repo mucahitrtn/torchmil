@@ -13,7 +13,7 @@
         - [ X ] (Javier) Datasets from: https://arxiv.org/abs/2310.17867
         - [ ] Allow datasets to be downloaded from the internet ?
     - torchmil.models:
-        - [ ] mil_model
+        - [ X ] mil_model
         - [ ] Remove criterion from models???
         - [ X ] (Fran) ABMIL
         - [ X ] (Fran) TransformerABMIL
@@ -25,7 +25,7 @@
             - [  ] Modify inst_eval, inst_eval_out so they accept batched inputs
         - [ X ] (Javier) DSMIL
         - [ X ] (Javier) DFTDMIL
-        - [  ] PathGCN
+        - [ X ] PatchGCN
             - Implement GENConv, right now PatchGCN uses GCNConv
         - [ X ] DeepGraphSurv
         - [ X ] TransMIL
@@ -36,21 +36,24 @@
     - torchmil.nn:
         - [ ] attention
             - [ X ] attention_pool
-            - [ ] multihead_self_attention
-            - [ ] multihead_cross_attention
-            - [ ] nyström_attention
+            - [ X ] multihead_self_attention
+            - [ X ] multihead_cross_attention
+            - [ X ] nyström_attention
             - [ ] prob_smooth_attention_pool
             - [ ] rpe_multihead_self_attention
             - [ ] sm_attention_pool
         - [ ] transformers
-            - [ ] encoder
-            - [ ] layer
-            - [ ] conventional_transformer
-            - [ ] nystrom_transformer
+            - [ X ] encoder
+            - [ X ] layer
+            - [ X ] conventional_transformer
+            - [ X ] nystrom_transformer
             - [ ] pmf_transformer
             - [ ] se_transformer
-            - [ ] sm_transformer
+            - [ X ] sm_transformer
         - [ ] gnns
+            - [ X ] deepgcn
+            - [ X ] dense_mincut_pool
+            - [ X ] gcn_conv
         - [ ] sm
         - [ ] utils
         - [ ] max_pool

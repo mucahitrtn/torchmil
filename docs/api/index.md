@@ -32,7 +32,7 @@
     - [Attention Pool](nn/attention/attention_pool.md)
     - [Multihead Self-Attention](nn/attention/multihead_self_attention.md)
     - [Multihead Self-Attention with Relative Positional Encoding](nn/attention/rpe_multihead_self_attention.md)
-    - [Nyström Self-Attention](nn/attention/nystrom_self_attention.md)
+    - [Nyström Attention](nn/attention/nystrom_attention.md)
     - [Multihead Cross-Attention](nn/attention/multihead_cross_attention.md)
 - [Transformers](nn/transformers/index.md)
     - [Conventional Transformer](nn/transformers/conventional_transformer.md)

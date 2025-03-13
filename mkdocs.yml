@@ -122,7 +122,7 @@ nav:
         - api/nn/attention/attention_pool.md
         - api/nn/attention/multihead_self_attention.md
         - api/nn/attention/rpe_multihead_self_attention.md
-        - api/nn/attention/nystrom_self_attention.md
+        - api/nn/attention/nystrom_attention.md
         - api/nn/attention/multihead_cross_attention.md
       - Graph Neural Networks (GNNs):
         - api/nn/gnns/index.md

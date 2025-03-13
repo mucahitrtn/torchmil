@@ -1,7 +1,19 @@
 import torch
 
 class Layer(torch.nn.Module):
-    """
+    r"""
+    Generic Transformer layer class.
+
+    Given an input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times D}$,
+    and (optional) additional arguments, this module computes:
+
+    \begin{align*}
+    \mathbf{Z} & = \mathbf{X} + \operatorname{Att}( \operatorname{LayerNorm}(\mathbf{X}) ) \\
+    \mathbf{Y} & = \mathbf{Z} + \operatorname{MLP}(\operatorname{LayerNorm}(\mathbf{Z})), \\
+    \end{align*}
+
+    and outputs $\mathbf{Y}$.
+    $\operatorname{Att}$ is given by the `att_module` argument, and $\operatorname{MLP}$ is given by the `mlp_module` argument.
     """
 
     def __init__(
@@ -15,6 +27,14 @@ class Layer(torch.nn.Module):
         dropout: float = 0.0
     ):
         """
+        Arguments:
+            in_dim: Input dimension.
+            att_dim: Attention dimension.
+            att_module: Attention module.
+            out_dim: Output dimension. If None, out_dim = in_dim.
+            use_mlp: Whether to use a MLP after the attention layer.
+            mlp_module: MLP module.
+            dropout: Dropout rate.
         """
         super().__init__()
 
@@ -55,6 +75,8 @@ class Layer(torch.nn.Module):
         **kwargs,
     ) -> torch.Tensor:
         """
+        Arguments:
+            X: Input tensor of shape `(batch_size, seq_len, in_dim)`.
         """
         out_att = self.att_module(self.norm1(X), **kwargs)
         if isinstance(out_att, tuple):

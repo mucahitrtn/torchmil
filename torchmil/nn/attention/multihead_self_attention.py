@@ -5,8 +5,20 @@ from torch.nn.attention import SDPBackend
 SDP_BACKEND = [SDPBackend.MATH, SDPBackend.FLASH_ATTENTION, SDPBackend.EFFICIENT_ATTENTION, SDPBackend.CUDNN_ATTENTION]
 
 class MultiheadSelfAttention(torch.nn.Module):
-    """
-    Multihead self-attention module.    
+    r"""
+    The Multihead Self Attention module, as described in [Attention is All You Need](https://arxiv.org/abs/1706.03762). 
+
+    Given an input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times \texttt{in_dim}}$,
+    this module computes:
+
+    \begin{gather*}
+    \mathbf{Q} = \mathbf{X}\mathbf{W}_Q, \quad \mathbf{K} = \mathbf{X}\mathbf{W}_K, \quad \mathbf{V} = \mathbf{X}\mathbf{W}_V,\\
+    \mathbf{Y} = \operatorname{Softmax}\left( \frac{\mathbf{Q} \mathbf{K}^\top}{\sqrt{d}} \right) \mathbf{V},
+    \end{gather*}
+
+    where $d = \texttt{att_dim}$ and $\mathbf{W}_Q, \mathbf{W}_K, \mathbf{W}_V \in \mathbb{R}^{\texttt{in_dim} \times \texttt{att_dim}}$ are learnable weight matrices.
+
+    If $\texttt{out_dim} \neq \texttt{att_dim}$, $\mathbf{Y}$ is passed through a linear layer with output dimension $\texttt{out_dim}$.
     """
     def __init__(
         self, 
@@ -18,8 +30,6 @@ class MultiheadSelfAttention(torch.nn.Module):
         learn_weights : bool = True
     ):
         """
-        Class constructor.
-
         Arguments:
             att_dim: Attention dimension.
             in_dim: Input dimension.

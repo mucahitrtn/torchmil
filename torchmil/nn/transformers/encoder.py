@@ -1,8 +1,22 @@
 import torch
 
 class Encoder(torch.nn.Module):
-    """
-    Generic encoder class.    
+    r"""
+    Generic Transformer encoder class.
+
+    Given an input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times D}$
+    and (optional) additional arguments, this module computes:
+
+    \begin{align*}
+    \mathbf{X}^{0} & = \mathbf{X} \\
+    \mathbf{X}^{l} & = \operatorname{Layer}^{l}\left( \mathbf{X}^{l-1}, \ldots \right), \quad l = 1, \ldots, L \\
+    \end{align*}
+
+    where $\ldots$ denotes additional arguments.
+    The list of layers, $\operatorname{Layer}^{l}$ for $l = 1, \ldots, L$, is given by the `layers` argument, and should be a subclass of [Layer](./#torchmil.nn.transformers.Layer).
+
+    This module outputs $\operatorname{Encoder}(\mathbf{X}) = \mathbf{X}^{L}$ if `add_self=False`, 
+    and $\operatorname{Encoder}(\mathbf{X}) = \mathbf{X}^{L} + \mathbf{X}$ if `add_self=True`.
     """
 
     def __init__(
@@ -11,8 +25,6 @@ class Encoder(torch.nn.Module):
         add_self: bool = False
     ):
         """
-        Class constructor
-
         Arguments:
             layers: List of encoder layers.
             add_self: Whether to add input to output.

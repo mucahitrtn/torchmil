@@ -7,6 +7,20 @@ from .layer import Layer
 
 
 class NystromTransformerLayer(Layer):
+    r"""
+    One layer of the NystromTransformer encoder.
+
+    Given an input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times D}$,
+    this module computes:
+
+    \begin{align*}
+    \mathbf{Z} & = \mathbf{X} + \operatorname{NystromSelfAttention}( \operatorname{LayerNorm}(\mathbf{X}) ) \\
+    \mathbf{Y} & = \mathbf{Z} + \operatorname{MLP}(\operatorname{LayerNorm}(\mathbf{Z})), \\
+    \end{align*}
+
+    and outputs $\mathbf{Y}$. $\operatorname{NystromSelfAttention}$ is implemented using the NystromAttention module, see [NystromAttention](../attention/nystrom_attention.md).
+    """
+
     def __init__(
         self, 
         in_dim : int,
@@ -20,9 +34,6 @@ class NystromTransformerLayer(Layer):
         use_mlp : bool = False
     ) -> None:
         """
-
-        Nystrom Transformer layer.
-
         Arguments:
             att_dim: Attention dimension.
             n_heads: Number of heads.
@@ -60,6 +71,24 @@ class NystromTransformerLayer(Layer):
 
 
 class NystromTransformerEncoder(Encoder):
+    r"""
+    Nystrom Transformer encoder with skip connections and layer normalization.
+
+    Given an input bag input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times D}$,
+    it computes:
+
+    \begin{align*}
+    \mathbf{X}^{0} & = \mathbf{X} \\
+    \mathbf{Z}^{l} & = \mathbf{X}^{l-1} + \operatorname{NystromSelfAttention}( \operatorname{LayerNorm}(\mathbf{X}^{l-1}) ), \quad l = 1, \ldots, L \\
+    \mathbf{X}^{l} & = \mathbf{Z}^{l} + \operatorname{MLP}(\operatorname{LayerNorm}(\mathbf{Z}^{l})), \quad l = 1, \ldots, L \\
+    \end{align*}
+
+    This module outputs $\operatorname{TransformerEncoder}(\mathbf{X}) = \mathbf{X}^{L}$ if `add_self=False`, 
+    and $\operatorname{TransformerEncoder}(\mathbf{X}) = \mathbf{X}^{L} + \mathbf{X}$ if `add_self=True`.
+
+    $\operatorname{NystromSelfAttention}$ is implemented using the NystromAttention module, see [NystromAttention](../attention/nystrom_attention.md).
+    """
+
     def __init__(
         self, 
         in_dim : int,
@@ -74,8 +103,6 @@ class NystromTransformerEncoder(Encoder):
         use_mlp : bool = False
     ) -> None:
         """
-        Nystrom Transformer encoder.
-
         Arguments:
             att_dim: Attention dimension.
             n_heads: Number of heads.

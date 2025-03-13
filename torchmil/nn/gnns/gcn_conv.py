@@ -3,6 +3,11 @@ import torch
 from torchmil.nn import LazyLinear
 
 class GCNConv(torch.nn.Module):
+    """
+    Implementation of a DeepGCN layer.
+
+    Adapts the implementation from [torch_geometric](https://pytorch-geometric.readthedocs.io/en/latest/generated/torch_geometric.nn.conv.GCNConv.html).
+    """
     def __init__(
         self, 
         in_dim : int, 

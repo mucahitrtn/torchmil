@@ -5,40 +5,59 @@ from torch.nn.attention import SDPBackend
 SDP_BACKEND = [SDPBackend.MATH, SDPBackend.FLASH_ATTENTION, SDPBackend.EFFICIENT_ATTENTION, SDPBackend.CUDNN_ATTENTION]
 
 class MultiheadCrossAttention(torch.nn.Module):
-    """
-    Multihead self-attention module.    
+    r"""
+    The Multihead Cross Attention module, as described in [Attention is All You Need](https://arxiv.org/abs/1706.03762). 
+
+    Given input bags $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times \texttt{in_dim}}$,
+    and $\mathbf{Y} = \left[ \mathbf{y}_1, \ldots, \mathbf{y}_M \right]^\top \in \mathbb{R}^{M \times \texttt{in_dim}}$,
+    this module computes:
+
+    \begin{gather*}
+    \mathbf{Q} = \mathbf{X}\mathbf{W}_Q, \quad \mathbf{K} = \mathbf{Y}\mathbf{W}_K, \quad \mathbf{V} = \mathbf{Y}\mathbf{W}_V,\\
+    \mathbf{Z} = \operatorname{Softmax}\left( \frac{\mathbf{Q} \mathbf{K}^\top}{\sqrt{d}} \right) \mathbf{V},
+    \end{gather*}
+
+    where $d = \texttt{att_dim}$ and $\mathbf{W}_Q, \mathbf{W}_K, \mathbf{W}_V \in \mathbb{R}^{\texttt{in_dim} \times \texttt{att_dim}}$ are learnable weight matrices.
+
+    If $\texttt{out_dim} \neq \texttt{att_dim}$, $\mathbf{Y}$ is passed through a linear layer with output dimension $\texttt{out_dim}$.
     """
     def __init__(
             self, 
-            att_dim : int, 
-            in_dim : int = None,
-            num_heads : int = 4,
+            in_dim : int,
+            out_dim : int = None,
+            att_dim : int = 512,            
+            n_heads : int = 4,
             dropout : float = 0.0,
             learn_weights : bool = True
         ):
         """
-        Class constructor.
-
         Arguments:
-            att_dim: Attention dimension.
             in_dim: Input dimension.
-            num_heads: Number of heads.
+            out_dim: Output dimension. If None, out_dim = in_dim.
+            att_dim: Attention dimension.
+            n_heads: Number of heads.
             dropout: Dropout rate.
+            learn_weights: Whether to learn the weights.
         """
         super(MultiheadCrossAttention, self).__init__()
+        if out_dim is None:
+            out_dim = in_dim
         self.att_dim = att_dim
         self.in_dim = in_dim
-        if self.in_dim is None:
-            self.in_dim = att_dim
-        self.num_heads = num_heads
+        self.n_heads = n_heads
         self.dropout = dropout
-        self.head_dim = self.att_dim // num_heads
+        self.head_dim = self.att_dim // n_heads
         self.learn_weights = learn_weights
         if learn_weights:
             self.q_nn = torch.nn.Linear(self.in_dim, self.att_dim, bias = False)
             self.kv_nn = torch.nn.Linear(self.in_dim, 2 * self.att_dim, bias = False)
         else:
             self.qkv_nn = None
+        
+        if out_dim != att_dim:
+            self.out_proj = torch.nn.Linear(att_dim, out_dim)
+        else:
+            self.out_proj = torch.nn.Identity()
 
     def _scaled_dot_product_attention(
             self, 
@@ -52,20 +71,20 @@ class MultiheadCrossAttention(torch.nn.Module):
         Scaled dot product attention.
 
         Arguments:
-            query: Query tensor of shape `(batch_size, num_heads, seq_len_q, head_dim)`.
-            key: Key tensor of shape `(batch_size, num_heads, seq_len_k, head_dim)`.
-            value: Value tensor of shape `(batch_size, num_heads, seq_len_v, head_dim)`.
+            query: Query tensor of shape `(batch_size, n_heads, seq_len_q, head_dim)`.
+            key: Key tensor of shape `(batch_size, n_heads, seq_len_k, head_dim)`.
+            value: Value tensor of shape `(batch_size, n_heads, seq_len_v, head_dim)`.
             mask: Mask tensor of shape `(batch_size, seq_len)`.
         Returns:
-            out: Output tensor of shape `(batch_size, num_heads, seq_len, head_dim)`.                
+            out: Output tensor of shape `(batch_size, n_heads, seq_len, head_dim)`.                
         """
 
         if mask is not None:
             mask = mask.unsqueeze(1).unsqueeze(1) # (batch_size, 1, 1, seq_len)
-            mask = mask.repeat(1, 1, query.size(2), 1).bool() # (batch_size, num_heads, seq_len, seq_len)
+            mask = mask.repeat(1, 1, query.size(2), 1).bool() # (batch_size, n_heads, seq_len, seq_len)
       
         with torch.nn.attention.sdpa_kernel(SDP_BACKEND):
-            out = torch.nn.functional.scaled_dot_product_attention(query, key, value, mask, self.dropout) # (batch_size, num_heads, seq_len, head_dim)
+            out = torch.nn.functional.scaled_dot_product_attention(query, key, value, mask, self.dropout) # (batch_size, n_heads, seq_len, head_dim)
         
         return out
 
@@ -108,10 +127,10 @@ class MultiheadCrossAttention(torch.nn.Module):
         batch_size, seq_len_x, _ = x.size()
         seq_len_y = y.size(1)
         query, key, value = self._qkv(x, y) # (batch_size, seq_len_x, att_dim), (batch_size, seq_len_y, att_dim), (batch_size, seq_len_y, att_dim)
-        query = query.view(batch_size, seq_len_x, self.num_heads, self.head_dim).permute(0, 2, 1, 3) # (batch_size, num_heads, seq_len_x, head_dim)
-        key = key.view(batch_size, seq_len_y, self.num_heads, self.head_dim).permute(0, 2, 1, 3) # (batch_size, num_heads, seq_len_y, head_dim)
-        value = value.view(batch_size, seq_len_y, self.num_heads, self.head_dim).permute(0, 2, 1, 3) # (batch_size, num_heads, seq_len_y, head_dim)
-        y = self._scaled_dot_product_attention(query, key, value, mask) # (batch_size, num_heads, seq_len_y, head_dim)
+        query = query.view(batch_size, seq_len_x, self.n_heads, self.head_dim).permute(0, 2, 1, 3) # (batch_size, n_heads, seq_len_x, head_dim)
+        key = key.view(batch_size, seq_len_y, self.n_heads, self.head_dim).permute(0, 2, 1, 3) # (batch_size, n_heads, seq_len_y, head_dim)
+        value = value.view(batch_size, seq_len_y, self.n_heads, self.head_dim).permute(0, 2, 1, 3) # (batch_size, n_heads, seq_len_y, head_dim)
+        y = self._scaled_dot_product_attention(query, key, value, mask) # (batch_size, n_heads, seq_len_y, head_dim)
         y = y.permute(0, 2, 1, 3).contiguous().view(batch_size, seq_len_x, self.att_dim) # (batch_size, seq_len_y, att_dim)
-        
+        y = self.out_proj(y)
         return y

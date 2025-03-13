@@ -20,7 +20,7 @@ class DeepGraphSurv(torch.nn.Module):
     \mathbf{f} = \operatorname{GCN}_{\text{att}}(\mathbf{X}, \mathbf{A}) \in \mathbb{R}^{N \times 1}.
     \end{gather}
 
-    These GCNs are implemented using the DeepGCN layer (see [DeepGCNLayer](../nn/gnns/deep_gcn_layer.md)) with GCNConv, LayerNorm, and ReLU activation (see [GCNConv](../nn/gnns/gcn_conv.md)).
+    These GCNs are implemented using the DeepGCN layer (see [DeepGCNLayer](../nn/gnns/deepgcn.md)) with GCNConv, LayerNorm, and ReLU activation (see [GCNConv](../nn/gnns/gcn_conv.md)).
 
     Writing $\mathbf{H} = \left[ \mathbf{h}_1, \ldots, \mathbf{h}_N \right]^\top$,
     the attention values are used to compute the bag representation $\mathbf{z} \in \mathbb{R}^{\texttt{hidden_dim}}$ as 

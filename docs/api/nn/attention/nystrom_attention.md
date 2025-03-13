@@ -1,4 +1,4 @@
-# Nystrom Self-Attention
+# Nystrom Attention
 ::: torchmil.nn.attention.NystromAttention
     options:
         members:

@@ -133,15 +133,13 @@ class CAMIL(MILModel):
     Context-Aware Multiple Instance Learning (CAMIL) model, presented in the paper [CAMIL: Context-Aware Multiple Instance Learning for Cancer Detection and Subtyping in Whole Slide Images](https://arxiv.org/abs/2305.05314).
 
     Given an input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times P}$, 
-    this model first transforms the instance features using a feature extractor, 
+    this model first transforms the instance features using a feature extractor, $\mathbf{X} = \operatorname{FeatExt}(\mathbf{X}) \in \mathbb{R}^{N \times D}.$
 
-    $$ \mathbf{X} = \operatorname{FeatExt}(\mathbf{X}) \in \mathbb{R}^{N \times D}.$$
-
-    Then, a global bag representation is computed using a [NystromTransformerLayer](../nn/transformers/nystrom_transformer.md), 
+    Then, a global bag representation is computed using a [NystromTransformerLayer](../nn/transformers/nystrom_transformer.md/#torchmil.nn.transformers.NystromTransformerLayer) layer, 
 
     $$ \mathbf{T} = \operatorname{NystromTransformerLayer}(\mathbf{X})$$
 
-    Next, a local bag representation is computed using the [CAMILSelfAttention](#torchmil.models.camil.CAMILSelfAttention) layer,
+    Next, a local bag representation is computed using the [CAMILSelfAttention](./#torchmil.models.camil.CAMILSelfAttention) layer,
     
     $$ \mathbf{L} = \operatorname{CAMILSelfAttention}(\mathbf{T}) $$ 
 
@@ -151,7 +149,7 @@ class CAMIL(MILModel):
 
     where $\odot$ denotes element-wise multiplication and $\operatorname{sigmoid}$ is the sigmoid function.
     
-    Lastly, the final bag representation is computed using a [modification of the Gatted Attention Pool mechanism](#torchmil.models.camil.CAMILAttentionPool). The bag representation is then fed into a linear classifier to predict the bag label.
+    Lastly, the final bag representation is computed using the [CAMILAttentionPool](./#torchmil.models.camil.CAMILAttentionPool), modification of the Gatted Attention Pool mechanism. The bag representation is then fed into a linear classifier to predict the bag label.
     """
     def __init__(
         self,
