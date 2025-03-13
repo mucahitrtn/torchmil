@@ -16,8 +16,6 @@ class ProbSmoothABMIL(MILModel):
         criterion: torch.nn.Module = torch.nn.BCEWithLogitsLoss(),
     ) -> None:
         """
-        Class constructor.
-
         Arguments:
             in_shape: Shape of input data expected by the feature extractor (excluding batch dimension). If not provided, it will be lazily initialized.
             att_dim: Attention dimension.

@@ -144,6 +144,7 @@ nav:
       - api/models/abmil.md
       - api/models/camil.md
       - api/models/clam.md
+      - api/models/deepgraphsurv.md
       - api/models/dftdmil.md
       - api/models/dsmil.md
       - api/models/gtp.md

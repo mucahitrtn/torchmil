@@ -5,6 +5,30 @@ from torchmil.nn import GCNConv, DeepGCNLayer
 from torchmil.nn.utils import get_feat_dim, LazyLinear, masked_softmax
 
 class DeepGraphSurv(torch.nn.Module):
+    r"""
+    DeepGraphSurv model, as proposed in [Graph CNN for Survival Analysis on Whole Slide Pathological Images](https://link.springer.com/chapter/10.1007/978-3-030-00934-2_20).
+
+    Given an input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times P}$
+    with adjacency matrix $\mathbf{A} \in \mathbb{R}^{N \times N}$ and mask $\mathbf{M} \in \{0, 1\}^{N \times 1}$, 
+    this model optionally transforms the instance features using a feature extractor, $\mathbf{X} = \operatorname{FeatExt}(\mathbf{X}) \in \mathbb{R}^{N \times D}$.
+
+    Then, the *representation branch* transforms the instance features using a Graph Convolutional Network (GCN), and the 
+    *attention branch* computes attention values using another GCN,
+
+    \begin{gather}
+    \mathbf{H} = \operatorname{GCN}_{\text{rep}}(\mathbf{X}, \mathbf{A}) \in \mathbb{R}^{N \times D}, \\
+    \mathbf{f} = \operatorname{GCN}_{\text{att}}(\mathbf{X}, \mathbf{A}) \in \mathbb{R}^{N \times 1}.
+    \end{gather}
+    
+    The attention values are used to compute the bag representation $\mathbf{z} \in \mathbb{R}^{D}$ as 
+
+    \begin{equation}
+    \mathbf{z} = \mathbf{H}^\top \operatorname{Softmax}(\mathbf{f}) = \sum_{n=1}^N s_n \mathbf{h}_n,
+    \end{equation}
+
+    where $s_n$ is the normalized attention score for the $n$-th instance. 
+    The bag representation $\mathbf{z}$ is then fed into a classifier (one linear layer) to predict the bag label.
+    """
     def __init__(self, 
         in_shape: tuple = None, 
         n_layers_rep : int = 4,
@@ -13,13 +37,13 @@ class DeepGraphSurv(torch.nn.Module):
         att_dim : int = 128,
         dropout : float = 0.0,
         feat_ext: torch.nn.Module = torch.nn.Identity(),
-        criterion=torch.nn.BCEWithLogitsLoss()
+        criterion : torch.nn.Module = torch.nn.BCEWithLogitsLoss()
     ):
         """
         Arguments:
             in_shape: Shape of input data expected by the feature extractor (excluding batch dimension). If not provided, it will be lazily initialized.
-            n_layers_rep: Number of GCN layers in the representation network.
-            n_layers_att: Number of GCN layers in the attention network.
+            n_layers_rep: Number of GCN layers in the representation branch.
+            n_layers_att: Number of GCN layers in the attention branch.
             hidden_dim: Hidden dimension. If not provided, it will be set to the feature dimension.
             att_dim: Attention dimension.
             dropout: Dropout rate.

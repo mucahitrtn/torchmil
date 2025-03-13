@@ -8,6 +8,10 @@ def get_args_names(fn):
     return args_names
 
 class MILModel(torch.nn.Module):
+    """
+    Base class for Multiple Instance Learning (MIL) models.
+    """
+
     def __init__(
             self,
             *args,
@@ -41,7 +45,7 @@ class MILModel(torch.nn.Module):
             Y_pred: Bag label prediction of shape `(batch_size,)`.
             loss_dict: Dictionary containing the loss value.
         """
-        raise NotImplementedError
+        return {}
 
     def predict(
             self, 

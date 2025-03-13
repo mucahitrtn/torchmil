@@ -5,35 +5,56 @@
     - Tutorial 1: ...
     - Tutorial 2: ...
 - Code:
-    - Datasets:
+    - torchmil.datasets:
         - [ X ] (Fran) Processed MIL dataset
         - [ X ] (Fran) WSI dataset
         - [ X ] (Fran) CTScan dataset
         - [ X ] (Fran) Toy dataset
         - [ X ] (Javier) Datasets from: https://arxiv.org/abs/2310.17867
         - [ ] Allow datasets to be downloaded from the internet ?
-    - Models and modules:
-        - [ ] Methods:
-            - [ X ] (Fran) ABMIL
-            - [  ] (Fran) TransformerABMIL
-            - [  ] (Fran) SmABMIL
-            - [  ] (Fran) SmTransformerABMIL
-            - [  ] (Fran) SmoothABMIL
-            - [  ] (Fran) SmoothTransformerABMIL
-            - [  ] (Fran) ProbSmoothABMIL
-            - [  ] (Fran) ProbSmoothTransformerABMIL
-            - [  ] CLAM
-                - [  ] Modify inst_eval, inst_eval_out so they accept batched inputs
-            - [ X ] (Javier) DSMIL
-            - [ X ] (Javier) DFTDMIL
-            - [  ] PathGCN
-                - Implement GENConv, right now PatchGCN uses GCNConv
-            - [  ] DeepGraphSurv
-            - [ X ] TransMIL
-            - [  ] GTP
-            - [ X ] (Javier) CAMIL
-            - [  ] IIBMIL
-            - [  ] SETMIL
-        - [ ] Add support for Lazy initialization (remove the need to specify in_dim)
-    - [ ] Discuss: a Bag class or Tensordict (?)
-    - [ ] Discuss: integration with Pytorch geometric (?)
+    - torchmil.models:
+        - [ ] mil_model
+        - [ ] Remove criterion from models???
+        - [ X ] (Fran) ABMIL
+        - [ X ] (Fran) TransformerABMIL
+        - [  ] (Fran) SmABMIL
+        - [  ] (Fran) SmTransformerABMIL
+        - [  ] (Fran) ProbSmoothABMIL
+        - [  ] (Fran) ProbSmoothTransformerABMIL
+        - [ X ] CLAM
+            - [  ] Modify inst_eval, inst_eval_out so they accept batched inputs
+        - [ X ] (Javier) DSMIL
+        - [ X ] (Javier) DFTDMIL
+        - [  ] PathGCN
+            - Implement GENConv, right now PatchGCN uses GCNConv
+        - [ X ] DeepGraphSurv
+        - [ X ] TransMIL
+        - [ X ] GTP
+        - [ X ] (Javier) CAMIL
+        - [  ] IIBMIL
+        - [  ] SETMIL
+    - torchmil.nn:
+        - [ ] attention
+            - [ X ] attention_pool
+            - [ ] multihead_self_attention
+            - [ ] multihead_cross_attention
+            - [ ] nyström_attention
+            - [ ] prob_smooth_attention_pool
+            - [ ] rpe_multihead_self_attention
+            - [ ] sm_attention_pool
+        - [ ] transformers
+            - [ ] encoder
+            - [ ] layer
+            - [ ] conventional_transformer
+            - [ ] nystrom_transformer
+            - [ ] pmf_transformer
+            - [ ] se_transformer
+            - [ ] sm_transformer
+        - [ ] gnns
+        - [ ] sm
+        - [ ] utils
+        - [ ] max_pool
+        - [ ] mean_pool 
+    - [ ] Add support for Lazy initialization (remove the need to specify in_dim)
+    - [ ] Bag class or Tensordict (?)
+    - [ ] Integration with Pytorch geometric (?)
