@@ -20,7 +20,7 @@ from .transformer_prob_smooth_abmil import TransformerProbSmoothABMIL as Transfo
 from .clam import CLAM_SB as CLAM_SB
 from .dsmil import DSMIL as DSMIL
 from .dftdmil import DFTDMIL as DFTDMIL
-from .path_gcn import PathGCN as PathGCN
+from .patch_gcn import PatchGCN as PatchGCN
 from .deepgraphsurv import DeepGraphSurv as DeepGraphSurv
 
 from .transmil import TransMIL as TransMIL

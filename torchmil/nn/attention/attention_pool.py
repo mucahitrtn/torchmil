@@ -11,7 +11,7 @@ class AttentionPool(torch.nn.Module):
     Given an input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times D}$, 
     this model aggregates the instance features into a bag representation $\mathbf{z} \in \mathbb{R}^{D}$ as, 
 
-    $$ \mathbf{z} = \mathbf{X}^\top \text{Softmax}(\mathbf{f}) = \sum_{n=1}^N s_n \mathbf{x}_n, $$
+    $$ \mathbf{z} = \mathbf{X}^\top \operatorname{Softmax}(\mathbf{f}) = \sum_{n=1}^N s_n \mathbf{x}_n, $$
 
     where $\mathbf{f} = \operatorname{MLP}(\mathbf{X}) \in \mathbb{R}^{N}$ are the attention values and $s_n$ is the normalized attention score for the $n$-th instance.
 
@@ -19,13 +19,13 @@ class AttentionPool(torch.nn.Module):
 
     \begin{equation}
     \operatorname{MLP}(\mathbf{X}) = \begin{cases}
-    \operatorname{act}(\mathbf{X}\mathbf{W}_1)\mathbf{w}, & \text{if gated=False}, \\
-    \left(\operatorname{act}(\mathbf{X}\mathbf{W}_1)\odot\operatorname{sigm}(\mathbf{X}\mathbf{W}_2)\right)\mathbf{w}, & \text{if gated=True},    
+    \operatorname{act}(\mathbf{X}\mathbf{W}_1)\mathbf{w}, & \text{if }\texttt{gated=False}, \\
+    \left(\operatorname{act}(\mathbf{X}\mathbf{W}_1)\odot\operatorname{sigm}(\mathbf{X}\mathbf{W}_2)\right)\mathbf{w}, & \text{if }\texttt{gated=True},    
     \end{cases}
     \end{equation}
     
-    where $\mathbf{W}_1 \in \mathbb{R}^{D \times \text{att_dim}}$, $\mathbf{W}_2 \in \mathbb{R}^{D \times \text{att_dim}}$,
-    $\mathbf{w} \in \mathbb{R}^{\text{att_dim}}$, $\operatorname{act} \ \colon \mathbb{R} \to \mathbb{R}$ is the activation function,
+    where $\mathbf{W}_1 \in \mathbb{R}^{D \times \texttt{att_dim}}$, $\mathbf{W}_2 \in \mathbb{R}^{D \times \texttt{att_dim}}$,
+    $\mathbf{w} \in \mathbb{R}^{\texttt{att_dim}}$, $\operatorname{act} \ \colon \mathbb{R} \to \mathbb{R}$ is the activation function,
     $\operatorname{sigm} \ \colon \mathbb{R} \to \left] 0, 1 \right[$ is the sigmoid function, and $\odot$ denotes element-wise multiplication.
     """
 

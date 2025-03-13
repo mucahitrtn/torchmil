@@ -4,7 +4,36 @@ from torchmil.nn import AttentionPool, GCNConv, DeepGCNLayer
 
 from torchmil.nn.utils import get_feat_dim, LazyLinear
 
-class PathGCN(torch.nn.Module):
+class PatchGCN(torch.nn.Module):
+    r"""
+    PatchGCN model, as proposed in [Whole Slide Images are 2D Point Clouds: Context-Aware Survival Prediction using Patch-based Graph Convolutional Networks](https://arxiv.org/abs/2107.13048).
+
+    Given an input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times P}$
+    with adjacency matrix $\mathbf{A} \in \mathbb{R}^{N \times N}$ and mask $\mathbf{M} \in \{0, 1\}^{N \times 1}$, 
+    this model optionally transforms the instance features using a feature extractor, $\mathbf{X} = \operatorname{FeatExt}(\mathbf{X}) \in \mathbb{R}^{N \times D}$.
+
+    Then, a Graph Convolutional Network (GCN) and a Multi-Layer Perceptron (MLP) are used to transform the instance features, 
+
+    \begin{gather}
+    \mathbf{H} = \operatorname{GCN}(\mathbf{X}, \mathbf{A}) \in \mathbb{R}^{N \times \texttt{out_gcn_dim}}, \\
+    \mathbf{H} = \operatorname{MLP}(\mathbf{H}) \in \mathbb{R}^{N \times \texttt{hidden_dim}},
+    \end{gather}
+
+    where $\texttt{out_gcn_dim} = \texttt{hidden_dim} \cdot \texttt{n_gcn_layers}$. 
+    These GCNs are implemented using the DeepGCN layer (see [DeepGCNLayer](../nn/gnns/deep_gcn_layer.md)) with GCNConv, LayerNorm, and ReLU activation (see [GCNConv](../nn/gnns/gcn_conv.md)), 
+    along with residual connections and dense connections.
+
+    Then, attention values $\mathbf{f} \in \mathbb{R}^{N \times 1}$ and the bag representation $\mathbf{z} \in \mathbb{R}^{\texttt{hidden_dim}}$
+    are computed using the attention pooling mechanism (see [Attention Pooling](../nn/attention/attention_pool.md)),
+
+    \begin{equation}
+    \mathbf{z}, \mathbf{f} = \operatorname{AttentionPool}(\mathbf{H}).
+    \end{equation}
+
+    Finally, the bag representation $\mathbf{z}$ is fed into a classifier (one linear layer) to predict the bag label.
+    """
+
+
     def __init__(self, 
         in_shape : tuple = None,
         n_gcn_layers : int = 4,
@@ -13,21 +42,20 @@ class PathGCN(torch.nn.Module):
         att_dim : int = 128,
         dropout : float = 0.0,
         feat_ext: torch.nn.Module = torch.nn.Identity(),
-        criterion=torch.nn.BCEWithLogitsLoss()
+        criterion : torch.nn.Module = torch.nn.BCEWithLogitsLoss()
     ):
-        """
-        
+        """        
         Arguments:
             in_shape: Shape of input data expected by the feature extractor (excluding batch dimension). If not provided, it will be lazily initialized.
             n_gcn_layers: Number of GCN layers.
-            mlp_depth: Number of layers in the MLP (applied after GCN layers).
+            mlp_depth: Number of layers in the MLP (applied after the GCN).
             hidden_dim: Hidden dimension. If not provided, it will be set to the feature dimension.
             att_dim: Attention dimension.
             dropout: Dropout rate.
             feat_ext: Feature extractor.
             criterion: Loss function.
         """
-        super(PathGCN, self).__init__()
+        super(PatchGCN, self).__init__()
         self.criterion = criterion
         self.feat_ext = feat_ext
 
@@ -48,10 +76,11 @@ class PathGCN(torch.nn.Module):
             self.gcn_layers.append(
                 DeepGCNLayer(conv_layer, norm_layer, act_layer, dropout=dropout, block='plain')
             )
-
+        
+        in_mlp_dim = hidden_dim*(n_gcn_layers+1)
         self.mlp = torch.nn.ModuleList()
         for _ in range(mlp_depth):
-            fc_layer = LazyLinear(hidden_dim, hidden_dim)
+            fc_layer = LazyLinear(in_mlp_dim, hidden_dim)
             act_layer = torch.nn.ReLU()
             dropout_layer = torch.nn.Dropout(dropout)
             self.mlp.append(
@@ -90,15 +119,11 @@ class PathGCN(torch.nn.Module):
         X_ = X 
         for layer in self.gcn_layers:
             X = layer(X, adj) # (batch_size, bag_size, hidden_dim)
-            X_ = torch.cat([X_, X], axis=1) # (batch_size, bag_size*(i+2), hidden_dim)
-        
+            X_ = torch.cat([X_, X], axis=2) # (batch_size, bag_size, hidden_dim*(i+2))
+        # X_ has shape (batch_size, bag_size, hidden_dim*(n_gcn_layers+1))
+
         for layer in self.mlp:
-            X_ = layer(X_)
-        
-        if mask is not None:
-            # amplify the masked values
-            num_new_nodes = X_.shape[1] - X.shape[1]
-            mask = torch.cat([mask, torch.ones(mask.shape[0], num_new_nodes, device=mask.device)], axis=1)
+            X_ = layer(X_) # (batch_size, hidden_dim)
         
         if return_att:
             z, att = self.pool(X_, mask, return_att=True) # (batch_size, hidden_dim)

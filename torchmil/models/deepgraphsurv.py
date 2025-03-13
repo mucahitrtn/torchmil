@@ -13,14 +13,17 @@ class DeepGraphSurv(torch.nn.Module):
     this model optionally transforms the instance features using a feature extractor, $\mathbf{X} = \operatorname{FeatExt}(\mathbf{X}) \in \mathbb{R}^{N \times D}$.
 
     Then, the *representation branch* transforms the instance features using a Graph Convolutional Network (GCN), and the 
-    *attention branch* computes attention values using another GCN,
+    *attention branch* computes the attention values $\mathbf{f}$ using another GCN,
 
     \begin{gather}
-    \mathbf{H} = \operatorname{GCN}_{\text{rep}}(\mathbf{X}, \mathbf{A}) \in \mathbb{R}^{N \times D}, \\
+    \mathbf{H} = \operatorname{GCN}_{\text{rep}}(\mathbf{X}, \mathbf{A}) \in \mathbb{R}^{N \times \texttt{hidden_dim}}, \\
     \mathbf{f} = \operatorname{GCN}_{\text{att}}(\mathbf{X}, \mathbf{A}) \in \mathbb{R}^{N \times 1}.
     \end{gather}
-    
-    The attention values are used to compute the bag representation $\mathbf{z} \in \mathbb{R}^{D}$ as 
+
+    These GCNs are implemented using the DeepGCN layer (see [DeepGCNLayer](../nn/gnns/deep_gcn_layer.md)) with GCNConv, LayerNorm, and ReLU activation (see [GCNConv](../nn/gnns/gcn_conv.md)).
+
+    Writing $\mathbf{H} = \left[ \mathbf{h}_1, \ldots, \mathbf{h}_N \right]^\top$,
+    the attention values are used to compute the bag representation $\mathbf{z} \in \mathbb{R}^{\texttt{hidden_dim}}$ as 
 
     \begin{equation}
     \mathbf{z} = \mathbf{H}^\top \operatorname{Softmax}(\mathbf{f}) = \sum_{n=1}^N s_n \mathbf{h}_n,
