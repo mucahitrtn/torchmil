@@ -20,7 +20,7 @@
         - [ X ] (Fran) SmABMIL
         - [ X ] (Fran) SmTransformerABMIL
         - [ X ] (Fran) ProbSmoothABMIL
-        - [  ] (Fran) ProbSmoothTransformerABMIL
+        - [ X ] (Fran) ProbSmoothTransformerABMIL
         - [ X ] CLAM
             - [  ] Modify inst_eval, inst_eval_out so they accept batched inputs
         - [ X ] (Javier) DSMIL
@@ -35,14 +35,16 @@
         - [  ] SETMIL
     - torchmil.nn:
         - [ ] attention
+            - [ ] index
             - [ X ] attention_pool
             - [ X ] multihead_self_attention
             - [ X ] multihead_cross_attention
             - [ X ] nyström_attention
-            - [ ] prob_smooth_attention_pool
-            - [ ] rpe_multihead_self_attention
-            - [ ] sm_attention_pool
+            - [ X ] prob_smooth_attention_pool
+            - [ X ] rpe_multihead_self_attention
+            - [ X ] sm_attention_pool
         - [ ] transformers
+            - [ ] index
             - [ X ] encoder
             - [ X ] layer
             - [ X ] conventional_transformer
@@ -51,6 +53,7 @@
             - [ ] se_transformer
             - [ X ] sm_transformer
         - [ ] gnns
+            - [ ] index
             - [ X ] deepgcn
             - [ X ] dense_mincut_pool
             - [ X ] gcn_conv

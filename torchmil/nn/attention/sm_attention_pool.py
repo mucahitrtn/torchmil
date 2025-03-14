@@ -7,10 +7,32 @@ from torchmil.nn.utils import masked_softmax, LazyLinear
 from torchmil.nn.sm import Sm
 
 class SmAttentionPool(torch.nn.Module):
-    """
-    Multiple Instance Learning (MIL) attention pooling layer with the Sm operator.
+    r"""
+    Attention-based pooling with the Sm operator, as proposed in [Sm: enhanced localization in Multiple Instance Learning for medical imaging classification](https://arxiv.org/abs/2410.03276).
+    
+    Given an input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times \texttt{in_dim}}$, 
+    this model aggregates the instance features into a bag representation $\mathbf{z} \in \mathbb{R}^{\texttt{in_dim}}$ as, 
 
-    Proposed in the paper [Sm: enhanced localization in Multiple Instance Learning for medical imaging classification](https://arxiv.org/abs/2410.03276).
+    \begin{gather}
+        \mathbf{f} = \operatorname{SmMLP}(\mathbf{X}) \in \mathbb{R}^{N}, \\
+        \mathbf{z} = \mathbf{X}^\top \operatorname{Softmax}(\mathbf{f}) = \sum_{n=1}^N s_n \mathbf{x}_n, 
+    \end{gather}
+
+    where $s_n$ is the normalized attention score for the $n$-th instance. 
+
+    To compute the attention values, $\operatorname{SmMLP}$ is defined as $\operatorname{SmMLP}(\mathbf{X}) = \mathbf{Y}^L$ where
+
+    \begin{gather}
+        \mathbf{Y}^0 = \mathbf{X}\mathbf{W^0}, \\
+        \mathbf{Y}^l = \operatorname{act}( \texttt{Sm}(\mathbf{Y}^{l-1}\mathbf{W}^l)), \quad \text{for } l = 1, \ldots, L-1, \\
+        \mathbf{Y}^L = \mathbf{Y}^{L-1}\mathbf{w},
+    \end{gather}
+    
+    where $\mathbf{W^0} \in \mathbb{R}^{\texttt{in_dim} \times \texttt{att_dim}}$, $\mathbf{W}^l \in \mathbb{R}^{\texttt{att_dim} \times \texttt{att_dim}}$, $\mathbf{w} \in \mathbb{R}^{\texttt{att_dim} \times 1}$,
+    $\operatorname{act} \ \colon \mathbb{R} \to \mathbb{R}$ is the activation function,
+    and $\texttt{Sm}$ is the Sm operator, see [Sm](../sm.md) for more details.
+
+    **Note**: If `sm_pre=True`, the Sm operator is applied before $\operatorname{SmMLP}$. If `sm_post=True`, the Sm operator is applied after $\operatorname{SmMLP}$.
     """
 
     def __init__(

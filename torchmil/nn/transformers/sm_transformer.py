@@ -74,6 +74,8 @@ class SmTransformerLayer(Layer):
     \end{align*}
 
     and outputs $\mathbf{Y}$.
+
+    See [Sm](../sm.md) for more details on the Sm operator.
     """
 
     def __init__(
@@ -147,6 +149,8 @@ class SmTransformerEncoder(Encoder):
 
     This module outputs $\text{SmTransformerEncoder}(\mathbf{X}) = \mathbf{X}^{L}$ if `add_self=False`,
     and $\text{SmTransformerEncoder}(\mathbf{X}) = \mathbf{X}^{L} + \mathbf{X}$ if `add_self=True`.
+    
+    See [Sm](../sm.md) for more details on the Sm operator.
     """
 
     def __init__(

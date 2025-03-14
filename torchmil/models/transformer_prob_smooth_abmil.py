@@ -7,6 +7,52 @@ from torchmil.nn.utils import get_feat_dim, LazyLinear
 
 
 class TransformerProbSmoothABMIL(MILModel):
+    r"""
+    Transformer Attention-based Multiple Instance Learning model, with probabilistic attention-based pooling.
+    Proposed in [Probabilistic Smooth Attention for Deep Multiple Instance Learning in Medical Imaging]().
+
+    Given an input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times P}$, the model optionally applies a feature extractor, $\text{FeatExt}(\cdot)$, to transform the instance features: $\mathbf{X} = \text{FeatExt}(\mathbf{X}) \in \mathbb{R}^{N \times D}$.
+    Then, it transforms the instance features using a transformer encoder, 
+
+    $$ \mathbf{X} = \text{TransformerEncoder}(\mathbf{X}) \in \mathbb{R}^{N \times D}. $$
+
+    Subsequently, it aggregates the instance features into a bag representation using a probabilistic attention-based pooling mechanism, as detailed in [ProbSmoothAttentionPool](../nn/attention/prob_smooth_attention_pool.md).
+
+    Specifically, it computes a mean vector $\mathbf{\mu}_{\mathbf{f}} \in \mathbb{R}^N$ and a variance vector $\mathbf{\sigma}_{\mathbf{f}^2} \in \mathbb{R}^N$ that define the attention distribution $q(\mathbf{f} \mid \mathbf{X}) = \mathcal{N}\left(\mathbf{f} \mid \mathbf{\mu}_{\mathbf{f}}, \operatorname{diag}(\mathbf{\sigma}_{\mathbf{f}}^2) \right)$,
+
+    $$
+    \mathbf{\mu}_{\mathbf{f}}, \mathbf{\sigma}_{\mathbf{f}} = \operatorname{ProbSmoothAttentionPool}(\mathbf{X}).
+    $$
+
+    If `covar_mode='zero'`, the variance vector $\mathbf{\sigma}_{\mathbf{f}}^2$ is set to zero, resulting in a deterministic attention distribution.
+
+    Then, $m$ attention vectors $\widehat{\mathbf{F}} = \left[ \widehat{\mathbf{f}}^{(1)}, \ldots, \widehat{\mathbf{f}}^{(m)} \right]^\top \in \mathbb{R}^{m \times N}$ are sampled from the attention distribution. The bag representation $\widehat{\mathbf{z}} \in \mathbb{R}^{m \times D}$ is then computed as:
+
+    $$
+    \widehat{\mathbf{z}} = \operatorname{Softmax}(\widehat{\mathbf{F}}) \mathbf{X}.
+    $$
+
+    The bag representation $\widehat{\mathbf{z}}$ is fed into a classifier, implemented as a linear layer, to produce bag label predictions $Y_{\text{pred}} \in \mathbb{R}^{m}$.
+
+    Notably, the attention distribution naturally induces a distribution over the bag label predictions. This model thus generates multiple predictions for each bag, corresponding to different samples from this distribution.
+        
+
+    **Regularization.**
+    The probabilistic pooling mechanism introduces a regularization term to the loss function that encourages *smoothness* in the attention values.
+    Given an input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times P}$ with adjacency matrix $\mathbf{A} \in \mathbb{R}^{N \times N}$, the regularization term corresponds to
+    
+    $$
+        \ell_{\text{KL}}(\mathbf{X}, \mathbf{A}) = 
+            \begin{cases}
+                \mathbf{\mu}_{\mathbf{f}}^\top \mathbf{L} \mathbf{\mu}_{\mathbf{f}} \quad & \text{if } \texttt{covar_mode='zero'}, \\
+                \mathbf{\mu}_{\mathbf{f}}^\top \mathbf{L} \mathbf{\mu}_{\mathbf{f}} + \operatorname{Tr}(\mathbf{L} \mathbf{\Sigma}_{\mathbf{f}}) - \frac{1}{2}\log \det( \mathbf{\Sigma}_{\mathbf{f}} ) + \operatorname{const} \quad & \text{if } \texttt{covar_mode='diag'}, \\
+            \end{cases}
+    $$
+
+    where $\operatorname{const}$ is a constant term that does not depend on the parameters, $\mathbf{\Sigma}_{\mathbf{f}} = \operatorname{diag}(\mathbf{\sigma}_{\mathbf{f}}^2)$, $\mathbf{L} = \mathbf{D} - \mathbf{A}$ is the graph Laplacian matrix, and $\mathbf{D}$ is the degree matrix of $\mathbf{A}$.
+    This term is then averaged for all bags in the batch and added to the loss function.    
+    """
+
     def __init__(
         self,
         in_shape: tuple = None,
@@ -24,8 +70,6 @@ class TransformerProbSmoothABMIL(MILModel):
         criterion: torch.nn.Module = torch.nn.BCEWithLogitsLoss(),
     ) -> None:
         """
-        Class constructor.
-
         Arguments:
             in_shape: Shape of input data expected by the feature extractor (excluding batch dimension). If not provided, it will be lazily initialized.
             pool_att_dim: Attention dimension.

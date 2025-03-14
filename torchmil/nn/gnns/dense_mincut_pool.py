@@ -40,6 +40,8 @@ def dense_mincut_pool(
     """
     Dense MinCut Pooling.
 
+    Adapts the implementation from [torch_geometric](https://pytorch-geometric.readthedocs.io/en/latest/generated/torch_geometric.nn.dense.dense_mincut_pool.html).
+
     Arguments:
         x: Input tensor of shape `(batch_size, n_nodes, in_dim)`.
         adj: Adjacency tensor of shape `(batch_size, n_nodes, n_nodes)`.

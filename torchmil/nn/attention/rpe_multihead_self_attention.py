@@ -4,7 +4,10 @@ from ..irpe import get_rpe_config, build_rpe
 
 class RPEMultiheadSelfAttention(torch.nn.Module):
     """
-    Multihead self-attention with relative position encoding.   
+    Multihead Self-Attention with Relative Position Encoding (RPE), as described in [Rethinking and Improving Relative Position Encoding for Vision Transformer](https://openaccess.thecvf.com/content/ICCV2021/html/Wu_Rethinking_and_Improving_Relative_Position_Encoding_for_Vision_Transformer_ICCV_2021_paper.html).
+    
+    The RPE implementation is based on the [official codebase](https://github.com/microsoft/Cream/tree/main/iRPE).
+    
     """
     def __init__(
         self, 
@@ -22,8 +25,6 @@ class RPEMultiheadSelfAttention(torch.nn.Module):
         rpe_on : str = 'k',
     ):
         """
-        Class constructor.
-
         Arguments:
             in_dim: Input dimension.
             att_dim: Attention dimension.
@@ -86,9 +87,10 @@ class RPEMultiheadSelfAttention(torch.nn.Module):
             key: Key tensor of shape `(batch_size, n_heads, seq_len, head_dim)`.
             value: Value tensor of shape `(batch_size, n_heads, seq_len, head_dim)`.
             mask: Mask tensor of shape `(batch_size, seq_len)`.
-            height: Height of the input sequence. If None, height = floor(swrt(seq_len)).
-            width: Width of the input sequence. If None, width = floor(sqrt(L)).
+            height: Height of the input sequence. If None, `height = floor(sqrt(seq_len))`.
+            width: Width of the input sequence. If None, `width = floor(sqrt(seq_len)`).
             return_attention: Whether to return the attention matrices.
+
         Returns:
             out: Output tensor of shape `(batch_size, n_heads, seq_len, head_dim)`.                
         """
@@ -125,6 +127,7 @@ class RPEMultiheadSelfAttention(torch.nn.Module):
 
         Arguments:
             x: Input tensor of shape `(batch_size, seq_len, in_dim)`.
+
         Returns:
             query: Query tensor of shape `(batch_size, seq_len, att_dim)`.
             key: Key tensor of shape `(batch_size, seq_len, att_dim)`.
@@ -150,6 +153,9 @@ class RPEMultiheadSelfAttention(torch.nn.Module):
         Arguments:
             x: Input tensor of shape `(batch_size, seq_len, in_dim)`.
             mask: Mask tensor of shape `(batch_size, seq_len)`.
+            height: Height of the input sequence. If None, `height = floor(sqrt(seq_len))`.
+            width: Width of the input sequence. If None, `width = floor(sqrt(seq_len))`.
+
         Returns:
             y: Output tensor of shape `(batch_size, seq_len, att_dim)`.
         """

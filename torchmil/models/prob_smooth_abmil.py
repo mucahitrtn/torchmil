@@ -17,13 +17,13 @@ class ProbSmoothABMIL(MILModel):
 
     Subsequently, it aggregates the instance features into a bag representation using a probabilistic attention-based pooling mechanism, as detailed in [ProbSmoothAttentionPool](../nn/attention/prob_smooth_attention_pool.md).
 
-    Specifically, it computes a mean vector $\mathbf{\mu}_{\mathbf{f}} \in \mathbb{R}^N$ and a variance vector $\mathbf{\sigma}_{\mathbf{f}} \in \mathbb{R}^N$ that define the attention distribution $q(\mathbf{f} \mid \mathbf{X}) = \mathcal{N}\left(\mathbf{f} \mid \mathbf{\mu}_{\mathbf{f}}, \operatorname{diag}(\mathbf{\sigma}_{\mathbf{f}}^2) \right)$, as follows:
+    Specifically, it computes a mean vector $\mathbf{\mu}_{\mathbf{f}} \in \mathbb{R}^N$ and a variance vector $\mathbf{\sigma}_{\mathbf{f}^2} \in \mathbb{R}^N$ that define the attention distribution $q(\mathbf{f} \mid \mathbf{X}) = \mathcal{N}\left(\mathbf{f} \mid \mathbf{\mu}_{\mathbf{f}}, \operatorname{diag}(\mathbf{\sigma}_{\mathbf{f}}^2) \right)$,
 
     $$
     \mathbf{\mu}_{\mathbf{f}}, \mathbf{\sigma}_{\mathbf{f}} = \operatorname{ProbSmoothAttentionPool}(\mathbf{X}).
     $$
 
-    If `covar_mode='zero'`, the variance vector $\mathbf{\sigma}_{\mathbf{f}}$ is set to zero, resulting in a deterministic attention distribution.
+    If `covar_mode='zero'`, the variance vector $\mathbf{\sigma}_{\mathbf{f}}^2$ is set to zero, resulting in a deterministic attention distribution.
 
     Then, $m$ attention vectors $\widehat{\mathbf{F}} = \left[ \widehat{\mathbf{f}}^{(1)}, \ldots, \widehat{\mathbf{f}}^{(m)} \right]^\top \in \mathbb{R}^{m \times N}$ are sampled from the attention distribution. The bag representation $\widehat{\mathbf{z}} \in \mathbb{R}^{m \times D}$ is then computed as:
 
@@ -41,14 +41,14 @@ class ProbSmoothABMIL(MILModel):
     Given an input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times P}$ with adjacency matrix $\mathbf{A} \in \mathbb{R}^{N \times N}$, the regularization term corresponds to
     
     $$
-        \ell(\mathbf{X}, \mathbf{A}) = 
+        \ell_{\text{KL}}(\mathbf{X}, \mathbf{A}) = 
             \begin{cases}
                 \mathbf{\mu}_{\mathbf{f}}^\top \mathbf{L} \mathbf{\mu}_{\mathbf{f}} \quad & \text{if } \texttt{covar_mode='zero'}, \\
-                \mathbf{\mu}_{\mathbf{f}}^\top \mathbf{L} \mathbf{\mu}_{\mathbf{f}} + \operatorname{Tr}(\mathbf{L} \mathbf{\Sigma}_{\mathbf{f}}) - \frac{1}{2}\log \det( \mathbf{\Sigma}_{\mathbf{f}} ) \quad & \text{if } \texttt{covar_mode='diag'}, \\
+                \mathbf{\mu}_{\mathbf{f}}^\top \mathbf{L} \mathbf{\mu}_{\mathbf{f}} + \operatorname{Tr}(\mathbf{L} \mathbf{\Sigma}_{\mathbf{f}}) - \frac{1}{2}\log \det( \mathbf{\Sigma}_{\mathbf{f}} ) + \operatorname{const} \quad & \text{if } \texttt{covar_mode='diag'}, \\
             \end{cases}
     $$
 
-    where $\mathbf{\Sigma}_{\mathbf{f}} = \operatorname{diag}(\mathbf{\sigma}_{\mathbf{f}}^2)$, $\mathbf{L} = \mathbf{D} - \mathbf{A}$ is the graph Laplacian matrix, and $\mathbf{D}$ is the degree matrix of $\mathbf{A}$.
+    where $\operatorname{const}$ is a constant term that does not depend on the parameters, $\mathbf{\Sigma}_{\mathbf{f}} = \operatorname{diag}(\mathbf{\sigma}_{\mathbf{f}}^2)$, $\mathbf{L} = \mathbf{D} - \mathbf{A}$ is the graph Laplacian matrix, and $\mathbf{D}$ is the degree matrix of $\mathbf{A}$.
     This term is then averaged for all bags in the batch and added to the loss function.    
     """
 

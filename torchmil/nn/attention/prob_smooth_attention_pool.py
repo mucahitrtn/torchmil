@@ -4,6 +4,44 @@ from torch import Tensor
 from torchmil.nn.utils import masked_softmax, LazyLinear
 
 class ProbSmoothAttentionPool(torch.nn.Module):
+    r"""
+    Probabilistic Smooth Attention Pooling, proposed in in [Probabilistic Smooth Attention for Deep Multiple Instance Learning in Medical Imaging]() and [Smooth Attention for Deep Multiple Instance Learning: Application to CT Intracranial Hemorrhage Detection](https://arxiv.org/abs/2307.09457)
+    
+    Given an input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times \texttt{in_dim}}$,
+    this model computes an attention distribution $q(\mathbf{f} \mid \mathbf{X}) = \mathcal{N}\left(\mathbf{f} \mid \mathbf{\mu}_{\mathbf{f}}, \operatorname{diag}(\mathbf{\sigma}_{\mathbf{f}}^2) \right)$, where:
+
+    \begin{gather}
+        \mathbf{H} = \operatorname{MLP}(\mathbf{X}) \in \mathbb{R}^{N \times 2\texttt{att_dim}}, \\
+        \mathbf{\mu}_{\mathbf{f}} = \mathbf{H}\mathbf{w}_{\mu} \in \mathbb{R}^{N}, \\
+        \log \operatorname{diag}(\mathbf{\sigma}_{\mathbf{f}}^2) = \mathbf{H}\mathbf{w}_{\sigma} \in \mathbb{R}^{N},
+    \end{gather}
+
+    where $\operatorname{MLP}$ is a multi-layer perceptron, and $\mathbf{w}_{\mu},\mathbf{w}_{\sigma} \in \mathbb{R}^{2\texttt{att_dim} \times 1}$.
+    If `covar_mode='zero'`, the variance vector $\mathbf{\sigma}_{\mathbf{f}}^2$ is set to zero, resulting in a deterministic attention distribution.
+
+    
+
+    Then, $M$ samples from the attention distribution are drawn as $\widehat{\mathbf{f}}^{(m)} \sim q(\mathbf{f} \mid \mathbf{X})$. 
+    With these samples, the bag representation is computed as:
+
+    $$
+    \widehat{\mathbf{z}} = \operatorname{Softmax}(\widehat{\mathbf{F}}) \mathbf{X} \in \mathbb{R}^{\texttt{in_dim} \times M},
+    $$
+
+    where $\widehat{\mathbf{F}} = \left[ \widehat{\mathbf{f}}^{(1)}, \ldots, \widehat{\mathbf{f}}^{(M)} \right]^\top \in \mathbb{R}^{N \times M}$.
+
+    **Kullback-Leibler Divergence.** Given a bag with adjancency matrix $\mathbf{A}$, the KL divergence between the attention distribution and the prior distribution is computed as:
+    
+    $$
+        \ell_{\text{KL}} = 
+            \begin{cases}
+                \mathbf{\mu}_{\mathbf{f}}^\top \mathbf{L} \mathbf{\mu}_{\mathbf{f}} \quad & \text{if } \texttt{covar_mode='zero'}, \\
+                \mathbf{\mu}_{\mathbf{f}}^\top \mathbf{L} \mathbf{\mu}_{\mathbf{f}} + \operatorname{Tr}(\mathbf{L} \mathbf{\Sigma}_{\mathbf{f}}) - \frac{1}{2}\log \det( \mathbf{\Sigma}_{\mathbf{f}} ) + \operatorname{const} \quad & \text{if } \texttt{covar_mode='diag'}, \\
+            \end{cases}
+    $$
+    
+    where $\operatorname{const}$ is a constant term that does not depend on the parameters, $\mathbf{\Sigma}_{\mathbf{f}} = \operatorname{diag}(\mathbf{\sigma}_{\mathbf{f}}^2)$, $\mathbf{L} = \mathbf{D} - \mathbf{A}$ is the graph Laplacian matrix, and $\mathbf{D}$ is the degree matrix of $\mathbf{A}$.
+    """
     def __init__(
         self,
         in_dim : int = None,
@@ -13,8 +51,6 @@ class ProbSmoothAttentionPool(torch.nn.Module):
         n_samples_test : int = 5000,
     ) -> None:
         """
-        Class constructor.
-
         Arguments:
             in_dim: Input dimension. If not provided, it will be lazily initialized.
             att_dim: Attention dimension.

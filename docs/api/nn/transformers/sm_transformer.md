@@ -1,5 +1,4 @@
 # Sm Transformer
-
 ---
 ::: torchmil.nn.transformers.SmTransformerEncoder
     options:

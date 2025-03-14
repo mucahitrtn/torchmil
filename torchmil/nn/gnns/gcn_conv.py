@@ -4,7 +4,7 @@ from torchmil.nn import LazyLinear
 
 class GCNConv(torch.nn.Module):
     """
-    Implementation of a DeepGCN layer.
+    Implementation of a Graph Convolutional Network (GCN) layer.
 
     Adapts the implementation from [torch_geometric](https://pytorch-geometric.readthedocs.io/en/latest/generated/torch_geometric.nn.conv.GCNConv.html).
     """
