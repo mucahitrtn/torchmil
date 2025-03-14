@@ -17,16 +17,16 @@
         - [ ] Remove criterion from models???
         - [ X ] (Fran) ABMIL
         - [ X ] (Fran) TransformerABMIL
-        - [  ] (Fran) SmABMIL
-        - [  ] (Fran) SmTransformerABMIL
-        - [  ] (Fran) ProbSmoothABMIL
+        - [ X ] (Fran) SmABMIL
+        - [ X ] (Fran) SmTransformerABMIL
+        - [ X ] (Fran) ProbSmoothABMIL
         - [  ] (Fran) ProbSmoothTransformerABMIL
         - [ X ] CLAM
             - [  ] Modify inst_eval, inst_eval_out so they accept batched inputs
         - [ X ] (Javier) DSMIL
         - [ X ] (Javier) DFTDMIL
         - [ X ] PatchGCN
-            - Implement GENConv, right now PatchGCN uses GCNConv
+            - [ ] Implement GENConv, right now PatchGCN uses GCNConv
         - [ X ] DeepGraphSurv
         - [ X ] TransMIL
         - [ X ] GTP
@@ -54,7 +54,7 @@
             - [ X ] deepgcn
             - [ X ] dense_mincut_pool
             - [ X ] gcn_conv
-        - [ ] sm
+        - [ X ] sm
         - [ ] utils
         - [ ] max_pool
         - [ ] mean_pool 

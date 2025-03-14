@@ -5,7 +5,7 @@ from tensordict import TensorDict
 
 class FalseFrequencyMILDataset(torch.utils.data.Dataset):
     """
-    False Frequency MIL Dataset class constructor.
+    False Frequency MIL Dataset.
     Implementation from Algorithm 3 in [Reproducibility in Multiple Instance Learning: A Case For Algorithmic Unit Tests](https://proceedings.neurips.cc/paper_files/paper/2023/hash/2bab8865fa4511e445767e3750b2b5ac-Abstract-Conference.html).
     """
     def __init__(

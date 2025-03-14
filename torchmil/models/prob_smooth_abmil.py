@@ -5,6 +5,53 @@ from .mil_model import MILModel
 from torchmil.nn import ProbSmoothAttentionPool, get_feat_dim, LazyLinear
 
 class ProbSmoothABMIL(MILModel):
+    r"""
+    Attention-based Multiple Instance Learning (ABMIL) model with Probabilistic Smooth Attention Pooling.
+    Proposed in [Probabilistic Smooth Attention for Deep Multiple Instance Learning in Medical Imaging]() and
+    [Smooth Attention for Deep Multiple Instance Learning: Application to CT Intracranial Hemorrhage Detection](https://arxiv.org/abs/2307.09457)
+
+    **Overview.**
+    This model extends the [ABMIL](./abmil.md) model by incorporating a probabilistic pooling mechanism.
+
+    Given an input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times P}$, the model optionally applies a feature extractor, $\text{FeatExt}(\cdot)$, to transform the instance features: $\mathbf{X} = \text{FeatExt}(\mathbf{X}) \in \mathbb{R}^{N \times D}$.
+
+    Subsequently, it aggregates the instance features into a bag representation using a probabilistic attention-based pooling mechanism, as detailed in [ProbSmoothAttentionPool](../nn/attention/prob_smooth_attention_pool.md).
+
+    Specifically, it computes a mean vector $\mathbf{\mu}_{\mathbf{f}} \in \mathbb{R}^N$ and a variance vector $\mathbf{\sigma}_{\mathbf{f}} \in \mathbb{R}^N$ that define the attention distribution $q(\mathbf{f} \mid \mathbf{X}) = \mathcal{N}\left(\mathbf{f} \mid \mathbf{\mu}_{\mathbf{f}}, \operatorname{diag}(\mathbf{\sigma}_{\mathbf{f}}^2) \right)$, as follows:
+
+    $$
+    \mathbf{\mu}_{\mathbf{f}}, \mathbf{\sigma}_{\mathbf{f}} = \operatorname{ProbSmoothAttentionPool}(\mathbf{X}).
+    $$
+
+    If `covar_mode='zero'`, the variance vector $\mathbf{\sigma}_{\mathbf{f}}$ is set to zero, resulting in a deterministic attention distribution.
+
+    Then, $m$ attention vectors $\widehat{\mathbf{F}} = \left[ \widehat{\mathbf{f}}^{(1)}, \ldots, \widehat{\mathbf{f}}^{(m)} \right]^\top \in \mathbb{R}^{m \times N}$ are sampled from the attention distribution. The bag representation $\widehat{\mathbf{z}} \in \mathbb{R}^{m \times D}$ is then computed as:
+
+    $$
+    \widehat{\mathbf{z}} = \operatorname{Softmax}(\widehat{\mathbf{F}}) \mathbf{X}.
+    $$
+
+    The bag representation $\widehat{\mathbf{z}}$ is fed into a classifier, implemented as a linear layer, to produce bag label predictions $Y_{\text{pred}} \in \mathbb{R}^{m}$.
+
+    Notably, the attention distribution naturally induces a distribution over the bag label predictions. This model thus generates multiple predictions for each bag, corresponding to different samples from this distribution.
+        
+
+    **Regularization.**
+    The probabilistic pooling mechanism introduces a regularization term to the loss function that encourages *smoothness* in the attention values.
+    Given an input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times P}$ with adjacency matrix $\mathbf{A} \in \mathbb{R}^{N \times N}$, the regularization term corresponds to
+    
+    $$
+        \ell(\mathbf{X}, \mathbf{A}) = 
+            \begin{cases}
+                \mathbf{\mu}_{\mathbf{f}}^\top \mathbf{L} \mathbf{\mu}_{\mathbf{f}} \quad & \text{if } \texttt{covar_mode='zero'}, \\
+                \mathbf{\mu}_{\mathbf{f}}^\top \mathbf{L} \mathbf{\mu}_{\mathbf{f}} + \operatorname{Tr}(\mathbf{L} \mathbf{\Sigma}_{\mathbf{f}}) - \frac{1}{2}\log \det( \mathbf{\Sigma}_{\mathbf{f}} ) \quad & \text{if } \texttt{covar_mode='diag'}, \\
+            \end{cases}
+    $$
+
+    where $\mathbf{\Sigma}_{\mathbf{f}} = \operatorname{diag}(\mathbf{\sigma}_{\mathbf{f}}^2)$, $\mathbf{L} = \mathbf{D} - \mathbf{A}$ is the graph Laplacian matrix, and $\mathbf{D}$ is the degree matrix of $\mathbf{A}$.
+    This term is then averaged for all bags in the batch and added to the loss function.    
+    """
+
     def __init__(
         self,
         in_shape: tuple = None,
@@ -24,7 +71,6 @@ class ProbSmoothABMIL(MILModel):
             n_samples_test: Number of samples for testing.
             feat_ext: Feature extractor.
             criterion: Loss function. By default, Binary Cross-Entropy loss from logits for binary classification.
-        
         """
         super().__init__()
         self.criterion = criterion
@@ -46,7 +92,7 @@ class ProbSmoothABMIL(MILModel):
     def forward(
         self,
         X: Tensor,
-        adj: Tensor,
+        adj: Tensor = None,
         mask: Tensor = None,
         return_att: bool = False,
         return_samples: bool = False,
@@ -137,7 +183,6 @@ class ProbSmoothABMIL(MILModel):
 
     def predict(self,
         X: Tensor,
-        adj: Tensor,
         mask: Tensor = None,
         return_inst_pred: bool = True,
         return_samples: bool = False
@@ -147,7 +192,6 @@ class ProbSmoothABMIL(MILModel):
 
         Arguments:
             X: Bag features of shape `(batch_size, bag_size, ...)`.
-            adj: Adjacency matrix of shape `(batch_size, bag_size, bag_size)`.
             mask: Mask of shape `(batch_size, bag_size)`.
             return_inst_pred: If True, returns the attention values as instance labels predictions, in addition to bag label predictions.
             return_samples: If True and `return_inst_pred=True`, the instance label predictions returned are samples from the instance label distribution.
@@ -156,7 +200,7 @@ class ProbSmoothABMIL(MILModel):
             Y_pred: Bag label logits of shape `(batch_size,)`.
             y_inst_pred: Only returned when `return_inst_pred=True`. Attention values (before normalization) of shape `(batch_size, bag_size)` if `return_samples=False`, else `(batch_size, bag_size, n_samples)`.
         """
-        Y_pred, att_val = self.forward(X, adj, mask, return_att=return_inst_pred, return_samples=return_samples)
+        Y_pred, att_val = self.forward(X, mask, return_att=return_inst_pred, return_samples=return_samples)
         return Y_pred, att_val
 
 class SmoothABMIL(ProbSmoothABMIL):

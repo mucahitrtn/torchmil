@@ -37,12 +37,9 @@ class DSMIL(MILModel):
     for Whole Slide Image Classification with Self-supervised Contrastive Learning](https://arxiv.org/pdf/2011.08939).
 
     **Overview.**
-    Given an input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times P}$, 
-    this model optionally transforms the instance features using a feature extractor,
-    
-    $$ \mathbf{X} = \text{FeatExt}(\mathbf{X}) \in \mathbb{R}^{N \times D}.$$
+    Given an input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times P}$, the model optionally applies a feature extractor, $\text{FeatExt}(\cdot)$, to transform the instance features: $\mathbf{X} = \text{FeatExt}(\mathbf{X}) \in \mathbb{R}^{N \times D}$.
 
-    Then, two streams are used. The **first stream** uses an instance classifier $c \ \colon \mathbb{R}^D \to \mathbb{R}$ and retrieves the instance with the highest logit score,
+    Then, two streams are used. The **first stream** uses an instance classifier $c \ \colon \mathbb{R}^D \to \mathbb{R}$ (implemented as a linear layer) and retrieves the instance with the highest logit score,
 
     $$
     m = \arg \max \{ c(\mathbf{x}_1), \ldots, c(\mathbf{x}_N) \}.
@@ -63,10 +60,10 @@ class DSMIL(MILModel):
     By default, the model is trained end-to-end using the followind per-bag loss:
 
     $$
-    \ell = \ell_{\text{BCE}}(y, \hat{y}) + \ell_{\text{BCE}}(y, c(\mathbf{x}_m)),
+    \ell = \ell_{\text{BCE}}(Y, \hat{Y}) + \ell_{\text{BCE}}(Y, c(\mathbf{x}_m)),
     $$
 
-    where $\ell_{\text{BCE}}$ is the Binary Cross-Entropy loss, $y$ is the true bag label, $\hat{y}$ is the predicted bag label, and $c(\mathbf{x}_m)$ is the predicted label of the critical instance.
+    where $\ell_{\text{BCE}}$ is the Binary Cross-Entropy loss, $Y$ is the true bag label, $\hat{Y}$ is the predicted bag label, and $c(\mathbf{x}_m)$ is the predicted label of the critical instance.
 
     """
     def __init__(

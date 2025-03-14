@@ -5,7 +5,7 @@ from tensordict import TensorDict
 
 class SCStandardMILDataset(torch.utils.data.Dataset):
     """
-    Single-Concept Standard MIL Dataset class constructor.
+    Single-Concept Standard MIL Dataset.
     Implementation from Algorithm 1 in [Reproducibility in Multiple Instance Learning: A Case For Algorithmic Unit Tests](https://proceedings.neurips.cc/paper_files/paper/2023/hash/2bab8865fa4511e445767e3750b2b5ac-Abstract-Conference.html).
     """
     def __init__(

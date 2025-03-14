@@ -10,10 +10,7 @@ class DFTDMIL(MILModel):
     Double-Tier Feature Distillation Multiple Instance Learning (DFTD-MIL) model, proposed in the paper [DTFD-MIL: Double-Tier Feature Distillation Multiple Instance Learning for Histopathology Whole Slide Image Classification](https://arxiv.org/abs/2203.12081).
 
     **Overview.**
-    Given an input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times P}$ and its label $Y$, 
-    this model optionally transforms the instance features using a feature extractor,
-    
-    $$ \mathbf{X} = \text{FeatExt}(\mathbf{X}) \in \mathbb{R}^{N \times D}.$$
+    Given an input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times P}$, the model optionally applies a feature extractor, $\text{FeatExt}(\cdot)$, to transform the instance features: $\mathbf{X} = \text{FeatExt}(\mathbf{X}) \in \mathbb{R}^{N \times D}$.
 
     Then, the instances in a bag are randomly grouped in $M$ pseudo-bags $\{\mathbf{X}_1, \cdots, \mathbf{X}_M\}$ with approximately the same number of instances. Each pseudo-bag is assigned its parent's bag label $Y_m = Y$. Then, the model has two prediction tiers:
 

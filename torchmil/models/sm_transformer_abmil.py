@@ -9,8 +9,27 @@ from torchmil.nn import SmAttentionPool, SmTransformerEncoder
 from torchmil.nn.utils import get_feat_dim
 
 class SmTransformerABMIL(MILModel):
-    """
-    Transformer Attention-based Multiple Instance Learning (ABMIL) model with the Sm operator. 
+    r"""
+    Transformer Attention-based Multiple Instance Learning model with the $\texttt{Sm}$ operator.
+    Proposed in [Sm: enhanced localization in Multiple Instance Learning for medical imaging classification](https://arxiv.org/abs/2410.03276).
+
+    Given an input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times P}$ with adjacency matrix $\mathbf{A} \in \mathbb{R}^{N \times N}$,
+    the model optionally applies a feature extractor, $\text{FeatExt}(\cdot)$, to transform the instance features: $\mathbf{X} = \text{FeatExt}(\mathbf{X}) \in \mathbb{R}^{N \times D}$.
+    
+    Then, it transforms the instance features using a transformer encoder with the $\texttt{Sm}$ operator,
+
+    $$ \mathbf{X} = \text{SmTransformerEncoder}(\mathbf{X}) \in \mathbb{R}^{N \times D}. $$
+
+    Subsequently, it aggregates the instance features into a bag representation $\mathbf{z} \in \mathbb{R}^{D}$ using an attention-based pooling mechanism that incorporates the $\texttt{Sm}$ operator,
+
+    $$
+    \mathbf{z}, \mathbf{f} = \operatorname{SmAttentionPool}(\mathbf{X}).
+    $$
+
+    where $\mathbf{f} \in \mathbb{R}^{N}$ are the attention values.
+    Finally, the bag representation $\mathbf{z}$ is then fed into a classifier (one linear layer) to predict the bag label.
+
+    See [SmAttentionPool](../nn/attention/sm_attention_pool.md) for more details on the attention-based pooling, and [SmTransformerEncoder](../nn/transformers/sm_transformer.md) for more details on the transformer encoder.
     """
     def __init__(
         self,

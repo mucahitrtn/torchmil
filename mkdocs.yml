@@ -120,6 +120,8 @@ nav:
       - Attention:
         - api/nn/attention/index.md
         - api/nn/attention/attention_pool.md
+        - api/nn/attention/sm_attention_pool.md
+        - api/nn/attention/prob_smooth_attention_pool.md
         - api/nn/attention/multihead_self_attention.md
         - api/nn/attention/rpe_multihead_self_attention.md
         - api/nn/attention/nystrom_attention.md
@@ -152,7 +154,6 @@ nav:
       - api/models/prob_smooth_abmil.md
       - api/models/sm_abmil.md
       - api/models/sm_transformer_abmil.md
-      - api/models/smooth_abmil.md
       - api/models/transformer_abmil.md
       - api/models/transformer_prob_smooth_abmil.md
       - api/models/transmil.md

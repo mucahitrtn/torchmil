@@ -9,24 +9,21 @@ class TransformerABMIL(MILModel):
     r"""
     Transformer Attention-based Multiple Instance Learning model.
 
-    Given an input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times P}$, 
-    this model optionally transforms the instance features using a feature extractor, 
-
-    $$ \mathbf{X} = \text{FeatExt}(\mathbf{X}) \in \mathbb{R}^{N \times D}. $$
-
+    Given an input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times P}$, the model optionally applies a feature extractor, $\text{FeatExt}(\cdot)$, to transform the instance features: $\mathbf{X} = \text{FeatExt}(\mathbf{X}) \in \mathbb{R}^{N \times D}$.
     Then, it transforms the instance features using a transformer encoder, 
 
     $$ \mathbf{X} = \text{TransformerEncoder}(\mathbf{X}) \in \mathbb{R}^{N \times D}, $$
 
     and finally it aggregates the instance features into a bag representation $\mathbf{z} \in \mathbb{R}^{D}$ using the attention-based pooling, 
 
-    $$ \mathbf{z} = \mathbf{X}^\top \text{Softmax}(\mathbf{f}) = \sum_{n=1}^N s_n \mathbf{x}_n, $$
+    $$
+    \mathbf{z}, \mathbf{f} = \operatorname{AttentionPool}(\mathbf{X}).
+    $$
 
-    where $\mathbf{f} = \operatorname{MLP}(\mathbf{X}) \in \mathbb{R}^{N}$ are the attention values and $s_n$ is the normalized attention score for the $n$-th instance.
+    where $\mathbf{f} = \operatorname{MLP}(\mathbf{X}) \in \mathbb{R}^{N}$ are the attention values.
     The bag representation $\mathbf{z}$ is then fed into a classifier (one linear layer) to predict the bag label.
 
     See [AttentionPool](../nn/attention/attention_pool.md) for more details on the attention-based pooling, and [TransformerEncoder](../nn/transformers/conventional_transformer.md) for more details on the transformer encoder.
-
     """
     def __init__(
         self,

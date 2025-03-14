@@ -9,10 +9,21 @@ from torchmil.nn import SmAttentionPool, LazyLinear
 from torchmil.nn.utils import get_feat_dim
 
 class SmABMIL(MILModel):
-    """
-    Attention-based Multiple Instance Learning (ABMIL) model with the Sm operator.
+    r"""
+    Attention-based Multiple Instance Learning (ABMIL) model with the $\texttt{Sm}$ operator.
+    Proposed in [Sm: enhanced localization in Multiple Instance Learning for medical imaging classification](https://arxiv.org/abs/2410.03276).
 
-    Proposed in the paper [Sm: enhanced localization in Multiple Instance Learning for medical imaging classification](https://arxiv.org/abs/2410.03276).
+    Given an input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times P}$, the model optionally applies a feature extractor, $\text{FeatExt}(\cdot)$, to transform the instance features: $\mathbf{X} = \text{FeatExt}(\mathbf{X}) \in \mathbb{R}^{N \times D}$.
+
+    Then, it aggregates the instance features into a bag representation $\mathbf{z} \in \mathbb{R}^{D}$ using an attention-based pooling mechanism that incorporates the $\texttt{Sm}$ operator,
+
+    $$
+    \mathbf{z}, \mathbf{f} = \operatorname{SmAttentionPool}(\mathbf{X}),
+    $$
+
+    where $\mathbf{f} \in \mathbb{R}^{N}$ are the attention values.
+    See [SmAttentionPool](../nn/attention/sm_attention_pool.md) for more details on the pooling operator
+    The bag representation $\mathbf{z}$ is then fed into a classifier (one linear layer) to predict the bag label.
     """
 
     def __init__(

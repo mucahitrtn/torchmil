@@ -8,10 +8,9 @@ class DeepGraphSurv(torch.nn.Module):
     r"""
     DeepGraphSurv model, as proposed in [Graph CNN for Survival Analysis on Whole Slide Pathological Images](https://link.springer.com/chapter/10.1007/978-3-030-00934-2_20).
 
-    Given an input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times P}$
-    with adjacency matrix $\mathbf{A} \in \mathbb{R}^{N \times N}$ and mask $\mathbf{M} \in \{0, 1\}^{N \times 1}$, 
-    this model optionally transforms the instance features using a feature extractor, $\mathbf{X} = \operatorname{FeatExt}(\mathbf{X}) \in \mathbb{R}^{N \times D}$.
-
+    Given an input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times P}$ with adjacency matrix $\mathbf{A} \in \mathbb{R}^{N \times N}$, 
+    the model optionally applies a feature extractor, $\text{FeatExt}(\cdot)$, to transform the instance features: $\mathbf{X} = \text{FeatExt}(\mathbf{X}) \in \mathbb{R}^{N \times D}$.
+    
     Then, the *representation branch* transforms the instance features using a Graph Convolutional Network (GCN), and the 
     *attention branch* computes the attention values $\mathbf{f}$ using another GCN,
 

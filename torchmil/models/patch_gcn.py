@@ -8,10 +8,9 @@ class PatchGCN(torch.nn.Module):
     r"""
     PatchGCN model, as proposed in [Whole Slide Images are 2D Point Clouds: Context-Aware Survival Prediction using Patch-based Graph Convolutional Networks](https://arxiv.org/abs/2107.13048).
 
-    Given an input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times P}$
-    with adjacency matrix $\mathbf{A} \in \mathbb{R}^{N \times N}$ and mask $\mathbf{M} \in \{0, 1\}^{N \times 1}$, 
-    this model optionally transforms the instance features using a feature extractor, $\mathbf{X} = \operatorname{FeatExt}(\mathbf{X}) \in \mathbb{R}^{N \times D}$.
-
+    Given an input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times P}$ with adjacency matrix $\mathbf{A} \in \mathbb{R}^{N \times N}$, 
+    the model optionally applies a feature extractor, $\text{FeatExt}(\cdot)$, to transform the instance features: $\mathbf{X} = \text{FeatExt}(\mathbf{X}) \in \mathbb{R}^{N \times D}$.
+    
     Then, a Graph Convolutional Network (GCN) and a Multi-Layer Perceptron (MLP) are used to transform the instance features, 
 
     \begin{gather}

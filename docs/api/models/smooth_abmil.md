@@ -1,9 +1,0 @@
-# SmoothABMIL
-
-::: torchmil.models.SmoothABMIL
-    options:
-        members:
-            - __init__
-            - forward
-            - compute_loss
-            - predict

@@ -122,7 +122,7 @@ class ProbSmoothAttentionPool(torch.nn.Module):
     def forward(
         self, 
         X : Tensor,
-        adj : Tensor,
+        adj : Tensor = None,
         mask : Tensor = None,
         return_att : bool = False,
         return_attdist : bool = False,

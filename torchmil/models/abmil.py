@@ -9,22 +9,17 @@ class ABMIL(MILModel):
     r"""
     Attention-based Multiple Instance Learning (ABMIL) model, proposed in the paper [Attention-based Multiple Instance Learning](https://arxiv.org/abs/1802.04712).
 
-    Given an input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times P}$, 
-    this model optionally transforms the instance features using a feature extractor, 
-
-    $$ \mathbf{X} = \text{FeatExt}(\mathbf{X}) \in \mathbb{R}^{N \times D}.$$
+    Given an input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times P}$, the model optionally applies a feature extractor, $\text{FeatExt}(\cdot)$, to transform the instance features: $\mathbf{X} = \text{FeatExt}(\mathbf{X}) \in \mathbb{R}^{N \times D}$.
 
     Then, it aggregates the instance features into a bag representation $\mathbf{z} \in \mathbb{R}^{D}$ using the attention-based pooling, 
 
     $$
-    \mathbf{z}, \mathbf{f} = \operatorname{AttentionPool}(\mathbf{H}).
+    \mathbf{z}, \mathbf{f} = \operatorname{AttentionPool}(\mathbf{X}).
     $$
 
     where $\mathbf{f} \in \mathbb{R}^{N}$ are the attention values.
     See [AttentionPool](../nn/attention/attention_pool.md) for more details on the attention-based pooling.
     The bag representation $\mathbf{z}$ is then fed into a classifier (one linear layer) to predict the bag label.
-
-    
     """
 
     def __init__(

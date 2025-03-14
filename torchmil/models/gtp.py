@@ -13,9 +13,8 @@ class GTP(MILModel):
     Method proposed in the paper [GTP: Graph-Transformer for Whole Slide Image Classification](https://arxiv.org/abs/2205.09671).
 
     **Forward pass.**
-    Given an input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times P}$, this model optionally transforms the instance features using a feature extractor trained with self-supervised contrastive learning:
-
-    $$ \mathbf{X} = \text{FeatExt}(\mathbf{X}) \in \mathbb{R}^{N \times D}.$$
+    Given an input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times P}$ with adjacency matrix $\mathbf{A} \in \mathbb{R}^{N \times N}$,
+    the model optionally applies a feature extractor, $\text{FeatExt}(\cdot)$, to transform the instance features: $\mathbf{X} = \text{FeatExt}(\mathbf{X}) \in \mathbb{R}^{N \times D}$.
 
     The bags are processed using a Graph Convolutional Network (GCN) to extract high-level instance embeddings. 
     This GCN leverages a graph $\mathbf{A}$ constructed from the bag, where nodes correspond to patches, and edges are determined based on spatial adjacency:
