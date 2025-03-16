@@ -9,27 +9,31 @@ from .encoder import Encoder
 from .layer import Layer
 
 
-SDP_BACKEND = [SDPBackend.MATH, SDPBackend.FLASH_ATTENTION,
-               SDPBackend.EFFICIENT_ATTENTION, SDPBackend.CUDNN_ATTENTION]
+SDP_BACKEND = [
+    SDPBackend.MATH,
+    SDPBackend.FLASH_ATTENTION,
+    SDPBackend.EFFICIENT_ATTENTION,
+    SDPBackend.CUDNN_ATTENTION,
+]
+
 
 class SETransformerLayer(Layer):
-    r"""
-    """
+    r""" """
 
     def __init__(
         self,
         in_dim: int,
-        out_dim : int = None,
+        out_dim: int = None,
         att_dim: int = 512,
         n_heads: int = 4,
         use_mlp: bool = True,
         dropout: float = 0.0,
         rpe_ratio: float = 1.9,
         rpe_method: str = "product",
-        rpe_mode: str = 'ctx',
+        rpe_mode: str = "ctx",
         rpe_shared_head: bool = True,
         rpe_skip: int = 1,
-        rpe_on: str = 'k'
+        rpe_on: str = "k",
     ):
         """
         Class constructor.
@@ -50,13 +54,26 @@ class SETransformerLayer(Layer):
         """
 
         att_module = RPEMultiheadSelfAttention(
-            att_dim=att_dim, in_dim=in_dim, out_dim=att_dim, n_heads=n_heads, dropout=dropout,
-            rpe_ratio=rpe_ratio, rpe_method=rpe_method, rpe_mode=rpe_mode, rpe_shared_head=rpe_shared_head,
-            rpe_skip=rpe_skip, rpe_on=rpe_on
+            att_dim=att_dim,
+            in_dim=in_dim,
+            out_dim=att_dim,
+            n_heads=n_heads,
+            dropout=dropout,
+            rpe_ratio=rpe_ratio,
+            rpe_method=rpe_method,
+            rpe_mode=rpe_mode,
+            rpe_shared_head=rpe_shared_head,
+            rpe_skip=rpe_skip,
+            rpe_on=rpe_on,
         )
 
         super(SETransformerLayer, self).__init__(
-            in_dim=in_dim, out_dim=out_dim, att_dim=att_dim, att_module=att_module, use_mlp=use_mlp, dropout=dropout
+            in_dim=in_dim,
+            out_dim=out_dim,
+            att_dim=att_dim,
+            att_module=att_module,
+            use_mlp=use_mlp,
+            dropout=dropout,
         )
 
     def forward(
@@ -70,14 +87,14 @@ class SETransformerLayer(Layer):
             X: Input tensor of shape `(batch_size, bag_size, in_dim)`.
 
         Returns:
-            Y: Output tensor of shape `(batch_size, bag_size, out_dim)`.            
+            Y: Output tensor of shape `(batch_size, bag_size, out_dim)`.
         """
 
         return super().forward(X)
 
+
 class SETransformerEncoder(Encoder):
-    r"""
-    """
+    r""" """
 
     def __init__(
         self,
@@ -91,10 +108,10 @@ class SETransformerEncoder(Encoder):
         dropout: float = 0.0,
         rpe_ratio: float = 1.9,
         rpe_method: str = "product",
-        rpe_mode: str = 'ctx',
+        rpe_mode: str = "ctx",
         rpe_shared_head: bool = True,
         rpe_skip: int = 1,
-        rpe_on: str = 'k'
+        rpe_on: str = "k",
     ):
         """
         Class constructor
@@ -113,27 +130,37 @@ class SETransformerEncoder(Encoder):
             rpe_mode: Relative position encoding mode.
             rpe_shared_head: Whether to share relative position encoding weights across heads.
             rpe_skip: Relative position encoding skip.
-            rpe_on: Relative position encoding on query, key, or value.  
-        """        
+            rpe_on: Relative position encoding on query, key, or value.
+        """
 
         if out_dim is None:
             out_dim = in_dim
 
-        layers = torch.nn.ModuleList([
-            SETransformerLayer(
-                in_dim=in_dim if i == 0 else att_dim, 
-                out_dim=out_dim if i == n_layers - 1 else att_dim,
-                att_dim=att_dim,  n_heads=n_heads, use_mlp=use_mlp, dropout=dropout,
-                rpe_ratio=rpe_ratio, rpe_method=rpe_method, rpe_mode=rpe_mode,
-                rpe_shared_head=rpe_shared_head, rpe_skip=rpe_skip, rpe_on=rpe_on
-            ) 
-            for i in range(n_layers)
-        ])
+        layers = torch.nn.ModuleList(
+            [
+                SETransformerLayer(
+                    in_dim=in_dim if i == 0 else att_dim,
+                    out_dim=out_dim if i == n_layers - 1 else att_dim,
+                    att_dim=att_dim,
+                    n_heads=n_heads,
+                    use_mlp=use_mlp,
+                    dropout=dropout,
+                    rpe_ratio=rpe_ratio,
+                    rpe_method=rpe_method,
+                    rpe_mode=rpe_mode,
+                    rpe_shared_head=rpe_shared_head,
+                    rpe_skip=rpe_skip,
+                    rpe_on=rpe_on,
+                )
+                for i in range(n_layers)
+            ]
+        )
 
         super(SETransformerEncoder, self).__init__(layers, add_self=add_self)
-        
+
         self.norm = torch.nn.LayerNorm(out_dim)
 
+    # TODO: Check if this norm is correct or not
     def forward(
         self,
         X: torch.Tensor,
@@ -145,10 +172,10 @@ class SETransformerEncoder(Encoder):
             X: Input tensor of shape `(batch_size, bag_size, in_dim)`.
 
         Returns:
-            Y: Output tensor of shape `(batch_size, bag_size, in_dim)`.        
+            Y: Output tensor of shape `(batch_size, bag_size, in_dim)`.
         """
 
-        Y = super().forward(X) # (batch_size, bag_size, att_dim)
-        Y = self.norm(Y) # (batch_size, bag_size, att_dim)
+        Y = super().forward(X)  # (batch_size, bag_size, att_dim)
+        Y = self.norm(Y)  # (batch_size, bag_size, att_dim)
 
         return Y

@@ -157,3 +157,4 @@ nav:
       - api/models/transformer_abmil.md
       - api/models/transformer_prob_smooth_abmil.md
       - api/models/transmil.md
+      - api/models/setmil.md

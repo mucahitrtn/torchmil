@@ -25,6 +25,7 @@
 - [TransformerABMIL](models/transformer_abmil.md)
 - [TransformerProbSmoothABMIL](models/transformer_prob_smooth_abmil.md)
 - [TransMIL](models/transmil.md)
+- [SETMIL](models/setmil.md)
 
 ## Modules: [torchmil.nn](nn/index.md)
 
