@@ -2,10 +2,12 @@
 
 - [ ] Index and introduction to the library.
 - [ ] Tutorials:
-    - Tutorial 1: "Training your first MIL model"
-    - Tutorial 2: "Visualizing attention maps"
-    - Tutorial 3: "Integrating torchmil with popular GNNs libraries"
-    - ? Tutorial 4: "Using torchmil with Pytorch Lightning"
+    - [ ] Tutorial 0: "Digits classification in torchmil": Training a simple ABMIL with a MNIST toy dataset
+    - [ ] Tutorial 1: "Data representation in torchmil": how to represent data in torchmil (bags, instances, graphs, mask, etc)
+    - [ ] Tutorial 2: "Datasets in torchmil": how datasets are implemented in torchmil: processed datasets vs non-processed datasets. 
+    - [ ] Tutorial 3: "WSI classification in torchmil": how to train a model with WSI data.
+    - [ ] Tutorial 4: "CTScan classification in torchmil": how to train a model with CTScan data.
+    - [ ] Tutorial 5: "Visualizing attention maps": how to visualize attention maps in torchmil.
 - Code:
     - torchmil.datasets:
         - [ X ] (Fran) Processed MIL dataset
@@ -34,7 +36,7 @@
         - [ X ] GTP
         - [ X ] (Javier) CAMIL
         - [  ] IIBMIL
-        - [  ] SETMIL
+        - [ X ] SETMIL
     - torchmil.nn:
         - [ ] attention
             - [ ] index
@@ -43,7 +45,7 @@
             - [ X ] multihead_cross_attention
             - [ X ] nyström_attention
             - [ X ] prob_smooth_attention_pool
-            - [ X ] rpe_multihead_self_attention
+            - [ X ] irpe_multihead_self_attention
             - [ X ] sm_attention_pool
         - [ ] transformers
             - [ ] index
@@ -51,7 +53,7 @@
             - [ X ] layer
             - [ X ] conventional_transformer
             - [ X ] nystrom_transformer
-            - [ ] se_transformer
+            - [ X ] irpe_transformer
             - [ X ] sm_transformer
             - [ X ] t2t
         - [ ] gnns

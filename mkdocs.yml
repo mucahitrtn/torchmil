@@ -69,10 +69,15 @@ markdown_extensions:
 plugins:
   - search  # default search plugin; needs manually re-enabling when using any other plugins
   - autorefs  # Cross-links to headings
-  # - mknotebooks  # Jupyter notebooks
+  - exclude:
+      glob:
+      - "_overrides"
+      - "examples/pruebas/*"
+  - mkdocs-jupyter:  # Jupyter notebooks
+      execute: true
   - mkdocstrings:
-      enabled: !ENV [ENABLE_MKDOCSTRINGS, true]
-      default_handler: python
+      # enabled: !ENV [ENABLE_MKDOCSTRINGS, true]
+      # default_handler: python
       handlers:
         python:
           # setup_commands:
@@ -84,6 +89,8 @@ plugins:
           #   - import jax.extend.core
           #   - jax.ShapeDtypeStruct.__module__ = "jax"
           #   - jax.extend.core.ClosedJaxpr.__module__ = "jax.extend.core"
+          selection:
+            inherited_members: true  # Allow looking up inherited methods
           options:
             show_source: false  # don't include source code
             show_bases: true
@@ -98,9 +105,9 @@ plugins:
 
 nav:
   - index.md
-  - Tutorials:
-    - tutorials/index.md
-    - tutorials/tutorial_1.md
+  - Examples:
+    - examples/index.md
+    - examples/data.ipynb
   - API reference:
     - api/index.md
     - <tt>torchmil.data</tt>:
