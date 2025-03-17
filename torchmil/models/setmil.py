@@ -179,7 +179,6 @@ class SETMIL(MILModel):
                 dropout=pmf_dropout,
             )
 
-        # TODO: In the paper they mention that they use the LN BEFORE the transformer, but in the code it is AFTER the transformer.
         self.se_transf = iRPETransformerEncoder(
             in_dim=att_dim,
             att_dim=att_dim,
