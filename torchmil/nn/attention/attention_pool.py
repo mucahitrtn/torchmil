@@ -8,8 +8,8 @@ class AttentionPool(torch.nn.Module):
     r"""
     Attention-based pooling, as proposed in the paper [Attention-based Multiple Instance Learning](https://arxiv.org/abs/1802.04712).
 
-    Given an input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times D}$, 
-    this model aggregates the instance features into a bag representation $\mathbf{z} \in \mathbb{R}^{D}$ as, 
+    Given an input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times \texttt{in_dim}}$, 
+    this model aggregates the instance features into a bag representation $\mathbf{z} \in \mathbb{R}^{\texttt{in_dim}}$ as, 
 
     $$ \mathbf{z} = \mathbf{X}^\top \operatorname{Softmax}(\mathbf{f}) = \sum_{n=1}^N s_n \mathbf{x}_n, $$
 
@@ -24,7 +24,7 @@ class AttentionPool(torch.nn.Module):
     \end{cases}
     \end{equation}
     
-    where $\mathbf{W}_1 \in \mathbb{R}^{D \times \texttt{att_dim}}$, $\mathbf{W}_2 \in \mathbb{R}^{D \times \texttt{att_dim}}$,
+    where $\mathbf{W}_1 \in \mathbb{R}^{\texttt{in_dim} \times \texttt{att_dim}}$, $\mathbf{W}_2 \in \mathbb{R}^{\texttt{in_dim} \times \texttt{att_dim}}$,
     $\mathbf{w} \in \mathbb{R}^{\texttt{att_dim}}$, $\operatorname{act} \ \colon \mathbb{R} \to \mathbb{R}$ is the activation function,
     $\operatorname{sigm} \ \colon \mathbb{R} \to \left] 0, 1 \right[$ is the sigmoid function, and $\odot$ denotes element-wise multiplication.
     """

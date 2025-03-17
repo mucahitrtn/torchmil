@@ -3,7 +3,7 @@ import torch
 import torch
 from torch.nn.attention import SDPBackend
 
-from torchmil.nn import RPEMultiheadSelfAttention
+from torchmil.nn import iRPEMultiheadSelfAttention
 
 from .encoder import Encoder
 from .layer import Layer
@@ -17,8 +17,20 @@ SDP_BACKEND = [
 ]
 
 
-class SETransformerLayer(Layer):
-    r""" """
+class iRPETransformerLayer(Layer):
+    r"""
+    Transformer layer with image Relative Position Encoding (iRPE), as described in [Rethinking and Improving Relative Position Encoding for Vision Transformer](https://openaccess.thecvf.com/content/ICCV2021/html/Wu_Rethinking_and_Improving_Relative_Position_Encoding_for_Vision_Transformer_ICCV_2021_paper.html).
+
+    Given an input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times D}$,
+    this module computes:
+
+    \begin{align*}
+    \mathbf{Z} & = \mathbf{X} + \operatorname{iRPESelfAttention}( \operatorname{LayerNorm}(\mathbf{X}) ) \\
+    \mathbf{Y} & = \mathbf{Z} + \operatorname{MLP}(\operatorname{LayerNorm}(\mathbf{Z})), \\
+    \end{align*}
+
+    and outputs $\mathbf{Y}$. See [iRPEMultiheadSelfAttention](../attention/irpe_multihead_self_attention.md) for more details about $\operatorname{iRPESelfAttention}$.
+    """
 
     def __init__(
         self,
@@ -53,7 +65,7 @@ class SETransformerLayer(Layer):
             rpe_on: Relative position encoding on query, key, or value.
         """
 
-        att_module = RPEMultiheadSelfAttention(
+        att_module = iRPEMultiheadSelfAttention(
             att_dim=att_dim,
             in_dim=in_dim,
             out_dim=att_dim,
@@ -67,7 +79,7 @@ class SETransformerLayer(Layer):
             rpe_on=rpe_on,
         )
 
-        super(SETransformerLayer, self).__init__(
+        super(iRPETransformerLayer, self).__init__(
             in_dim=in_dim,
             out_dim=out_dim,
             att_dim=att_dim,
@@ -93,8 +105,22 @@ class SETransformerLayer(Layer):
         return super().forward(X)
 
 
-class SETransformerEncoder(Encoder):
-    r""" """
+class iRPETransformerEncoder(Encoder):
+    r"""
+    Given an input bag input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times D}$,
+    it computes:
+
+    \begin{align*}
+    \mathbf{X}^{0} & = \mathbf{X} \\
+    \mathbf{Z}^{l} & = \mathbf{X}^{l-1} + \operatorname{iRPESelfAttention}( \operatorname{LayerNorm}(\mathbf{X}^{l-1}) ), \quad l = 1, \ldots, L \\
+    \mathbf{X}^{l} & = \mathbf{Z}^{l} + \operatorname{MLP}(\operatorname{LayerNorm}(\mathbf{Z}^{l})), \quad l = 1, \ldots, L. \\
+    \end{align*}
+
+    See [iRPEMultiheadSelfAttention](../attention/irpe_multihead_self_attention.md) for more details about $\operatorname{iRPESelfAttention}$.
+
+    This module outputs $\operatorname{TransformerEncoder}(\mathbf{X}) = \mathbf{X}^{L}$ if `add_self=False`, 
+    and $\operatorname{TransformerEncoder}(\mathbf{X}) = \mathbf{X}^{L} + \mathbf{X}$ if `add_self=True`.
+    """
 
     def __init__(
         self,
@@ -138,7 +164,7 @@ class SETransformerEncoder(Encoder):
 
         layers = torch.nn.ModuleList(
             [
-                SETransformerLayer(
+                iRPETransformerLayer(
                     in_dim=in_dim if i == 0 else att_dim,
                     out_dim=out_dim if i == n_layers - 1 else att_dim,
                     att_dim=att_dim,
@@ -156,11 +182,10 @@ class SETransformerEncoder(Encoder):
             ]
         )
 
-        super(SETransformerEncoder, self).__init__(layers, add_self=add_self)
+        super(iRPETransformerEncoder, self).__init__(layers, add_self=add_self)
 
         self.norm = torch.nn.LayerNorm(out_dim)
 
-    # TODO: Check if this norm is correct or not
     def forward(
         self,
         X: torch.Tensor,

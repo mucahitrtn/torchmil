@@ -2,7 +2,7 @@ import torch
 
 from .mil_model import MILModel
 
-from torchmil.nn import PMFTransformerEncoder, SETransformerEncoder
+from torchmil.nn.transformers import iRPETransformerEncoder, T2TLayer
 from torchmil.nn.utils import (
     get_feat_dim,
     SinusoidalPositionalEncodingND,
@@ -10,6 +10,76 @@ from torchmil.nn.utils import (
     get_sequential_representation,
 )
 
+class PMF(torch.nn.Module):
+    r"""
+    """
+
+    def __init__(
+        self,
+        in_dim: int,
+        out_dim: int = None,
+        att_dim: int = 512,
+        kernel_list: list[tuple[int, int]] = [(3, 3), (5, 5), (7, 7)],
+        stride_list: list[tuple[int, int]] = [(1, 1), (1, 1), (1, 1)],
+        padding_list: list[tuple[int, int]] = [(1, 1), (2, 2), (3, 3)],
+        dilation_list: list[tuple[int, int]] = [(1, 1), (1, 1), (1, 1)],
+        n_heads: int = 4,
+        use_mlp: bool = True,
+        dropout: float = 0.0
+    ):
+        """
+        Arguments:
+            in_dim: Input dimension.
+            out_dim: Output dimension.
+            att_dim: Attention dimension.
+            kernel_list: List of kernel sizes.
+            stride_list: List of strides.
+            padding_list: List of paddings.
+            dilation_list: List of dilations.
+            n_heads: Number of heads.
+            use_mlp: Whether to use feedforward layer.
+            dropout: Dropout rate.
+        """
+
+        super().__init__()
+
+        self.unfold0 = torch.nn.Unfold(kernel_size=7, stride=4, padding=2)
+
+        self.layers = torch.nn.ModuleList([
+            T2TLayer(
+                in_dim=in_dim*7*7,
+                att_dim=att_dim, 
+                out_dim=att_dim,
+                kernel_size=kernel_list[i], stride=stride_list[i], padding=padding_list[i], dilation=dilation_list[i],
+                n_heads=n_heads, use_mlp=use_mlp, dropout=dropout
+            )
+            for i in range(len(kernel_list))
+        ])
+
+        if out_dim is not None:
+            self.out_proj = torch.nn.Linear(att_dim*len(kernel_list), out_dim)
+        else:
+            self.out_proj = torch.nn.Identity()
+    
+    def forward(
+        self,
+        X: torch.Tensor
+    ) -> torch.Tensor:
+        """
+        Arguments:
+            X: Input tensor of shape `(batch_size, in_dim, coord1, coord2)`.
+        Returns:
+            Y: Output tensor of shape `(batch_size, seq_len, out_dim)`.
+        """
+        X = self.unfold0(X) # (batch_size, in_dim * kernel_size[0] * kernel_size[1], L)
+        X = X.transpose(1, 2) # (batch_size, L, in_dim * kernel_size[0] * kernel_size[1])
+        X_ = []
+        for layer in self.layers:
+            U = layer(X) # (batch_size, L, att_dim)
+            X_.append(U)
+        X_ = torch.cat(X_, dim=2) # (batch_size, new_seq_len, att_dim * len(kernel_list))
+        X_ = self.out_proj(X_) # (batch_size, new_seq_len, out_dim)
+        return X_
 
 class SETMIL(MILModel):
     r"""
@@ -17,33 +87,31 @@ class SETMIL(MILModel):
 
     Given an input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times P}$, the model optionally applies a feature extractor, $\text{FeatExt}(\cdot)$, to transform the instance features: $\mathbf{X} = \text{FeatExt}(\mathbf{X}) \in \mathbb{R}^{N \times D}$.
 
-    Then, using three tokens-to-token modules (see [T2T](https://arxiv.org/abs/2101.11986) for further information) working in a pyramid arrangement, it modifies the feature map producing a richer representation with multi-scale context information as:
+    Then, the Pyramid Multi-Scale Fusion (PMF) module enriches the representation with multi-scale context information. 
+    The PMF module consists of three T2T modules with different kernel sizes, $k = 3, 5, 7$, concatenated along the feature dimension,
 
-    $$\mathbf{E} = \text{Concat}(\text{T2T}_{k=3}(\mathbf{X}), \text{T2T}_{k=5}(\mathbf{X}), \text{T2T}_{k=7}(\mathbf{X})),$$
+    $$\operatorname{PMF}\left( \mathbf{X} \right) = \text{Concat}(\text{T2T}_{k=3}(\mathbf{X}), \text{T2T}_{k=5}(\mathbf{X}), \text{T2T}_{k=7}(\mathbf{X})).$$
 
-    where $k$ is the kernel size of the convolutional layer in the T2T module. Using $\mathbf{E}$, the model applies a spatial encoding transformer (SET) to learn the spatial relationships between the instances in the bag. Using a Multilayer Perceptron (MLP), the SET module takes the form
-
-    $$\text{SETL}( \mathbf{E} ) = \text{MLP}(\text{MultiheadAttention}^{\text{SET}}(\text{LayerNorm}(\mathbf{E}))),$$
-
-    where $\text{MultiheadAttention}^{\text{SET}}$ is the multi-head self-attention mechanism with relative positional encoding (RPE), which uses the euclidean distance between coordinates, to embed the position and context information.
-
-    The output of the SET module is used to predict the bag label $\hat{Y}$ using a linear layer $\phi$:
-
-    $$\hat{Y} = \phi\left( \text{SETL}( \underset{(6)}{\cdots} \text{SETL}(\mathbf{E} )))\right),$$
+    See [T2T](https://arxiv.org/abs/2101.11986) and [T2TLayer](../nn/transformers/t2t.md) for further information.
+    
+    Then, the model applies a Spatial Encoding Transformer (SET), which consists of a stack of transformer layers with image Relative Positional Encoding (iRPE).
+    See [iRPETransformer](../nn/transformers/irpe_transformer.md) for further information.
+    
+    Finally, using the class token computed by the SET module, the model predicts the bag label $\hat{Y}$ using a linear layer.
     """
 
     def __init__(
         self,
         in_shape: tuple,
         att_dim: int = 512,
-        use_pmft: bool = False,
-        pmft_n_heads: int = 4,
-        pmft_use_mlp: bool = True,
-        pmft_dropout: float = 0.0,
-        pmft_kernel_list: list[tuple[int, int]] = [(3, 3), (5, 5), (7, 7)],
-        pmft_stride_list: list[tuple[int, int]] = [(1, 1), (1, 1), (1, 1)],
-        pmft_padding_list: list[tuple[int, int]] = [(1, 1), (2, 2), (3, 3)],
-        pmft_dilation_list: list[tuple[int, int]] = [(1, 1), (1, 1), (1, 1)],
+        use_pmf: bool = False,
+        pmf_n_heads: int = 4,
+        pmf_use_mlp: bool = True,
+        pmf_dropout: float = 0.0,
+        pmf_kernel_list: list[tuple[int, int]] = [(3, 3), (5, 5), (7, 7)],
+        pmf_stride_list: list[tuple[int, int]] = [(1, 1), (1, 1), (1, 1)],
+        pmf_padding_list: list[tuple[int, int]] = [(1, 1), (2, 2), (3, 3)],
+        pmf_dilation_list: list[tuple[int, int]] = [(1, 1), (1, 1), (1, 1)],
         set_n_layers: int = 1,
         set_n_heads: int = 4,
         set_use_mlp: bool = True,
@@ -60,15 +128,15 @@ class SETMIL(MILModel):
         """
         Arguments:
             in_shape: Shape of input data expected by the feature extractor (excluding batch dimension).
-            att_dim: Attention dimension.
-            use_pmft: If True, use Pyramid Multihead Feature Transformer (PMFT) before the SET module.
-            pmft_n_heads: Number of heads in the PMFT module.
-            pmft_use_mlp: If True, use MLP in the PMFT module.
-            pmft_dropout: Dropout rate in the PMFT module.
-            pmft_kernel_list: List of kernel sizes in the PMFT module.
-            pmft_stride_list: List of stride sizes in the PMFT module.
-            pmft_padding_list: List of padding sizes in the PMFT module.
-            pmft_dilation_list: List of dilation sizes in the PMFT module.
+            att_dim: Attention dimension used by the PMF and SET modules.
+            use_pmf: If True, use Pyramid Multihead Feature (PMF) before the SET module.
+            pmf_n_heads: Number of heads in the PMF module.
+            pmf_use_mlp: If True, use MLP in the PMF module.
+            pmf_dropout: Dropout rate in the PMF module.
+            pmf_kernel_list: List of kernel sizes in the PMF module.
+            pmf_stride_list: List of stride sizes in the PMF module.
+            pmf_padding_list: List of padding sizes in the PMF module.
+            pmf_dilation_list: List of dilation sizes in the PMF module.
             set_n_layers: Number of layers in the SET module.
             set_n_heads: Number of heads in the SET module.
             set_use_mlp: If True, use MLP in the SET module.
@@ -96,23 +164,23 @@ class SETMIL(MILModel):
 
         self.pos_embed = SinusoidalPositionalEncodingND(1, att_dim)
 
-        self.use_pmft = use_pmft
-        if use_pmft:
-            self.pmf_transf = PMFTransformerEncoder(
+        self.use_pmf = use_pmf
+        if use_pmf:
+            self.pmf = PMF(
                 in_dim=att_dim,
                 att_dim=att_dim,
                 out_dim=att_dim,
-                kernel_list=pmft_kernel_list,
-                stride_list=pmft_stride_list,
-                padding_list=pmft_padding_list,
-                dilation_list=pmft_dilation_list,
-                n_heads=pmft_n_heads,
-                use_mlp=pmft_use_mlp,
-                dropout=pmft_dropout,
+                kernel_list=pmf_kernel_list,
+                stride_list=pmf_stride_list,
+                padding_list=pmf_padding_list,
+                dilation_list=pmf_dilation_list,
+                n_heads=pmf_n_heads,
+                use_mlp=pmf_use_mlp,
+                dropout=pmf_dropout,
             )
 
         # TODO: In the paper they mention that they use the LN BEFORE the transformer, but in the code it is AFTER the transformer.
-        self.se_transf = SETransformerEncoder(
+        self.se_transf = iRPETransformerEncoder(
             in_dim=att_dim,
             att_dim=att_dim,
             n_layers=set_n_layers,
@@ -175,33 +243,27 @@ class SETMIL(MILModel):
             X, coords
         )  # (batch_size, coord1, coord2, att_dim)
 
-        # TODO: Does this transposition work as intended? Isnt the final shape (batch_size, att_dim, coord_2, coord_1)?
-        X = X.transpose(1, -1)  # (batch_size, att_dim, coord1, coord2)
+        X = X.transpose(1, -1) # (batch_size, att_dim, coord2, coord1)
+        X = X.transpose(-1, -2) # (batch_size, att_dim, coord1, coord2)
         X = self._pad_to_square(X)  # (batch_size, att_dim, max_coord, max_coord)
+        max_coord = X.size(-1)
 
-        coords_shape = X.size()[2:]
-
-        if self.use_pmft:
-            X = self.pmf_transf(X)  # (batch_size, seq_len, att_dim)
-        else:
-            X = X.reshape(batch_size, self.att_dim, -1).transpose(
-                1, 2
-            )  # (batch_size, seq_len, att_dim)
-            # seq_len = coord1 * coord2
+        if self.use_pmf:
+            X = self.pmf(X)  # (batch_size, new_seq_len, att_dim)
 
         # Add class token
         cls_token = self.cls_token.expand(
             batch_size, -1, -1
         )  # (batch_size, 1, att_dim)
-        X = torch.cat([cls_token, X], dim=1)  # (batch_size, seq_len + 1, att_dim)
+        X = torch.cat([cls_token, X], dim=1)  # (batch_size, new_seq_len + 1, att_dim)
 
-        pos = self.pos_embed(X)  # (batch_size, seq_len + 1, att_dim)
-        X = X + pos  # (batch_size, seq_len + 1, att_dim)
+        pos = self.pos_embed(X)  # (batch_size, new_seq_len + 1, att_dim)
+        X = X + pos  # (batch_size, new_seq_len + 1, att_dim)
 
         if return_att:
-            if self.use_pmft:
+            if self.use_pmf:
                 print(
-                    "Warning: bag size has changed after PMF Transformer, cannot return attention values."
+                    "Warning: bag size has changed after PMF Transformer, cannot return attention values. Returning zeros instead."
                 )
                 att = torch.zeros(batch_size, orig_bag_size, device=X.device)
             else:
@@ -209,13 +271,9 @@ class SETMIL(MILModel):
                     X, return_att=True
                 )  # (batch_size, seq_len + 1, att_dim), (batch_size, seq_len+1, bag_size+1)
                 att = att[:, 0, 1:]  # (batch_size, seq_len)
-                att = att.view(
-                    batch_size, *coords_shape
-                )  # (batch_size, coord1, coord2)
-                att = att.unsqueeze(-1)  # (batch_size, coord1, coord2, 1)
-                att = get_sequential_representation(
-                    att, coords
-                )  # (batch_size, bag_size, 1)
+                att = att.view( batch_size, max_coord, max_coord)  # (batch_size, max_coord, max_coord)
+                att = att.unsqueeze(-1)  # (batch_size, max_coord, max_coord, 1)
+                att = get_sequential_representation(att, coords)  # (batch_size, bag_size, 1)
                 att = att.squeeze(-1)  # (batch_size, bag_size)
         else:
             X = self.se_transf(X)  # (batch_size, bag_size' + 1, att_dim)

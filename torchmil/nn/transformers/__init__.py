@@ -21,13 +21,12 @@ from .nystrom_transformer import(
     NystromTransformerEncoder
 )
 
-from .se_transformer import(
-    SETransformerLayer,
-    SETransformerEncoder
+from .irpe_transformer import(
+    iRPETransformerLayer,
+    iRPETransformerEncoder
 )
 
-from .pmf_transformer import(
-    PMFTransformerLayer,
-    PMFTransformerEncoder
+from .t2t import(
+    T2TLayer
 )
 

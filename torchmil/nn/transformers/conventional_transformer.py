@@ -80,7 +80,7 @@ class TransformerEncoder(Encoder):
     \begin{align*}
     \mathbf{X}^{0} & = \mathbf{X} \\
     \mathbf{Z}^{l} & = \mathbf{X}^{l-1} + \operatorname{SelfAttention}( \operatorname{LayerNorm}(\mathbf{X}^{l-1}) ), \quad l = 1, \ldots, L \\
-    \mathbf{X}^{l} & = \mathbf{Z}^{l} + \operatorname{MLP}(\operatorname{LayerNorm}(\mathbf{Z}^{l})), \quad l = 1, \ldots, L \\
+    \mathbf{X}^{l} & = \mathbf{Z}^{l} + \operatorname{MLP}(\operatorname{LayerNorm}(\mathbf{Z}^{l})), \quad l = 1, \ldots, L. \\
     \end{align*}
 
     This module outputs $\operatorname{TransformerEncoder}(\mathbf{X}) = \mathbf{X}^{L}$ if `add_self=False`, 
