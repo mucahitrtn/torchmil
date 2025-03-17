@@ -2,8 +2,10 @@
 
 - [ ] Index and introduction to the library.
 - [ ] Tutorials:
-    - Tutorial 1: ...
-    - Tutorial 2: ...
+    - Tutorial 1: "Training your first MIL model"
+    - Tutorial 2: "Visualizing attention maps"
+    - Tutorial 3: "Integrating torchmil with popular GNNs libraries"
+    - ? Tutorial 4: "Using torchmil with Pytorch Lightning"
 - Code:
     - torchmil.datasets:
         - [ X ] (Fran) Processed MIL dataset
@@ -49,9 +51,9 @@
             - [ X ] layer
             - [ X ] conventional_transformer
             - [ X ] nystrom_transformer
-            - [ ] pmf_transformer
             - [ ] se_transformer
             - [ X ] sm_transformer
+            - [ X ] t2t
         - [ ] gnns
             - [ ] index
             - [ X ] deepgcn
@@ -61,6 +63,7 @@
         - [ ] utils
         - [ ] max_pool
         - [ ] mean_pool 
+    - [ ] visualize
     - [ ] Add support for Lazy initialization (remove the need to specify in_dim)
     - [ ] Bag class or Tensordict (?)
     - [ ] Integration with Pytorch geometric (?)

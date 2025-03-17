@@ -13,7 +13,7 @@ class ProbSmoothAttentionPool(torch.nn.Module):
     \begin{gather}
         \mathbf{H} = \operatorname{MLP}(\mathbf{X}) \in \mathbb{R}^{N \times 2\texttt{att_dim}}, \\
         \mathbf{\mu}_{\mathbf{f}} = \mathbf{H}\mathbf{w}_{\mu} \in \mathbb{R}^{N}, \\
-        \log \operatorname{diag}(\mathbf{\sigma}_{\mathbf{f}}^2) = \mathbf{H}\mathbf{w}_{\sigma} \in \mathbb{R}^{N},
+        \log \mathbf{\sigma}_{\mathbf{f}}^2 = \mathbf{H}\mathbf{w}_{\sigma} \in \mathbb{R}^{N},
     \end{gather}
 
     where $\operatorname{MLP}$ is a multi-layer perceptron, and $\mathbf{w}_{\mu},\mathbf{w}_{\sigma} \in \mathbb{R}^{2\texttt{att_dim} \times 1}$.

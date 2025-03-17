@@ -20,7 +20,7 @@ from .attention import (
     SmAttentionPool as SmAttentionPool,
     MultiheadSelfAttention as MultiheadSelfAttention,
     MultiheadCrossAttention as MultiheadCrossAttention,
-    RPEMultiheadSelfAttention as RPEMultiheadSelfAttention,
+    iRPEMultiheadSelfAttention as iRPEMultiheadSelfAttention,
     NystromAttention as NystromAttention
 )
 
@@ -28,14 +28,13 @@ from .transformers import (
     TransformerLayer as TransformerLayer,
     SmTransformerLayer as SmTransformerLayer,
     NystromTransformerLayer as NystromTransformerLayer,
-    SETransformerLayer as SETransformerLayer,
-    PMFTransformerLayer as PMFTransformerLayer,
+    iRPETransformerLayer as iRPETransformerLayer,
+    T2TLayer as T2TLayer,
     Encoder as Encoder,
     TransformerEncoder as TransformerEncoder,
     SmTransformerEncoder as SmTransformerEncoder,
     NystromTransformerEncoder as NystromTransformerEncoder,
-    SETransformerEncoder as SETransformerEncoder,
-    PMFTransformerEncoder as PMFTransformerEncoder
+    iRPETransformerEncoder as iRPETransformerEncoder,
 )
 
 from .gnns import (

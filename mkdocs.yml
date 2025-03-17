@@ -123,7 +123,7 @@ nav:
         - api/nn/attention/sm_attention_pool.md
         - api/nn/attention/prob_smooth_attention_pool.md
         - api/nn/attention/multihead_self_attention.md
-        - api/nn/attention/rpe_multihead_self_attention.md
+        - api/nn/attention/irpe_multihead_self_attention.md
         - api/nn/attention/nystrom_attention.md
         - api/nn/attention/multihead_cross_attention.md
       - Graph Neural Networks (GNNs):
@@ -137,8 +137,8 @@ nav:
         - api/nn/transformers/conventional_transformer.md
         - api/nn/transformers/sm_transformer.md
         - api/nn/transformers/nystrom_transformer.md
-        - api/nn/transformers/pmf_transformer.md
-        - api/nn/transformers/se_transformer.md
+        - api/nn/transformers/irpe_transformer.md
+        - api/nn/transformers/t2t.md
       - api/nn/sm.md
     - <tt>torchmil.models</tt>:
       - api/models/index.md
@@ -157,3 +157,4 @@ nav:
       - api/models/transformer_abmil.md
       - api/models/transformer_prob_smooth_abmil.md
       - api/models/transmil.md
+      - api/models/setmil.md

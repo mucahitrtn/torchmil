@@ -25,13 +25,14 @@
 - [TransformerABMIL](models/transformer_abmil.md)
 - [TransformerProbSmoothABMIL](models/transformer_prob_smooth_abmil.md)
 - [TransMIL](models/transmil.md)
+- [SETMIL](models/setmil.md)
 
 ## Modules: [torchmil.nn](nn/index.md)
 
 - [Attention](nn/attention/index.md)
     - [Attention Pool](nn/attention/attention_pool.md)
     - [Multihead Self-Attention](nn/attention/multihead_self_attention.md)
-    - [Multihead Self-Attention with Relative Positional Encoding](nn/attention/rpe_multihead_self_attention.md)
+    - [Multihead Self-Attention with image Relative Positional Encoding (iRPE)](nn/attention/irpe_multihead_self_attention.md)
     - [Nyström Attention](nn/attention/nystrom_attention.md)
     - [Multihead Cross-Attention](nn/attention/multihead_cross_attention.md)
 - [Transformers](nn/transformers/index.md)
