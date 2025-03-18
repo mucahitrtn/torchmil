@@ -6,6 +6,8 @@ from collections import deque
 
 from tensordict import TensorDict
 
+from typing import Union
+
 
 class ToyDataset(torch.utils.data.Dataset):
 
@@ -61,7 +63,7 @@ class ToyDataset(torch.utils.data.Dataset):
             labels : np.ndarray,
             num_bags : int,
             obj_labels : list[int],
-            bag_size : int,
+            bag_size : Union[int, tuple[int, int]],
             pos_class_prob : float = 0.5,
             seed : int = 0
         ) -> None:
@@ -73,6 +75,7 @@ class ToyDataset(torch.utils.data.Dataset):
             labels: Labels vector of shape `(num_instances,)`.
             num_bags: Number of bags to generate.
             obj_labels: List of labels to consider as positive.
+            bag_size: Number of instances per bag. If a tuple `(min_size, max_size)` is provided, the bag size is sampled uniformly from this range.
             pos_class_prob: Probability of generating a positive bag.
             seed: Random seed.        
         """
@@ -89,7 +92,7 @@ class ToyDataset(torch.utils.data.Dataset):
         np.random.seed(seed)
         self.bags_list = self._create_bags()
 
-        print(f"Expected number of bags: {self.num_bags}, Created bags: {len(self.bags_list)}")
+        # print(f"Expected number of bags: {self.num_bags}, Created bags: {len(self.bags_list)}")
     
     def _create_bags(self):
         pos_idx = np.where(np.isin(self.labels, self.obj_labels))[0]
@@ -108,8 +111,12 @@ class ToyDataset(torch.utils.data.Dataset):
         for _ in range(num_pos_bags):
             data = []
             inst_labels = []
-            num_positives = np.random.randint(1, self.bag_size//2)
-            num_negatives = self.bag_size - num_positives
+            if isinstance(self.bag_size, tuple):
+                bag_size = np.random.randint(self.bag_size[0], self.bag_size[1])
+            else:
+                bag_size = self.bag_size
+            num_positives = np.random.randint(1, bag_size//2)
+            num_negatives = bag_size - num_positives
             for _ in range(num_positives):
                 a = pos_idx_queue.pop()
                 data.append(self.data[a])
@@ -127,17 +134,21 @@ class ToyDataset(torch.utils.data.Dataset):
             inst_labels = np.where(np.isin(inst_labels, self.obj_labels), 1, 0)
             label = np.max(inst_labels)
 
-            bag_dict = {
+            bag_dict = TensorDict({
                 'X': torch.from_numpy(data).float(),
                 'Y': torch.as_tensor(label).long(),
                 'y_inst': torch.from_numpy(inst_labels).long()
-            }
+            })
             bags_list.append(bag_dict)
 
         for _ in range(num_neg_bags):
             data = []
             inst_labels = []
-            for _ in range(self.bag_size):
+            if isinstance(self.bag_size, tuple):
+                bag_size = np.random.randint(self.bag_size[0], self.bag_size[1])
+            else:
+                bag_size = self.bag_size
+            for _ in range(bag_size):
                 a = neg_idx_queue.pop()
                 data.append(self.data[a])
                 inst_labels.append(self.labels[a])
@@ -156,9 +167,7 @@ class ToyDataset(torch.utils.data.Dataset):
             })
             bags_list.append(bag_dict)
         
-        
         return bags_list
-        
     
     def __len__(self) -> int:
         """

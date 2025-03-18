@@ -1,12 +1,18 @@
 import torch
 
 class MeanPool(torch.nn.Module):
-    """
-    Mean pooling module.    
+    r"""
+    Mean pooling aggregation. 
+
+    Given an input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times D}$,
+    this model aggregates the instance features into a bag representation $\mathbf{z} \in \mathbb{R}^{D}$ as,
+
+    $$
+        \mathbf{z} = \frac{1}{N} \sum_{n=1}^{N} \mathbf{x}_n.
+    $$
     """
     def __init__(self):
         """
-        Class constructor
         """
         super(MeanPool, self).__init__()
 

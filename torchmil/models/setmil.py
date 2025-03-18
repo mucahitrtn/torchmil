@@ -2,16 +2,22 @@ import torch
 
 from .mil_model import MILModel
 
-from torchmil.nn.transformers import iRPETransformerEncoder, T2TLayer
 from torchmil.nn.utils import (
     get_feat_dim,
-    SinusoidalPositionalEncodingND,
+    SinusoidalPositionalEncodingND
+)
+
+from torchmil.nn.transformers import iRPETransformerEncoder, T2TLayer
+
+
+from torchmil.data import (
     get_spatial_representation,
     get_sequential_representation,
 )
 
 class PMF(torch.nn.Module):
     r"""
+    Pyramid Multi-Scale Fusion (PMF) module, proposed in the paper [SETMIL: Spatial Encoding Transformer-Based Multiple Instance Learning for Pathological Image Analysis](https://link.springer.com/chapter/10.1007/978-3-031-16434-7_7).
     """
 
     def __init__(
