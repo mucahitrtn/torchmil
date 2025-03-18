@@ -10,8 +10,10 @@ from torchmil.nn.utils import (
     get_sequential_representation,
 )
 
+
 class PMF(torch.nn.Module):
     r"""
+    Pyramid Multi-Scale Fusion (PMF) module, as described in the [SETMIL paper](https://link.springer.com/chapter/10.1007/978-3-031-16434-7_7).
     """
 
     def __init__(
@@ -25,7 +27,7 @@ class PMF(torch.nn.Module):
         dilation_list: list[tuple[int, int]] = [(1, 1), (1, 1), (1, 1)],
         n_heads: int = 4,
         use_mlp: bool = True,
-        dropout: float = 0.0
+        dropout: float = 0.0,
     ):
         """
         Arguments:
@@ -45,41 +47,50 @@ class PMF(torch.nn.Module):
 
         self.unfold0 = torch.nn.Unfold(kernel_size=7, stride=4, padding=2)
 
-        self.layers = torch.nn.ModuleList([
-            T2TLayer(
-                in_dim=in_dim*7*7,
-                att_dim=att_dim, 
-                out_dim=att_dim,
-                kernel_size=kernel_list[i], stride=stride_list[i], padding=padding_list[i], dilation=dilation_list[i],
-                n_heads=n_heads, use_mlp=use_mlp, dropout=dropout
-            )
-            for i in range(len(kernel_list))
-        ])
+        self.layers = torch.nn.ModuleList(
+            [
+                T2TLayer(
+                    in_dim=in_dim * 7 * 7,
+                    att_dim=att_dim,
+                    out_dim=att_dim,
+                    kernel_size=kernel_list[i],
+                    stride=stride_list[i],
+                    padding=padding_list[i],
+                    dilation=dilation_list[i],
+                    n_heads=n_heads,
+                    use_mlp=use_mlp,
+                    dropout=dropout,
+                )
+                for i in range(len(kernel_list))
+            ]
+        )
 
         if out_dim is not None:
-            self.out_proj = torch.nn.Linear(att_dim*len(kernel_list), out_dim)
+            self.out_proj = torch.nn.Linear(att_dim * len(kernel_list), out_dim)
         else:
             self.out_proj = torch.nn.Identity()
-    
-    def forward(
-        self,
-        X: torch.Tensor
-    ) -> torch.Tensor:
+
+    def forward(self, X: torch.Tensor) -> torch.Tensor:
         """
         Arguments:
             X: Input tensor of shape `(batch_size, in_dim, coord1, coord2)`.
         Returns:
             Y: Output tensor of shape `(batch_size, seq_len, out_dim)`.
         """
-        X = self.unfold0(X) # (batch_size, in_dim * kernel_size[0] * kernel_size[1], L)
-        X = X.transpose(1, 2) # (batch_size, L, in_dim * kernel_size[0] * kernel_size[1])
+        X = self.unfold0(X)  # (batch_size, in_dim * kernel_size[0] * kernel_size[1], L)
+        X = X.transpose(
+            1, 2
+        )  # (batch_size, L, in_dim * kernel_size[0] * kernel_size[1])
         X_ = []
         for layer in self.layers:
-            U = layer(X) # (batch_size, L, att_dim)
+            U = layer(X)  # (batch_size, L, att_dim)
             X_.append(U)
-        X_ = torch.cat(X_, dim=2) # (batch_size, new_seq_len, att_dim * len(kernel_list))
-        X_ = self.out_proj(X_) # (batch_size, new_seq_len, out_dim)
+        X_ = torch.cat(
+            X_, dim=2
+        )  # (batch_size, new_seq_len, att_dim * len(kernel_list))
+        X_ = self.out_proj(X_)  # (batch_size, new_seq_len, out_dim)
         return X_
+
 
 class SETMIL(MILModel):
     r"""
@@ -87,16 +98,16 @@ class SETMIL(MILModel):
 
     Given an input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times P}$, the model optionally applies a feature extractor, $\text{FeatExt}(\cdot)$, to transform the instance features: $\mathbf{X} = \text{FeatExt}(\mathbf{X}) \in \mathbb{R}^{N \times D}$.
 
-    Then, the Pyramid Multi-Scale Fusion (PMF) module enriches the representation with multi-scale context information. 
+    Then, the Pyramid Multi-Scale Fusion (PMF) module enriches the representation with multi-scale context information.
     The PMF module consists of three T2T modules with different kernel sizes, $k = 3, 5, 7$, concatenated along the feature dimension,
 
     $$\operatorname{PMF}\left( \mathbf{X} \right) = \text{Concat}(\text{T2T}_{k=3}(\mathbf{X}), \text{T2T}_{k=5}(\mathbf{X}), \text{T2T}_{k=7}(\mathbf{X})).$$
 
     See [T2T](https://arxiv.org/abs/2101.11986) and [T2TLayer](../nn/transformers/t2t.md) for further information.
-    
+
     Then, the model applies a Spatial Encoding Transformer (SET), which consists of a stack of transformer layers with image Relative Positional Encoding (iRPE).
     See [iRPETransformer](../nn/transformers/irpe_transformer.md) for further information.
-    
+
     Finally, using the class token computed by the SET module, the model predicts the bag label $\hat{Y}$ using a linear layer.
     """
 
@@ -242,8 +253,8 @@ class SETMIL(MILModel):
             X, coords
         )  # (batch_size, coord1, coord2, att_dim)
 
-        X = X.transpose(1, -1) # (batch_size, att_dim, coord2, coord1)
-        X = X.transpose(-1, -2) # (batch_size, att_dim, coord1, coord2)
+        X = X.transpose(1, -1)  # (batch_size, att_dim, coord2, coord1)
+        X = X.transpose(-1, -2)  # (batch_size, att_dim, coord1, coord2)
         X = self._pad_to_square(X)  # (batch_size, att_dim, max_coord, max_coord)
         max_coord = X.size(-1)
 
@@ -270,9 +281,13 @@ class SETMIL(MILModel):
                     X, return_att=True
                 )  # (batch_size, seq_len + 1, att_dim), (batch_size, seq_len+1, bag_size+1)
                 att = att[:, 0, 1:]  # (batch_size, seq_len)
-                att = att.view( batch_size, max_coord, max_coord)  # (batch_size, max_coord, max_coord)
+                att = att.view(
+                    batch_size, max_coord, max_coord
+                )  # (batch_size, max_coord, max_coord)
                 att = att.unsqueeze(-1)  # (batch_size, max_coord, max_coord, 1)
-                att = get_sequential_representation(att, coords)  # (batch_size, bag_size, 1)
+                att = get_sequential_representation(
+                    att, coords
+                )  # (batch_size, bag_size, 1)
                 att = att.squeeze(-1)  # (batch_size, bag_size)
         else:
             X = self.se_transf(X)  # (batch_size, bag_size' + 1, att_dim)

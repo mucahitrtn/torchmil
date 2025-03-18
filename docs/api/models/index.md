@@ -15,3 +15,4 @@
 - [TransformerProbSmoothABMIL](transformer_prob_smooth_abmil.md)
 - [TransMIL](transmil.md)
 - [SETMIL](setmil.md)
+- [IIBMIL](iibmil.md)
