@@ -1,2 +1,2 @@
-# Probabilistic Smooth Attention Pool
+# Prob Smooth Attention Pool
 ::: torchmil.nn.attention.ProbSmoothAttentionPool

@@ -1,4 +1,4 @@
-# Nystrom Transformer
+# Nyström Transformer
 
 ---
 ::: torchmil.nn.transformers.NystromTransformerEncoder

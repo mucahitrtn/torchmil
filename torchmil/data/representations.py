@@ -1,6 +1,6 @@
 import torch
 
-def get_spatial_representation(
+def seq_to_spatial(
         X : torch.Tensor,
         coords : torch.Tensor,
     ) -> torch.Tensor:
@@ -45,7 +45,7 @@ def get_spatial_representation(
 
     return X_enc
 
-def get_sequential_representation(
+def spatial_to_seq(
         X_esp : torch.Tensor,
         coords : torch.Tensor,
     ) -> torch.Tensor:

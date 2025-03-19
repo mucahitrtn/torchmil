@@ -1,11 +1,11 @@
 # torchmil.data
 
-## Data representation in <tt><b>torchmil</b></tt>
-
 !!! note
-    The data representation in <tt><b>torchmil</b></tt> is inspired by the data representation in [PyTorch Geometric](https://pytorch-geometric.readthedocs.io/en/latest/notes/introduction.html#data-handling-of-graphs).
+    The way data is represented in <tt><b>torchmil</b></tt> is inspired by [PyTorch Geometric](https://pytorch-geometric.readthedocs.io/en/latest/notes/introduction.html#data-handling-of-graphs).
 
-    See [this notebook](../../examples/data_representation.ipynb) for a detailed explanation of the data representation in <tt><b>torchmil</b></tt>.
+    See [this notebook](../../examples/data_representation.ipynb) for an explanation with examples of the data representation in <tt><b>torchmil</b></tt>.
+
+## Bags in <tt><b>torchmil</b></tt>
 
 In Multiple Instance Learning (MIL), a bag is a collection of instances. 
 In <tt><b>torchmil</b></tt>, a bag is represented as a [TensorDict](https://pytorch.org/tensordict/stable/index.html).
@@ -20,13 +20,9 @@ Additionally, a bag may contain other keys. The most common ones in <tt><b>torch
 - `bag['adj']`: a tensor of shape `(bag_size, bag_size)` containing the adjacency matrix of the bag. This matrix is used to represent the relationships between the instances in the bag. The methods implemented in [<tt><b>torchmil.models</b></tt>](../models/index.md) allow this matrix to be a sparse tensor.
 - `bag['coords']`: a tensor of shape `(bag_size, coords_dim)` containing the coordinates of the instances in the bag. This tensor is used to represent the absolute position of the instances in the bag.
 
-## Batches in <tt><b>torchmil</b></tt>
+The data representation in <tt><b>torchmil</b></tt> is designed to be flexible and to allow the user to add any additional information to the bags. The user can define new keys in the bags and use them in the models implemented in <tt><b>torchmil</b></tt>.
 
-Batching is crucial for training deep learning models. However, in MIL, each bag can be of different size. To solve this, in <tt><b>torchmil</b></tt>, the tensors in the bags are padded to the maximum size of the bags in the batch. A mask tensor is used to indicate which elements of the padded tensors are real instances and which are padding. This mask tensor is used to adjust the behavior of the models to ignore the padding elements (e.g., in the attention mechanism). 
+## More information
 
-The function `torchmil.data.collate_fn` is used to collate a list of bags into a batch. This function can be used as the `collate_fn` argument of the PyTorch `DataLoader`. The function `torchmil.data.pad_tensors` is used to pad the tensors in the bags.
-
--------------------------
-::: torchmil.data.collate_fn
--------------------------
-::: torchmil.data.pad_tensors
+- [Batches in <tt><b>torchmil</b></tt>](collate.md)
+- [Spatial and sequential representation](representation.md)

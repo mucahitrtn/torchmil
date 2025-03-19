@@ -11,8 +11,8 @@ from torchmil.nn.transformers import iRPETransformerEncoder, T2TLayer
 
 
 from torchmil.data import (
-    get_spatial_representation,
-    get_sequential_representation,
+    seq_to_spatial,
+    spatial_to_seq,
 )
 
 
@@ -260,7 +260,7 @@ class SETMIL(MILModel):
         X = self.feat_ext(X)  # (batch_size, bag_size, feat_dim)
         X = self.proj(X)  # (batch_size, bag_size, att_dim)
 
-        X = get_spatial_representation(
+        X = seq_to_spatial(
             X, coords
         )  # (batch_size, coord1, coord2, att_dim)
 
@@ -296,7 +296,7 @@ class SETMIL(MILModel):
                     batch_size, max_coord, max_coord
                 )  # (batch_size, max_coord, max_coord)
                 att = att.unsqueeze(-1)  # (batch_size, max_coord, max_coord, 1)
-                att = get_sequential_representation(
+                att = spatial_to_seq(
                     att, coords
                 )  # (batch_size, bag_size, 1)
                 att = att.squeeze(-1)  # (batch_size, bag_size)

@@ -41,8 +41,8 @@ theme:
   favicon: "_static/abacus.png"
   custom_dir: "docs/_overrides"  # Overriding part of the HTML
 
-  twitter_name: "@Franblueee"
-  twitter_url: "https://x.com/franblueee"
+  # twitter_name: "@Franblueee"
+  # twitter_url: "https://x.com/franblueee"
 
 strict: False
 
@@ -114,7 +114,8 @@ nav:
     - api/index.md
     - <tt>torchmil.data</tt>:
       - api/data/index.md
-      # - api/data/collate.md
+      - api/data/collate.md
+      - api/data/representation.md
     - <tt>torchmil.datasets</tt>:
       - api/datasets/index.md
       - api/datasets/processed_mil_dataset.md
@@ -170,6 +171,7 @@ nav:
       - api/models/transformer_prob_smooth_abmil.md
       - api/models/transmil.md
       - api/models/setmil.md
+      - api/models/iibmil.md
     - <tt>torchmil.visualize</tt>:
       - api/visualize/index.md
       - api/visualize/vis_ctscan.md

@@ -1,4 +1,4 @@
-# Nystrom Attention
+# Nyström Attention
 ::: torchmil.nn.attention.NystromAttention
     options:
         members:

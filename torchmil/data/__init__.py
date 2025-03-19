@@ -4,6 +4,6 @@ from .collate import (
 )
 
 from .representations import (
-    get_sequential_representation,
-    get_spatial_representation
+    seq_to_spatial,
+    spatial_to_seq
 )

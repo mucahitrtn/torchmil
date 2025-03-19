@@ -1,4 +1,4 @@
-# Transformer with image Relative Positional Encoding (iRPE)
+# iRPE Transformer
 
 ---
 ::: torchmil.nn.transformers.iRPETransformerEncoder
