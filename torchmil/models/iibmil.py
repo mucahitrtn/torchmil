@@ -106,17 +106,20 @@ class IIBMILDecoder(torch.nn.Module):
 
 class IIBMIL(torch.nn.Module):
     r"""
-    Integrated Instance-Level and Bag-Level Multiple Instances Learning with Label Disambiguation (IIB-MIL) model, proposed in the paper [IIB-MIL: Integrated Instance-Level and Bag-Level Multiple Instances Learning with Label Disambiguation for Pathological Image Analysis](https://link.springer.com/chapter/10.1007/978-3-031-43987-2_54).
+    Integrated Instance-Level and Bag-Level Multiple Instance Learning (IIB-MIL) model, proposed in the paper [IIB-MIL: Integrated Instance-Level and Bag-Level Multiple Instances Learning with Label Disambiguation for Pathological Image Analysis](https://link.springer.com/chapter/10.1007/978-3-031-43987-2_54).
 
-    Given an input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times P}$, the model applies a residual transformer $T$ is applied to calibrate the instance features and encode context information $\mathbf{X} = T(\mathbf{X}) \in \mathbb{R}^{N \times P}$. Then, the model uses **bag-level** and **instance-level** supervision:
+    Given an input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times P}$, the model optionally applies a feature extractor, $\text{FeatExt}(\cdot)$, to transform the instance features: $\mathbf{X} = \text{FeatExt}(\mathbf{X}) \in \mathbb{R}^{N \times D}$.
 
-    **Bag-level supervision**: The instances are aggregated using a transformer and a linear layer is used to predict the bag label.
+    Then, a [TransformerEncoder](../nn/transformers/conventional_transformer.md) is applied to transform the instance features using context information. 
+    Subsequently, the model uses **bag-level** and **instance-level** supervision:
+
+    **Bag-level supervision**: The instances are aggregated into a class token using $\texttt{n_queries}$ queries embeddings and the [IIBMILDecoder](./#torchmil.models.iibmil.IIBMILDecoder). A linear layer is then applied to predict the bag label.
 
     **Instance-level supervision**: Consists of four steps.
 
-    1. Obtain $p_{i,c}$ the probability of instance $i$ belonging to class $c$ using an instance classifier.
-    2. The prototype $\mathbf{P}_{c,t}$ of class $c$ at time $t$ is updated using the set of instances with the top $k$ highest probabilities of belonging to class $c$  ( $\text{Set}_{c,t}$ ), using a momentum update rule. The prototype label $z_{i}$ of each instance is obtained as $z_{i} = \text{argmax}_{c} \ p_{i,c} \cdot \mathbf{x}_i^T$.
-    3. Compute instance-level soft labels from the Confidence Bank $\mathbf{B}$ using momentum update.
+    1. Using an instance classifier, obtain the probability of instance $i$ belonging to class $c$, denoted as $p_{i,c}$.
+    2. The prototype $\mathbf{p}_{c,t} \in \mathbf{R}^{D}$ of class $c$ at time $t$ is updated using a momentum update rule based on the set of instances with the top $k$ highest probabilities of belonging to class $c$. Writing $\mathbf{P}_t = \left[ \mathbf{p}_{1,t}, \ldots, \mathbf{p}_{C,t}  \right]^\top \in \mathbb{R}^{C \times D}$, the prototype label $z_{i}$ of each instance is obtained as $z_{i} = \text{argmax}_{c} \ \mathbf{P} \mathbf{x}_i$.
+    3. Compute instance-level soft labels using the prototype labels and a momentum update.
     4. Compute the instance-level cross-entropy loss using the soft labels and the instance classifier.
     """
 
@@ -129,7 +132,7 @@ class IIBMIL(torch.nn.Module):
         n_heads: int = 4,
         n_queries: int = 5,
         feat_ext: torch.nn.Module = torch.nn.Identity(),
-        criterion=torch.nn.BCEWithLogitsLoss(),
+        criterion : torch.nn.Module = torch.nn.BCEWithLogitsLoss(),
     ) -> None:
         """
         Arguments:

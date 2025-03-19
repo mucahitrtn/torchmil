@@ -1,3 +1,5 @@
+from typing import Any
+
 import torch
 from tensordict import TensorDict
 
@@ -109,7 +111,7 @@ class MILModelWrapper(MILModel):
         self,
         bag : TensorDict,
         **kwargs
-    ):
+    ) -> Any:
         """
         Arguments:
             bag: Dictionary containing one key for each argument accepted by the model's `forward` method.
@@ -125,7 +127,7 @@ class MILModelWrapper(MILModel):
         self, 
         bag : TensorDict,
         **kwargs
-    ):
+    ) -> tuple[Any, dict]:
         """
         Arguments:
             bag: Dictionary containing one key for each argument accepted by the model's `forward` method.
@@ -141,7 +143,7 @@ class MILModelWrapper(MILModel):
         self, 
         bag : TensorDict,
         **kwargs
-    ):
+    ) -> Any:
         """
         Arguments:
             bag: Dictionary containing one key for each argument accepted by the model's `forward` method.
