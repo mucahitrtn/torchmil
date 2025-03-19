@@ -161,6 +161,7 @@ nav:
       - api/models/dftdmil.md
       - api/models/dsmil.md
       - api/models/gtp.md
+      - api/models/iibmil.md
       - api/models/patch_gcn.md
       - api/models/prob_smooth_abmil.md
       - api/models/sm_abmil.md
