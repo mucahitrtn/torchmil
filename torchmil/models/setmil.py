@@ -70,7 +70,10 @@ class PMF(torch.nn.Module):
         else:
             self.out_proj = torch.nn.Identity()
 
-    def forward(self, X: torch.Tensor) -> torch.Tensor:
+    def forward(
+        self,
+        X: torch.Tensor
+    ) -> torch.Tensor:
         """
         Arguments:
             X: Input tensor of shape `(batch_size, in_dim, coord1, coord2)`.
@@ -226,7 +229,10 @@ class SETMIL(MILModel):
         return X
 
     def forward(
-        self, X: torch.Tensor, coords: torch.Tensor, return_att: bool = False
+        self, 
+        X: torch.Tensor, 
+        coords: torch.Tensor, 
+        return_att: bool = False
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Forward pass.

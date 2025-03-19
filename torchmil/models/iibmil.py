@@ -37,7 +37,10 @@ class IIBMILDecoderLayer(torch.nn.Module):
         )
 
     def forward(
-        self, U: torch.Tensor, X: torch.Tensor, mask: torch.Tensor = None
+        self, 
+        U: torch.Tensor,
+        X: torch.Tensor,
+        mask: torch.Tensor = None
     ) -> torch.Tensor:
         """
         Forward pass.
@@ -80,7 +83,10 @@ class IIBMILDecoder(torch.nn.Module):
         )
 
     def forward(
-        self, U: torch.Tensor, X: torch.Tensor, mask: torch.Tensor = None
+        self,
+        U: torch.Tensor,
+        X: torch.Tensor,
+        mask: torch.Tensor = None
     ) -> torch.Tensor:
         """
         Forward pass.
@@ -322,7 +328,10 @@ class IIBMIL(torch.nn.Module):
                 return Y_pred, X_enc
 
     def compute_loss(
-        self, Y: torch.Tensor, X: torch.Tensor, mask: torch.Tensor = None
+        self, 
+        Y: torch.Tensor,
+        X: torch.Tensor,
+        mask: torch.Tensor = None
     ) -> tuple[torch.Tensor, dict]:
         """
         Compute loss given true bag labels.
@@ -348,7 +357,10 @@ class IIBMIL(torch.nn.Module):
         return Y_pred, {crit_name: crit_loss, "InstLoss": inst_loss}
 
     def predict(
-        self, X: torch.Tensor, mask: torch.Tensor = None, return_inst_pred: bool = True
+        self,
+        X: torch.Tensor,
+        mask: torch.Tensor = None,
+        return_inst_pred: bool = True
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Predict bag and (optionally) instance labels.
