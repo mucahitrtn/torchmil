@@ -1,12 +1,20 @@
 import torch
 
 class MaxPool(torch.nn.Module):
-    """
-    Max pooling module.    
+    r"""
+    Max pooling aggregation. 
+
+    Given an input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times D}$,
+    this model aggregates the instance features into a bag representation $\mathbf{z} \in \mathbb{R}^{D}$ as,
+
+    $$
+    \left[ \mathbf{z} \right]_d = \max \left\{ \left[ \mathbf{x}_n \right]_{d} \ \colon n \in \left\{ 1, \ldots, N \right\}  \right\},
+    $$
+
+    where $\left[ \mathbf{a} \right]_i$ denotes the $i$-th element of the vector $\mathbf{a}$.
     """
     def __init__(self):
         """
-        Class constructor.        
         """
         super(MaxPool, self).__init__()
     
@@ -16,10 +24,11 @@ class MaxPool(torch.nn.Module):
         mask : torch.Tensor = None,
     ) -> torch.Tensor:
         """
-        input:
+        Arguments:
             X: Input tensor of shape `(batch_size, bag_size, in_dim)`.
             mask: Mask tensor of shape `(batch_size, bag_size)`.
-        output:
+
+        Returns:
             z: Output tensor of shape `(batch_size, in_dim)`.
         """
         

@@ -2,6 +2,11 @@
 
 ## Data representation in <tt><b>torchmil</b></tt>
 
+!!! note
+    The data representation in <tt><b>torchmil</b></tt> is inspired by the data representation in [PyTorch Geometric](https://pytorch-geometric.readthedocs.io/en/latest/notes/introduction.html#data-handling-of-graphs).
+
+    See [this notebook](../../examples/data_representation.ipynb) for a detailed explanation of the data representation in <tt><b>torchmil</b></tt>.
+
 In Multiple Instance Learning (MIL), a bag is a collection of instances. 
 In <tt><b>torchmil</b></tt>, a bag is represented as a [TensorDict](https://pytorch.org/tensordict/stable/index.html).
 In most cases (e.g., the datasets provided in <tt><b>torchmil</b></tt>), a bag  will contain at least two keys:

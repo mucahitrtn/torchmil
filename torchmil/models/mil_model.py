@@ -1,4 +1,5 @@
 import torch
+from tensordict import TensorDict
 
 def get_args_names(fn):
     args_names = fn.__code__.co_varnames[:fn.__code__.co_argcount]
@@ -13,10 +14,9 @@ class MILModel(torch.nn.Module):
 
     Subclasses should implement the following methods:
 
-    - `forward`: Forward pass of the model. Accepts bag features (and optionally other arguments) and returns bag label logits (and optionally other outputs).
-    - `compute_loss`: Compute inner losses of the model. Accepts ground truth bag labels, bag features (and optionally other arguments) and returns bag label predictions and a dictionary of pairs (loss_name, loss_value). By default, the model has no inner losses, so this dictionary is empty.
-    - `predict`: Predict bag and (optionally) instance labels. Accepts bag features (and optionally other arguments) and returns bag label predictions (and optionally instance label predictions).
-        
+    - `forward`: Forward pass of the model. Accepts bag features (and optionally other arguments) and returns the bag label prediction (and optionally other outputs).
+    - `compute_loss`: Compute inner losses of the model. Accepts bag features (and optionally other arguments) and returns the output of the forward method a dictionary of pairs (loss_name, loss_value). By default, the model has no inner losses, so this dictionary is empty.
+    - `predict`: Predict bag and (optionally) instance labels. Accepts bag features (and optionally other arguments) and returns label predictions (and optionally instance label predictions).
     """
 
     def __init__(
@@ -39,7 +39,7 @@ class MILModel(torch.nn.Module):
             X: Bag features of shape `(batch_size, bag_size, ...)`.
 
         Returns:
-            Y_pred: Bag label logits of shape `(batch_size,)`.
+            Y_pred: Bag label prediction of shape `(batch_size,)`.
         """
         raise NotImplementedError
 
@@ -56,11 +56,11 @@ class MILModel(torch.nn.Module):
 
         Returns:
             Y_pred: Bag label prediction of shape `(batch_size,)`.
-            loss_dict: Dictionary containing the loss value.
+            loss_dict: Dictionary containing the loss values.
         """
 
-        Y_pred = self.forward(X, *args, **kwargs)
-        return Y_pred, {}
+        out = self.forward(X, *args, **kwargs)
+        return out, {}
 
     def predict(
             self, 
@@ -79,33 +79,76 @@ class MILModel(torch.nn.Module):
         raise NotImplementedError
 
 class MILModelWrapper(MILModel):
-    def __init__(self, model):
+    """
+    A wrapper class for MIL models in torchmil.
+    It allows to use all models that inherit from `MILModel` using a common interface:
+
+    ```python
+    model_A = ... # forward accepts arguments 'X', 'adj'
+    model_B = ... # forward accepts arguments 'X''
+    model_A_w = MILModelWrapper(model_A)
+    model_B_w = MILModelWrapper(model_B)
+
+    bag = TensorDict({'X': ..., 'adj': ..., ...})
+    Y_pred_A = model_A_w(bag) # calls model_A.forward(X=bag['X'], adj=bag['adj'])
+    Y_pred_B = model_B_w(bag) # calls model_B.forward(X=bag['X'])
+    ```
+    """
+    def __init__(
+        self,
+        model : MILModel
+    ) -> None:
         super().__init__()
         self.model = model
+    """
+    Arguments:
+        model: MILModel instance to wrap.    
+    """
 
     def forward(
         self,
-        bag,
+        bag : TensorDict,
         **kwargs
-    ) -> torch.Tensor:
+    ):
+        """
+        Arguments:
+            bag: Dictionary containing one key for each argument accepted by the model's `forward` method.
+    
+        Returns:
+            out: Output of the model's `forward` method.
+        """
         arg_names = get_args_names(self.model.forward)
         arg_dict = {k: bag[k] for k in bag.keys() if k in arg_names}
         return self.model(**arg_dict, **kwargs)
 
     def compute_loss(
         self, 
-        bag, 
+        bag : TensorDict,
         **kwargs
-    ) -> tuple[torch.Tensor, dict]:
+    ):
+        """
+        Arguments:
+            bag: Dictionary containing one key for each argument accepted by the model's `forward` method.
+
+        Returns:
+            out: Output of the model's `compute_loss` method.
+        """
         arg_names = get_args_names(self.model.compute_loss)
         arg_dict = {k: bag[k] for k in bag.keys() if k in arg_names}
         return self.model.compute_loss(**arg_dict, **kwargs)
 
     def predict(
         self, 
-        bag, 
+        bag : TensorDict,
         **kwargs
-    ) -> tuple[torch.Tensor, torch.Tensor]:
+    ):
+        """
+        Arguments:
+            bag: Dictionary containing one key for each argument accepted by the model's `forward` method.
+        
+        Returns:
+            out: Output of the model's `predict` method.
+        """
         arg_names = get_args_names(self.model.predict)
         arg_dict = {k: bag[k] for k in bag.keys() if k in arg_names}
         return self.model.predict(**arg_dict, **kwargs)

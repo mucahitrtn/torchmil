@@ -2,8 +2,7 @@ import torch
 
 from .mil_model import MILModel
 from torchmil.nn import AttentionPool
-from torchmil.nn.utils import get_feat_dim, LazyLinear
-from .utils import SmoothTop1SVM
+from torchmil.nn.utils import get_feat_dim, LazyLinear, SmoothTop1SVM
 
 class CLAM_SB(MILModel):
     r"""

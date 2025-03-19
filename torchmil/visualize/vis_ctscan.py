@@ -1,10 +1,20 @@
 import numpy as np
 
-
 def slices_to_canvas(
-        slices_list : list,
+        slices_list : list[np.ndarray],
         slice_size : int,
 ) -> np.ndarray:
+    """
+    Given a list of images of CT scan slices, return a canvas with all the slices.
+
+    Arguments:
+        slices_list: List of images of CT scan slices. Each image is a numpy array with shape `(slice_size, slice_size, 3)`.
+        slice_size: Size of the slices.
+    
+    Returns:
+        canvas: Canvas with all the slices. It has shape `(slice_size, bag_len*slice_size, 3)`.
+    
+    """
     bag_len = len(slices_list)
 
     max_y = slice_size
