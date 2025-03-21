@@ -109,8 +109,8 @@ nav:
   - index.md
   - Examples:
     - examples/index.md
-    - examples/data_representation.ipynb
-    - examples/training_first_model.ipynb
+    - Representing bags in torchmil: examples/data_representation.ipynb
+    - Training your first MIL model: examples/training_first_model.ipynb
   - API reference:
     - api/index.md
     - <tt>torchmil.data</tt>:
