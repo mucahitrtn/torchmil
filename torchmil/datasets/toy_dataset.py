@@ -167,6 +167,9 @@ class ToyDataset(torch.utils.data.Dataset):
             })
             bags_list.append(bag_dict)
         
+        # Shuffle bags
+        np.random.shuffle(bags_list)
+        
         return bags_list
     
     def __len__(self) -> int:

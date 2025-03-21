@@ -2,7 +2,7 @@
 
 - [ ] Index and introduction to the library.
 - [ ] Tutorials:
-    - [ ] Tutorial 0: "Digits classification in torchmil": Training a simple ABMIL with a MNIST toy dataset
+    - [ ] Tutorial 0: "Training your first MIL model": Training a simple ABMIL with a MNIST toy dataset
     - [ X ] Tutorial 1: "Data representation in torchmil": how to represent data in torchmil (bags, instances, graphs, mask, etc)
     - [ ] Tutorial 2: "Datasets in torchmil": how datasets are implemented in torchmil: processed datasets vs non-processed datasets. 
     - [ ] Tutorial 3: "WSI classification in torchmil": how to train a model with WSI data.
@@ -65,7 +65,7 @@
         - [ X ] utils
         - [ X ] max_pool
         - [ X ] mean_pool 
-    - [ ] visualize
+    - [ X ] visualize
     - [ ] Add support for Lazy initialization (remove the need to specify in_dim)
     - [ ] Bag class or Tensordict (?)
     - [ ] Integration with Pytorch geometric (?)

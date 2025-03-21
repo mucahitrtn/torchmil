@@ -76,7 +76,7 @@ plugins:
   # - mkdocs-jupyter:  # Jupyter notebooks
   #     execute: true
   - mknotebooks:
-      execute: True
+      execute: False
   - mkdocstrings:
       # enabled: !ENV [ENABLE_MKDOCSTRINGS, true]
       # default_handler: python
@@ -110,6 +110,7 @@ nav:
   - Examples:
     - examples/index.md
     - examples/data_representation.ipynb
+    - examples/training_first_model.ipynb
   - API reference:
     - api/index.md
     - <tt>torchmil.data</tt>:

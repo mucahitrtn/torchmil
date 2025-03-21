@@ -13,7 +13,6 @@ def slices_to_canvas(
     
     Returns:
         canvas: Canvas with all the slices. It has shape `(slice_size, bag_len*slice_size, 3)`.
-    
     """
     bag_len = len(slices_list)
 
@@ -33,6 +32,17 @@ def draw_slices_contour(
     slice_size : int,
     contour_prop : float = 0.05,
 ) -> np.ndarray:
+    """
+    Given a canvas with CT scan slices already drawn, draw a contour around each slice.    
+
+    Arguments:
+        canvas: Canvas with all the slices. It has shape `(slice_size, bag_len*slice_size, 3)`.
+        slice_size: Size of the slices.
+        contour_prop: Proportion of the slice size that the contour will cover.
+    
+    Returns:
+        canvas: Canvas with the contours drawn. It has shape `(slice_size, bag_len*slice_size, 3)`.
+    """
 
     canvas_copy = np.copy(canvas)
 
@@ -53,6 +63,21 @@ def draw_heatmap_ctscan(
         max_color : np.ndarray = np.array([0.8392156862745098, 0.15294117647058825, 0.1568627450980392]),
         min_color : np.ndarray = np.array([0.17254901960784313, 0.6274509803921569, 0.17254901960784313]),
     ) -> np.ndarray:
+    """
+    Given a canvas with CT scan slices already drawn, draw a heatmap on top of the slices.
+    This heatmap is defined by `values`, which should be normalized between 0 and 1.
+
+    Arguments:
+        canvas: Canvas with all the slices. It has shape `(slice_size, bag_len*slice_size, 3)`.
+        values: List of values to draw the heatmap. Each value should be normalized between 0 and 1.
+        slice_size: Size of the slices.
+        alpha: Alpha value for blending the heatmap with the canvas.
+        max_color: Color for the maximum value in the heatmap.
+        min_color: Color for the minimum value in the heatmap.
+    
+    Returns:
+        canvas: Canvas with the heatmap drawn. It has shape `(slice_size, bag_len*slice_size, 3)`.
+    """
 
     canvas_copy = np.copy(canvas)
 
