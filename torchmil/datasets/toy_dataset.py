@@ -115,7 +115,10 @@ class ToyDataset(torch.utils.data.Dataset):
                 bag_size = np.random.randint(self.bag_size[0], self.bag_size[1])
             else:
                 bag_size = self.bag_size
-            num_positives = np.random.randint(1, bag_size//2)
+            if bag_size // 2 <= 1:
+                num_positives = 1
+            else:
+                num_positives = np.random.randint(1, bag_size//2)
             num_negatives = bag_size - num_positives
             for _ in range(num_positives):
                 a = pos_idx_queue.pop()

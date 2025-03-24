@@ -211,7 +211,7 @@ class ProcessedMILDataset(torch.utils.data.Dataset):
         norm_edge_weight = normalize_adj(
             edge_index, edge_weight, n_nodes=bag_size)
         if bag_size == 1:
-            edge_index, norm_edge_weight = add_self_loops(edge_index, bag_size, norm_edge_weight)
+            edge_index, norm_edge_weight = add_self_loops(edge_index, norm_edge_weight, bag_size)
 
         return edge_index, edge_weight, norm_edge_weight
 

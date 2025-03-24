@@ -2,39 +2,41 @@
 
 - [ ] Index and introduction to the library.
 - [ ] Tutorials:
-    - [ ] Tutorial 0: "Training your first MIL model": Training a simple ABMIL with a MNIST toy dataset
+    - [ X ] Tutorial 0: "Training your first MIL model": Training a simple ABMIL with a MNIST toy dataset
     - [ X ] Tutorial 1: "Data representation in torchmil": how to represent data in torchmil (bags, instances, graphs, mask, etc)
     - [ ] Tutorial 2: "Datasets in torchmil": how datasets are implemented in torchmil: processed datasets vs non-processed datasets. 
     - [ ] Tutorial 3: "WSI classification in torchmil": how to train a model with WSI data.
     - [ ] Tutorial 4: "CTScan classification in torchmil": how to train a model with CTScan data.
     - [ ] Tutorial 5: "Visualizing attention maps": how to visualize attention maps in torchmil.
+    - [ ] Tutorial 6: (Advanced) "Integrating torchmil with Pytorch Geometric": how to use a module from Pytorch Geometric in torchmil.
+- [ ] Tests
 - Code:
     - torchmil.datasets:
-        - [ X ] (Fran) Processed MIL dataset
-        - [ X ] (Fran) WSI dataset
-        - [ X ] (Fran) CTScan dataset
-        - [ X ] (Fran) Toy dataset
-        - [ X ] (Javier) Datasets from: https://arxiv.org/abs/2310.17867
+        - [ X ] Processed MIL dataset
+        - [ X ] WSI dataset
+        - [ X ] CTScan dataset
+        - [ X ] Toy dataset
+        - [ X ] Datasets from: https://arxiv.org/abs/2310.17867
         - [ ] Allow datasets to be downloaded from the internet ?
     - torchmil.models:
         - [ X ] mil_model
-        - [ ] Remove criterion from models???
-        - [ X ] (Fran) ABMIL
-        - [ X ] (Fran) TransformerABMIL
-        - [ X ] (Fran) SmABMIL
-        - [ X ] (Fran) SmTransformerABMIL
-        - [ X ] (Fran) ProbSmoothABMIL
-        - [ X ] (Fran) ProbSmoothTransformerABMIL
+        - [ ] Remove criterion from models ???
+        - [ X ] ABMIL
+        - [ X ] TransformerABMIL
+        - [ X ] SmABMIL
+        - [ X ] SmTransformerABMIL
+        - [ X ] ProbSmoothABMIL
+        - [ X ] ProbSmoothTransformerABMIL
         - [ X ] CLAM
             - [  ] Modify inst_eval, inst_eval_out so they accept batched inputs
-        - [ X ] (Javier) DSMIL
-        - [ X ] (Javier) DFTDMIL
+        - [ X ] DSMIL
+        - [ X ] DFTDMIL
         - [ X ] PatchGCN
             - [ ] Implement GENConv, right now PatchGCN uses GCNConv
         - [ X ] DeepGraphSurv
         - [ X ] TransMIL
         - [ X ] GTP
-        - [ X ] (Javier) CAMIL
+        - [ X ] CAMIL
         - [  ] IIBMIL
         - [ X ] SETMIL
     - torchmil.nn:

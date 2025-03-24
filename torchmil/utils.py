@@ -5,15 +5,15 @@ from scipy.spatial import KDTree
 def degree(
         index: np.ndarray,
         edge_weight: np.ndarray = None,
-        n_nodes: int = None,
+        n_nodes: int = None
 ) -> np.ndarray:
     """
-    Compute the degree of the adjacency matrix.
+    Compute the degree of the adjacency matrix. Assumes that the graph is undirected.
 
     Arguments:
-        index: Edge index of the adjacency matrix.
+        index: Edge index of the adjacency matrix, shape (2, n_edges).
+        edge_weight: Edge weight of the adjacency matrix, shape (n_edges,).
         n_nodes: Number of nodes in the graph.
-        edge_weight: Edge weight of the adjacency matrix.
     
     Returns:
         degree: Degree of the adjacency matrix.
@@ -24,9 +24,9 @@ def degree(
     
     if n_nodes is None:
         n_nodes = index.max() + 1
-    
+
     out = np.zeros((n_nodes))
-    np.add.at(out, index, edge_weight)
+    np.add.at(out, index[0,:], edge_weight)
     return out
 
 def add_self_loops(
@@ -38,8 +38,8 @@ def add_self_loops(
         Add self-loops to the adjacency matrix.
 
         Arguments:
-            edge_index: Edge index of the adjacency matrix.
-            edge_weight: Edge weight of the adjacency matrix.
+            edge_index: Edge index of the adjacency matrix, shape (2, n_edges).
+            edge_weight: Edge weight of the adjacency matrix, shape (n_edges,).
             n_nodes: Number of nodes in the graph.
         
         Returns:
@@ -52,7 +52,7 @@ def add_self_loops(
         
         if edge_weight is None:
             edge_weight = np.ones(edge_index.shape[1])
-
+        
         loop_index = np.arange(0, n_nodes)
         loop_index = np.tile(loop_index, (2,1))
 
@@ -95,20 +95,18 @@ def normalize_adj(
     else:
         row = edge_index[0]
         col = edge_index[1]
-        deg = degree(col, edge_weight, n_nodes).astype(np.float32)
+        deg = degree(edge_index, edge_weight, n_nodes).astype(np.float32)
         with np.errstate(divide='ignore'):
             deg_inv_sqrt = np.power(deg, -0.5)
             deg_inv_sqrt[deg_inv_sqrt == float('inf')] = 0
-        
-        # new_edge_weight = deg_inv_sqrt[row] * deg_inv_sqrt[col]
         new_edge_weight = deg_inv_sqrt[row] * edge_weight * deg_inv_sqrt[col]
 
     return new_edge_weight
 
 def build_adj(
     coords: np.ndarray,
-    feat: np.ndarray,
-    dist_thr: float,
+    feat: np.ndarray = None,
+    dist_thr: float = 1.0,
     add_self_loops: bool = False
 ) -> tuple[np.ndarray, np.ndarray]:
     """
@@ -116,10 +114,9 @@ def build_adj(
 
     Arguments:
         coords: Coordinates of the nodes.
-        feat: Features of the nodes.
-        dist_thr: Distance threshold to consider two nodes as neighbors.
+        feat: Features of the nodes, used to compute the edge weights. If None, the adjacency matrix is binary.
+        dist_thr: Distance threshold to consider two nodes as neighbors. Default is 1.0.
         add_self_loops: Whether to add self-loops.
-        adj_with_dist: If True, the adjacency matrix is built using the Euclidean distance between the patches features. If False, the adjacency matrix is binary.
     
     Returns:
         edge_index: Edge index of the adjacency matrix.
@@ -129,10 +126,10 @@ def build_adj(
     kdtree = KDTree(coords)
 
     # Build adjacency matrix
-    n_patches = len(coords)
+    n_nodes = len(coords)
     edge_index = []
     edge_weight = []
-    for i in range(n_patches):
+    for i in range(n_nodes):
 
         # Self-loop
         if add_self_loops:
