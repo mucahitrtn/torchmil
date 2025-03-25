@@ -68,6 +68,7 @@
         - [ X ] max_pool
         - [ X ] mean_pool 
     - [ X ] visualize
+    - [ ] utils
     - [ ] Add support for Lazy initialization (remove the need to specify in_dim)
     - [ ] Bag class or Tensordict (?)
     - [ ] Integration with Pytorch geometric (?)

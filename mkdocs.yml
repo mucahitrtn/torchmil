@@ -106,11 +106,13 @@ plugins:
             docstring_section_style: list
 
 nav:
-  - index.md
+  - Introduction:
+    - index.md
+    - Getting started: getting_started.md
   - Examples:
     - examples/index.md
     - Representing bags in torchmil: examples/data_representation.ipynb
-    - Training your first MIL model: examples/training_first_model.ipynb
+    - Training your first MIL model: examples/training_your_first_mil_model.ipynb
   - API reference:
     - api/index.md
     - <tt>torchmil.data</tt>:
@@ -177,3 +179,9 @@ nav:
       - api/visualize/index.md
       - api/visualize/vis_ctscan.md
       - api/visualize/vis_wsi.md
+    - <tt>torchmil.utils</tt>:
+      - api/utils/index.md
+      - api/utils/annealing_scheduler.md
+      - api/utils/graph_utils.md
+      - api/utils/trainer.md
+      

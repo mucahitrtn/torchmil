@@ -196,9 +196,9 @@ class ProcessedMILDataset(torch.utils.data.Dataset):
             bag_dict: Dictionary containing the features ('X'), label ('Y'), instance labels ('y_inst') and coordinates ('coords') of the bag.
 
         Returns:
-            edge_index: Edge index of the adjacency matrix.
-            edge_weight: Edge weight of the adjacency matrix.
-            norm_edge_weight: Normalized edge weight of the adjacency matrix.
+            edge_index: Edge index of the adjacency matrix, of shape `(2, n_edges)`.
+            edge_weight: Edge weight of the adjacency matrix, of shape `(n_edges,)`.
+            norm_edge_weight: Normalized edge weight of the adjacency matrix, of shape `(n_edges,)`.
         """
 
         bag_size = bag_dict['coords'].shape[0]
@@ -255,11 +255,6 @@ class ProcessedMILDataset(torch.utils.data.Dataset):
 
             if 'coords' in bag_dict:
                 edge_index, edge_weight, norm_edge_weight = self._build_adj(bag_dict)
-                # bag_dict['edge_index'] = edge_index
-                # if self.norm_adj:
-                #     bag_dict['edge_weight'] = norm_edge_weight
-                # else:
-                #     bag_dict['edge_weight'] = edge_weight
                 if self.norm_adj:
                     edge_val = norm_edge_weight
                 else:
@@ -272,7 +267,6 @@ class ProcessedMILDataset(torch.utils.data.Dataset):
             self.loaded_bags[bag_name] = tensor_bag_dict
 
         if tensor_bag_dict['X'].shape[0] != tensor_bag_dict['y_inst'].shape[0]:
-            print('a', bag_name, tensor_bag_dict['X'].shape, tensor_bag_dict['y_inst'].shape)
             raise ValueError("Bag size and instance labels size must be the same.")
 
         return TensorDict(tensor_bag_dict)
