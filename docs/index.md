@@ -21,22 +21,22 @@ pip install torchmil
 You can load a MIL dataset and train a MIL model in just a few lines of code:
 
 ```python
-from torchmil.datasets import Camelyon16
+from torchmil.datasets import Camelyon16MIL
 from torchmil.models import ABMIL
 from torchmil.utils import Trainer
+from torchmil.data import collate_fn
 from torch.utils.data import DataLoader
 
 # Load the Camelyon16 dataset
-dataset = Camelyon16(root='data', features='UNI')
-dataloader = DataLoader(dataset, batch_size=4, shuffle=True)
+dataset = Camelyon16MIL(root='data', features='UNI')
+dataloader = DataLoader(dataset, batch_size=4, shuffle=True, collate_fn=collate_fn)
 
-# Instantiate the ABMIL model, optimizer, and criterion
-model = ABMIL(in_shape=(2048,), out_dim=1)
+# Instantiate the ABMIL model and optimizer
+model = ABMIL(in_shape=(2048,), criterion=torch.nn.BCEWithLogitsLoss()) # each model has its own criterion
 optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
-criterion = torch.nn.BCEWithLogitsLoss()
 
 # Instantiate the Trainer
-trainer = Trainer(model, optimizer, criterion, device='cuda')
+trainer = Trainer(model, optimizer, device='cuda')
 
 # Train the model
 trainer.train(dataloader, epochs=10)
@@ -48,7 +48,7 @@ torch.save(model.state_dict(), 'model.pth')
 ## Next steps
 
 Head to the [get started](getting_started.md) guide to learn more about **torchmil**.
-Also, yoy can take a look at the [examples](examples/index.md) to see how to use **torchmil** in practice.
+Also, you can take a look at the [examples](examples/index.md) to see how to use **torchmil** in practice.
 To see the full list of available models, datasets, and modules, check the [API reference](api/index.md).
 
 ## Citation

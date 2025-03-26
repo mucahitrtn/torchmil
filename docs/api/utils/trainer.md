@@ -4,8 +4,8 @@
         members:
             - __init__
             - train
-            - model_state_dict
-            - best_model_state_dict
-            - best_model
+            - get_model_state_dict
+            - get_best_model_state_dict
+            - get_best_model
             - _log
             - _shared_loop

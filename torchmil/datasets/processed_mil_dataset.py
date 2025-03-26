@@ -129,7 +129,8 @@ class ProcessedMILDataset(torch.utils.data.Dataset):
         if not os.path.exists(label_file):
             warnings.warn(f"Label file {label_file} not found. Setting label to None.")
             return None
-        return np.load(label_file)
+        out = np.load(label_file)
+        return out
     
     def _load_inst_labels(self, name: str) -> np.ndarray:
         """
@@ -148,7 +149,8 @@ class ProcessedMILDataset(torch.utils.data.Dataset):
         if not os.path.exists(inst_labels_file):
             warnings.warn(f"Instance labels file {inst_labels_file} not found. Setting instance labels to None.")
             return None
-        return np.load(inst_labels_file)
+        out = np.load(inst_labels_file)
+        return out
 
     def _load_coords(self, name: str) -> np.ndarray:
         """

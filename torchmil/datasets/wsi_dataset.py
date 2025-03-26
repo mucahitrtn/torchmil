@@ -24,7 +24,8 @@ class WSIDataset(ProcessedMILDataset):
     Consequently, $Y = \max\left\{ y_1, y_2, \ldots, y_N \right\}$, where $N$ is the number of patches in the WSI.
     This means that the WSI is positive (contains the characteristic) if at least one of its patches is positive (contains the characteristic).
     In the case that the WSI has been annotated at the patch level, the instance labels $y_n$ can be used solely for evaluation purposes.
-    
+    See [`torchmil.datasets.BinaryClassificationDataset`](./binary_classification_dataset.md) for more information.
+
     **Directory structure.**
     It is assumed that the bags have been processed and saved as numpy files. 
     For more information on the processing of the bags, refer to the [`ProcessedMILDataset` class](processed_mil_dataset.md).

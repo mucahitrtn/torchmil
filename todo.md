@@ -10,13 +10,16 @@
     - [ ] Tutorial 5: "Visualizing attention maps": how to visualize attention maps in torchmil.
     - [ ] Tutorial 6: (Advanced) "Integrating torchmil with Pytorch Geometric": how to use a module from Pytorch Geometric in torchmil.
 - [ ] Tests
-- Code:
+- Documentation:
     - torchmil.datasets:
         - [ X ] Processed MIL dataset
         - [ X ] WSI dataset
         - [ X ] CTScan dataset
         - [ X ] Toy dataset
         - [ X ] Datasets from: https://arxiv.org/abs/2310.17867
+        - [   ] Camelyon16
+        - [   ] PANDA   
+        - [   ] RSNA_ICH
         - [ ] Allow datasets to be downloaded from the internet ?
     - torchmil.models:
         - [ X ] mil_model
@@ -37,7 +40,7 @@
         - [ X ] TransMIL
         - [ X ] GTP
         - [ X ] CAMIL
-        - [  ] IIBMIL
+        - [ X ] IIBMIL
         - [ X ] SETMIL
     - torchmil.nn:
         - [ ] attention
@@ -69,6 +72,7 @@
         - [ X ] mean_pool 
     - [ X ] visualize
     - [ ] utils
-    - [ ] Add support for Lazy initialization (remove the need to specify in_dim)
-    - [ ] Bag class or Tensordict (?)
-    - [ ] Integration with Pytorch geometric (?)
+- [ ] Singleton dimension in bag labels
+- [ ] Add support for Lazy initialization (remove the need to specify in_dim)
+- [ ] Bag class or Tensordict (?)
+- [ ] Integration with Pytorch geometric (?)

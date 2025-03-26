@@ -21,5 +21,5 @@
     - [Transformer with image Relative Positional Encoding (iRPE)](transformers/irpe_transformer.md)
     - [Tokens-2-Token](transformers/t2t.md)
 - [Sm operator](sm.md)
-- [Max Pool](max_pooling.md)
-- [Mean Pool](min_pooling.md)
+- [Max Pool](max_pool.md)
+- [Mean Pool](mean_pool.md)

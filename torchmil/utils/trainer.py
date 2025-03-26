@@ -14,7 +14,7 @@ class Trainer:
             self, 
             model : MILModel,
             optimizer : torch.optim.Optimizer,
-            metrics_dict : dict[str : torchmetrics.Metric] = {},
+            metrics_dict : dict[str : torchmetrics.Metric] = {'auroc' : torchmetrics.AUROC(task='binary')},
             obj_metric : str = 'auroc',
             lr_scheduler : torch.optim.lr_scheduler._LRScheduler = None,
             annealing_scheduler_dict : dict[str : AnnealingScheduler] = None,
@@ -36,7 +36,7 @@ class Trainer:
             early_stop_patience: Patience for early stopping. If None, early stopping is disabled.
             disable_pbar: Disable progress bar. 
         """
-        self.model = MILModelWrapper(model) 
+        self.model = MILModelWrapper(model)
         self.optimizer = optimizer
         self.metrics_dict = metrics_dict
         self.obj_metric_name = obj_metric
@@ -88,7 +88,7 @@ class Trainer:
             val_dataloader = train_dataloader
         
         if self.best_model_state_dict is None:
-            self.best_model_state_dict = self.model_state_dict()
+            self.best_model_state_dict = self.get_model_state_dict()
             self.best_obj_metric = float('-inf')
 
         early_stop_count = 0
@@ -120,7 +120,7 @@ class Trainer:
                 print(f'Early stopping count: {early_stop_count}')
             else:
                 self.best_obj_metric = val_metrics[f"val/{self.obj_metric_name}"]
-                self.best_model_state_dict = self.model_state_dict()
+                self.best_model_state_dict = self.get_model_state_dict()
                 early_stop_count = 0
             
             if early_stop_count >= self.early_stop_patience:
@@ -205,8 +205,7 @@ class Trainer:
         pbar.close()
         return metrics
     
-    @property
-    def model_state_dict(self) -> dict:
+    def get_model_state_dict(self) -> dict:
         """
         Get (a deepcopy of) the state dictionary of the model.
 
@@ -216,8 +215,7 @@ class Trainer:
         state_dict = deepcopy(self.model.model.state_dict())
         return state_dict
         
-    @property
-    def best_model_state_dict(self) -> dict:
+    def get_best_model_state_dict(self) -> dict:
         """
         Get the state dictionary of the best model (the model with the best objective metric).
 
@@ -227,8 +225,7 @@ class Trainer:
         """
         return self.best_model_state_dict
 
-    @property
-    def best_model(self) -> MILModel:
+    def get_best_model(self) -> MILModel:
         """
         Get the best model (the model with the best objective metric).
 

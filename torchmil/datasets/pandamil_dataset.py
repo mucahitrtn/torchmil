@@ -1,0 +1,95 @@
+import numpy as np
+import pandas as pd
+import os
+
+from .binary_classification_dataset import BinaryClassificationDataset
+from .wsi_dataset import WSIDataset
+
+def keep_only_existing_files(path, names, ext='.npy'):
+    existing_files = []
+    for name in names:
+        file = f'{path}/{name}{ext}'
+        if os.path.isfile(file):
+            existing_files.append(name)
+    return existing_files
+
+class PANDAMILDataset(BinaryClassificationDataset, WSIDataset):
+    r"""
+    Prostate cANcer graDe Assessment (PANDA) dataset for Multiple Instance Learning (MIL). 
+
+    The [original PANDA dataset](https://www.kaggle.com/c/prostate-cancer-grade-assessment/data) has been processed to be used for MIL binary classification problems.
+    It can be downloaded from [here](https://huggingface.co/datasets/Franblueee/PANDA_MIL/).
+
+    A patch is considered positive if at least 50% of its pixels are annotated as tumor. The WSI label is positive if at least one patch is positive.
+    
+    The following directory structure is expected:
+        
+        ```
+        root
+        ├── patches_{patch_size}
+        │   ├── features
+        │   │   ├── features_{features}
+        │   │   │   ├── wsi1.npy
+        │   │   │   ├── wsi2.npy
+        │   │   │   └── ...
+        │   ├── labels
+        │   │   ├── wsi1.npy
+        │   │   ├── wsi2.npy
+        │   │   └── ...
+        │   ├── patch_labels
+        │   │   ├── wsi1.npy
+        │   │   ├── wsi2.npy
+        │   │   └── ...
+        │   ├── coords
+        │   │   ├── wsi1.npy
+        │   │   ├── wsi2.npy
+        │   │   └── ...
+        └── splits.csv
+        ```
+    """
+    def __init__(
+        self,
+        root : str,
+        features : str = 'UNI',
+        partition : str = 'train',
+        patch_size: int = 512,
+        adj_with_dist: bool = False,
+        norm_adj: bool = True
+    ) -> None:
+        """
+        Arguments:
+            root: Path to the root directory of the dataset.
+            features: Type of features to use. Must be one of ['UNI', 'resnet50_bt'].
+            partition: Partition of the dataset. Must be one of ['train', 'test'].
+            patch_size: Size of the patches. Currently, only 512 is supported.
+            adj_with_dist: If True, the adjacency matrix is built using the Euclidean distance between the patches features. If False, the adjacency matrix is binary.
+            norm_adj: If True, normalize the adjacency matrix.       
+        """
+        features_path = f'{root}/patches_{patch_size}/features/features_{features}/'
+        labels_path = f'{root}/patches_{patch_size}/labels/'
+        patch_labels_path = f'{root}/patches_{patch_size}/patch_labels/'
+        coords_path = f'{root}/patches_{patch_size}/coords/'
+
+        splits_file = f'{root}/splits.csv'
+        df = pd.read_csv(splits_file)
+        if partition == 'train':
+            wsi_names = df[df['split']=='train']['bag_name'].values
+        else:
+            wsi_names = df[df['split']=='test']['bag_name'].values
+        wsi_names = list(set(wsi_names))
+        wsi_names = keep_only_existing_files(features_path, wsi_names)
+
+        WSIDataset.__init__(
+            self,
+            features_path=features_path,
+            labels_path=labels_path,
+            patch_labels_path=patch_labels_path,
+            coords_path=coords_path,
+            wsi_names=wsi_names,
+            patch_size=patch_size,
+            adj_with_dist=adj_with_dist,
+            norm_adj=norm_adj,
+        )
+    
+    def _load_bag(self, name: str) -> dict[str, np.ndarray]:
+        return BinaryClassificationDataset._load_bag(self, name)
