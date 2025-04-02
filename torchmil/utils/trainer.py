@@ -13,19 +13,21 @@ class Trainer:
     """
 
     def __init__(
-            self, 
-            model : MILModel,
-            optimizer : torch.optim.Optimizer,
-            metrics_dict : dict[str : torchmetrics.Metric] = {'auroc' : torchmetrics.AUROC(task='binary')},
-            obj_metric : str = 'auroc',
-            obj_metric_mode : str = 'max',
-            lr_scheduler : torch.optim.lr_scheduler._LRScheduler = None,
-            annealing_scheduler_dict : dict[str : AnnealingScheduler] = None,
-            device : str = 'cuda',
-            logger = None, 
-            early_stop_patience : int = None,
-            disable_pbar : bool = False,
-            verbose : bool = True,
+        self,
+        model: MILModel,
+        optimizer: torch.optim.Optimizer,
+        metrics_dict: dict[str : torchmetrics.Metric] = {
+            "auroc": torchmetrics.AUROC(task="binary")
+        },
+        obj_metric : str = 'auroc',
+        obj_metric_mode : str = 'max',
+        lr_scheduler: torch.optim.lr_scheduler._LRScheduler = None,
+        annealing_scheduler_dict: dict[str:AnnealingScheduler] = None,
+        device: str = "cuda",
+        logger=None,
+        early_stop_patience: int = None,
+        disable_pbar: bool = False,
+        verbose: bool = True,
     ) -> None:
         """
         Arguments:
