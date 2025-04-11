@@ -33,9 +33,14 @@ class MeanPool(torch.nn.Module):
         batch_size, bag_size, _ = X.shape
 
         if mask is None:
-            mask = torch.ones(batch_size, bag_size, device=X.device)
+            mask = torch.ones(batch_size, bag_size, device=X.device).bool()
         mask = mask.unsqueeze(dim=-1) # (batch_size, bag_size, 1)
 
-        z = torch.sum(X*mask, dim=1) / torch.sum(mask, dim=1) # (batch_size, in_dim)
+        eff_num_inst = torch.sum(mask, dim=1) # (batch_size, 1)
+
+        if torch.any(eff_num_inst == 0):
+            z = torch.zeros(batch_size, X.shape[-1], device=X.device)
+        else:
+            z = torch.sum(X*mask, dim=1) / torch.sum(mask, dim=1) # (batch_size, in_dim)
 
         return z

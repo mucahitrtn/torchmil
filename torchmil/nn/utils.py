@@ -42,23 +42,24 @@ def masked_softmax(
     return torch.nn.functional.softmax(X_masked, dim=1)
 
 class MaskedSoftmax(torch.nn.Module):
-    def __init__(self, dim=-1):
+    """
+    Compute masked softmax along the second dimension.    
+    """
+    def __init__(self):
         super().__init__()
-        self.dim = dim
 
     def forward(self, X, mask):
         """
-        Compute masked softmax.
-        
+        Forward method.
+
         Arguments:
-            X (Tensor): Input tensor of shape `(batch_size, bag_size)`.
-            mask (Tensor): Mask of shape `(batch_size, bag_size)`.
+            X: Input tensor of shape `(batch_size, N, ...)`.
+            mask: Mask tensor of shape `(batch_size, N)`.
         
         Returns:
-            Tensor: Masked softmax of shape `(batch_size, bag_size)`.
+            Tensor: Masked softmax of shape `(batch_size, N, ...)`.
         """
-
-        return masked_softmax(X, mask, dim=self.dim)
+        return masked_softmax(X, mask)
     
 def get_feat_dim(
         feat_ext : torch.nn.Module,
@@ -138,7 +139,12 @@ class SinusoidalPositionalEncodingND(torch.nn.Module):
 def log_sum_exp(x):
     """
     Compute log(sum(exp(x), 1)) in a numerically stable way.
-    Assumes x is 2d.
+
+    Arguments:
+        x: Input tensor of shape `(batch_size, n_classes)`.
+    
+    Returns:
+        log_sum_exp: Log sum exp of shape `(batch_size,)
     """
     max_score, _ = x.max(1)
     return max_score + torch.log(torch.sum(torch.exp(x - max_score[:, None]), 1))
@@ -146,6 +152,14 @@ def log_sum_exp(x):
 def delta(y, labels, alpha=None):
     """
     Compute zero-one loss matrix for a vector of ground truth y
+
+    Arguments:
+        y: Ground truth labels, of shape `(batch_size, n_classes)`.
+        labels: Possible labels, of shape `(n_classes,)`.
+        alpha: Regularization parameter.
+
+    Returns:
+        delta: Zero-one loss matrix of shape `(batch_size, n_classes)`.
     """
 
     if isinstance(y, torch.autograd.Variable):
@@ -157,27 +171,6 @@ def delta(y, labels, alpha=None):
         delta = alpha * delta
     return delta
 
-def Top1_Hard_SVM(labels, alpha=1.):
-    def fun(x, y):
-        y = y.long()
-        # max oracle
-        max_, _ = (x + delta(y, labels, alpha)).max(1)
-        # subtract ground truth
-        loss = max_ - x.gather(1, y).squeeze()
-        return loss
-    return fun
-
-def Top1_Smooth_SVM(labels, tau, alpha=1.):
-    def fun(x, y):
-        # add loss term and subtract ground truth score
-        y = y.long()
-        x = x + delta(y, labels, alpha) - x.gather(1, y)
-        # compute loss
-        loss = tau * log_sum_exp(x / tau)
-
-        return loss
-    return fun
-
 def detect_large(x, k, tau, thresh):
     top, _ = x.topk(k + 1, 1)
     # switch to hard top-k if (k+1)-largest element is much smaller than k-largest element
@@ -185,58 +178,11 @@ def detect_large(x, k, tau, thresh):
     smooth = hard.eq(0)
     return smooth, hard
 
-class _SVMLoss(torch.nn.Module):
-
-    def __init__(
-        self, 
-        n_classes : int,
-        alpha : float = 1.0
-    ) -> None:
-        """
-
-        Arguments:
-            n_classes: Number of classes.
-            alpha: Regularization parameter.       
-        """
-
-        assert isinstance(n_classes, int)
-
-        assert n_classes > 0
-        assert alpha is None or alpha >= 0
-
-        super(_SVMLoss, self).__init__()
-        self.alpha = alpha if alpha is not None else 1
-        self.n_classes = n_classes
-        self._tau = None
-
-    def forward(self, x, y):
-        raise NotImplementedError("Forward needs to be re-implemented for each loss")
-
-    @property
-    def tau(self):
-        return self._tau
-
-    @tau.setter
-    def tau(self, tau):
-        if self._tau != tau:
-            # print("Setting tau to {}".format(tau))
-            self._tau = float(tau)
-            self.get_losses()
-
-    def cuda(self, device=None):
-        torch.nn.Module.cuda(self, device)
-        self.get_losses()
-        return self
-
-    def cpu(self):
-        torch.nn.Module.cpu(self)
-        self.get_losses()
-        return self
-
-    def get_losses(self):
-        raise NotImplementedError("get_losses needs to be re-implemented for each loss")
-
-class SmoothTop1SVM(_SVMLoss):
+class SmoothTop1SVM(torch.nn.Module):
+    """
+    Smooth Top-1 SVM loss, as described in [Smooth Loss Functions for Deep Top-k Classification](https://arxiv.org/abs/1802.07595).
+    Implementation adapted from [the original code](https://github.com/oval-group/smooth-topk).    
+    """
     def __init__(
         self, 
         n_classes : int,
@@ -244,18 +190,18 @@ class SmoothTop1SVM(_SVMLoss):
         tau : float = 1.0
     ) -> None:
         """
-        Smooth Top-1 SVM loss, as described in [Smooth Loss Functions for Deep Top-k Classification](https://arxiv.org/abs/1802.07595).
-        Implementation adapted from [the original code](https://github.com/oval-group/smooth-topk).
-
         Arguments:
             n_classes: Number of classes.
             alpha: Regularization parameter.
             tau: Temperature parameter.
         """
-        super(SmoothTop1SVM, self).__init__(n_classes=n_classes, alpha=alpha)
+        # super(SmoothTop1SVM, self).__init__(n_classes=n_classes, alpha=alpha)
+        super().__init__()
+        self.alpha = alpha
+        self.n_classes = n_classes
         self.tau = tau
         self.thresh = 1e3
-        self.get_losses()
+        self.labels = torch.from_numpy(np.arange(n_classes))
 
     def forward(
         self, 
@@ -273,8 +219,8 @@ class SmoothTop1SVM(_SVMLoss):
             loss: Loss tensor of shape `(batch_size,)`.
         """
         
-        if x.shape[1] == 1:
-            x = torch.cat([x, -x], 1) # add dummy dimension for binary classification
+        # if x.shape[1] == 1:
+        #     x = torch.cat([x, -x], 1) # add dummy dimension for binary classification
 
         smooth, hard = detect_large(x, 1, self.tau, self.thresh)
 
@@ -282,15 +228,50 @@ class SmoothTop1SVM(_SVMLoss):
         if smooth.data.sum():
             x_s, y_s = x[smooth], y[smooth]
             x_s = x_s.view(-1, x.size(1))
-            loss += self.F_s(x_s, y_s).sum() / x.size(0)
+            loss += self.smooth_loss(x_s, y_s).sum() / x.size(0)
         if hard.data.sum():
             x_h, y_h = x[hard], y[hard]
             x_h = x_h.view(-1, x.size(1))
-            loss += self.F_h(x_h, y_h).sum() / x.size(0)
+            loss += self.hard_loss(x_h, y_h).sum() / x.size(0)
 
         return loss
 
-    def get_losses(self):
-        labels = torch.from_numpy(np.arange(self.n_classes))
-        self.F_h = Top1_Hard_SVM(labels, self.alpha)
-        self.F_s = Top1_Smooth_SVM(labels, self.tau, self.alpha)
+    def hard_loss(self, x, y):
+        """
+        Compute hard loss.
+
+        Arguments:
+            x: Input tensor of shape `(batch_size, n_classes)`.
+            y: Target tensor of shape `(batch_size,)`.
+        
+        Returns:
+            loss: Hard loss tensor of shape `(batch_size,)`.
+        """
+
+        y = y.long()
+        # max oracle
+        max_, _ = (x + delta(y, self.labels, self.alpha)).max(1)
+        # subtract ground truth
+        loss = max_ - x.gather(1, y).squeeze()
+        return loss
+
+    def smooth_loss(self, x, y):
+        """
+        Compute smooth loss.
+
+        Arguments:
+            x: Input tensor of shape `(batch_size, n_classes)`.
+            y: Target tensor of shape `(batch_size,)`.
+        
+        Returns:
+            loss: Smooth loss tensor of shape `(batch_size,)`.
+        """
+
+        y = y.long()
+        # add loss term and subtract ground truth score
+        x = x + delta(y, self.labels, self.alpha) - x.gather(1, y)
+        # compute loss
+        loss = self.tau * log_sum_exp(x / self.tau)
+
+        return loss
+    

@@ -261,6 +261,7 @@ class ProcessedMILDataset(torch.utils.data.Dataset):
                     edge_val = norm_edge_weight
                 else:
                     edge_val = edge_weight
+                
                 tensor_bag_dict['adj'] = torch.sparse_coo_tensor(
                     edge_index, edge_val, (bag_dict['coords'].shape[0], bag_dict['coords'].shape[0])).coalesce()
                         

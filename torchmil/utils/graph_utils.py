@@ -146,7 +146,12 @@ def build_adj(
                 else:
                     dist = 1.0
                 edge_weight.append(dist)
+    
+    if len(edge_index) == 0:
+        edge_index = np.array([[], []]).astype(np.longlong)
+        edge_weight = np.array([])
+    else:
+        edge_index = np.array(edge_index).T.astype(np.longlong)  # (2, n_edges)
+        edge_weight = np.array(edge_weight)  # (n_edges,)    
 
-    edge_index = np.array(edge_index).T.astype(np.longlong)  # (2, n_edges)
-    edge_weight = np.array(edge_weight)  # (n_edges,)
     return edge_index, edge_weight

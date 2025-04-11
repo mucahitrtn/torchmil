@@ -72,7 +72,7 @@ class CLAM_SB(MILModel):
 
         self.pool = AttentionPool(in_dim = feat_dim, att_dim = att_dim, act = att_act, gated = gated)
         self.classifier = LazyLinear(feat_dim, 1)
-        self.inst_classifiers = torch.nn.ModuleList([LazyLinear(feat_dim, 1) for i in range(2)])
+        self.inst_classifiers = torch.nn.ModuleList([LazyLinear(feat_dim, 2) for i in range(2)])
         if inst_loss_name == 'SmoothTop1SVM':
             self.inst_loss_fn = SmoothTop1SVM(n_classes = 2)
         elif inst_loss_name == 'BCEWithLogitsLoss':
@@ -143,7 +143,9 @@ class CLAM_SB(MILModel):
         all_instances = torch.cat([top_p, top_n], dim=0) # (2 * k_sample, feat_dim)
         logits = classifier(all_instances) # (2 * k_sample, 2)
         all_preds = torch.topk(logits, 1, dim = 1)[1] # (2 * k_sample,)
-        instance_loss = self.inst_loss_fn(logits.float(), all_targets.unsqueeze(-1).float())
+        # instance_loss = self.inst_loss_fn(logits.float(), all_targets.unsqueeze(-1).float())
+        all_preds_one_hot = torch.nn.functional.one_hot(all_preds.squeeze(-1), num_classes=2).float() # (2 * k_sample, 2)
+        instance_loss = self.inst_loss_fn(logits.float(), all_preds_one_hot)
         return instance_loss, all_preds, all_targets
     
     def inst_eval_out(
@@ -175,7 +177,9 @@ class CLAM_SB(MILModel):
         p_targets = self.create_negative_targets(k_sample, device) # (k_sample,)
         logits = classifier(top_p) # (k_sample, 2)
         p_preds = torch.topk(logits, 1, dim = 1)[1] # (k_sample,)
-        instance_loss = self.inst_loss_fn(logits.float(), p_targets.unsqueeze(-1).float()) # (k_sample,)
+        # instance_loss = self.inst_loss_fn(logits.float(), p_targets.unsqueeze(-1).float()) # (k_sample,)
+        p_preds_one_hot = torch.nn.functional.one_hot(p_preds.squeeze(-1), num_classes=2).float() # (k_sample, 2)
+        instance_loss = self.inst_loss_fn(logits.float(), p_preds_one_hot)
         return instance_loss, p_preds, p_targets
 
     def compute_inst_loss(

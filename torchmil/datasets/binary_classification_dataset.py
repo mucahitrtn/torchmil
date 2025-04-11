@@ -21,7 +21,7 @@ class BinaryClassificationDataset(ProcessedMILDataset):
         self,
         features_path: str,
         labels_path: str,
-        patch_labels_path: str = None,
+        inst_labels_path: str = None,
         coords_path: str = None,
         bag_names: list = None,
         dist_thr: float = 1.5,
@@ -31,13 +31,21 @@ class BinaryClassificationDataset(ProcessedMILDataset):
         super().__init__(
             features_path=features_path,
             labels_path=labels_path,
-            patch_labels_path=patch_labels_path,
+            inst_labels_path=inst_labels_path,
             coords_path=coords_path,
             bag_names=bag_names,
             dist_thr=dist_thr,
             adj_with_dist=adj_with_dist,
             norm_adj=norm_adj,
         )
+
+    def _load_inst_labels(self, name):
+        inst_labels = super()._load_inst_labels(name)
+        # make sure that inst_labels has shape (bag_size,)
+        if inst_labels is not None:
+            while inst_labels.ndim > 1:
+                inst_labels = np.squeeze(inst_labels, axis=-1)
+        return inst_labels
 
     def _load_labels(self, name):
         labels = super()._load_labels(name)
@@ -61,4 +69,5 @@ class BinaryClassificationDataset(ProcessedMILDataset):
                 warnings.warn(
                     f'Instance labels are not consistent with bag label for bag {name}. Setting all instance labels to the bag label.'
                 )
+                bag_dict['y_inst'] = np.full(bag_dict['X'].shape[0], bag_dict['Y'])
         return bag_dict

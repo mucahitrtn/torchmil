@@ -35,7 +35,7 @@ class MaxPool(torch.nn.Module):
         batch_size, bag_size, _ = X.shape
 
         if mask is None:
-            mask = torch.ones(batch_size, bag_size, device=X.device)
+            mask = torch.ones(batch_size, bag_size, device=X.device).bool()
         mask = mask.unsqueeze(dim=-1)
 
         # Set masked values to -inf
