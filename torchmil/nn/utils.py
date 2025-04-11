@@ -281,4 +281,3 @@ class SmoothTop1SVM(torch.nn.Module):
         loss = self.tau * log_sum_exp(x / self.tau)
 
         return loss
-    
