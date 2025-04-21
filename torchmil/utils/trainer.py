@@ -16,6 +16,7 @@ class Trainer:
             optimizer : torch.optim.Optimizer,
             metrics_dict : dict[str : torchmetrics.Metric] = {'auroc' : torchmetrics.AUROC(task='binary')},
             obj_metric : str = 'auroc',
+            obj_metric_mode : str = 'max',
             lr_scheduler : torch.optim.lr_scheduler._LRScheduler = None,
             annealing_scheduler_dict : dict[str : AnnealingScheduler] = None,
             device : str = 'cuda',
@@ -27,8 +28,9 @@ class Trainer:
         Arguments:
             model: MIL model to be trained. Must be an instance of [MILModel](../models/mil_model.md).
             optimizer: Optimizer for training the model.
-            metrics_dict: Dictionary of metrics to be computed during training. Must contain the objective metric. Metrics should be instances of [torchmetrics.Metric](https://torchmetrics.readthedocs.io/en/v0.8.2/references/metric.html).
-            obj_metric: Objective metric to be used for early stopping and to track the best model. Must be one of the keys in `metrics_dict`.
+            metrics_dict: Dictionary of metrics to be computed during training. Metrics should be instances of [torchmetrics.Metric](https://torchmetrics.readthedocs.io/en/v0.8.2/references/metric.html).
+            obj_metric: Objective metric to be used for early stopping and to track the best model. Must be one of the keys in `metrics_dict` or the loss used by the model.
+            obj_metric_mode: Mode for the objective metric. Must be one of 'max' or 'min'. If 'max', the best model is the one with the highest value of the objective metric. If 'min', the best model is the one with the lowest value of the objective metric.
             lr_scheduler: Learning rate scheduler.
             annealing_scheduler_dict: Dictionary of annealing schedulers for loss coefficients. Keys should be the loss names and values should be instances of [AnnealingScheduler](./annealing_scheduler.md).
             device: Device to be used for training.
@@ -40,6 +42,7 @@ class Trainer:
         self.optimizer = optimizer
         self.metrics_dict = metrics_dict
         self.obj_metric_name = obj_metric
+        self.obj_metric_mode = obj_metric_mode
         self.lr_scheduler = lr_scheduler
         self.annealing_scheduler_dict = annealing_scheduler_dict
         self.device = device
@@ -49,6 +52,9 @@ class Trainer:
 
         if self.early_stop_patience is None:
             self.early_stop_patience = float('inf')
+        
+        if self.obj_metric_mode not in ['max', 'min']:
+            raise ValueError(f"obj_metric_mode must be one of ['max', 'min'], but got {self.obj_metric_mode}")
         
         self.best_model_state_dict = None
         self.best_obj_metric = None
@@ -89,8 +95,10 @@ class Trainer:
         
         if self.best_model_state_dict is None:
             self.best_model_state_dict = self.get_model_state_dict()
-            self.best_obj_metric = float('-inf')
-
+            if self.obj_metric_mode == 'max':
+                self.best_obj_metric = float('-inf')
+            else:
+                self.best_obj_metric = float('inf')
         early_stop_count = 0
         for epoch in range(1, max_epochs+1):
 
@@ -115,7 +123,13 @@ class Trainer:
                 self.lr_scheduler.step()
                 
             print(f'Best {self.obj_metric_name}: {self.best_obj_metric}, Current {self.obj_metric_name}: {val_metrics[f"val/{self.obj_metric_name}"]}')
-            if val_metrics[f"val/{self.obj_metric_name}"] < self.best_obj_metric:
+            
+            if self.obj_metric_mode == 'max':
+                is_better = val_metrics[f"val/{self.obj_metric_name}"] > self.best_obj_metric
+            else:
+                is_better = val_metrics[f"val/{self.obj_metric_name}"] < self.best_obj_metric
+            
+            if not is_better:
                 early_stop_count += 1
                 print(f'Early stopping count: {early_stop_count}')
             else:
