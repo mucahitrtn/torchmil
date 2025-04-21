@@ -34,8 +34,15 @@ def masked_softmax(
     if mask is None:
         return torch.nn.functional.softmax(X, dim=1)
 
-    while mask.dim() < X.dim():
+    # Ensure mask is of the same shape as X
+    if mask.dim() < X.dim():
         mask = mask.unsqueeze(-1)
+    
+    # exp_X = torch.exp(X)
+    # exp_X_masked = exp_X * mask
+    # sum_exp_X_masked = exp_X_masked.sum(dim=1, keepdim=True)
+    # softmax_X = exp_X_masked / (sum_exp_X_masked + 1e-8)
+    # return softmax_X
         
     X_masked = X.masked_fill(mask == 0, -float('inf'))
 
