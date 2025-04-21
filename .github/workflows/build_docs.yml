@@ -21,4 +21,4 @@ jobs:
         with:
           python-version: 3.x
       - run: pip install mkdocs-material mknotebooks mkdocstrings mkdocstrings-python mkdocs-exclude
-      - run: mkdocs gh-deploy --force --clean
+      - run: mkdocs gh-deploy --clean
