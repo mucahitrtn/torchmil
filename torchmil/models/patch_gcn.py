@@ -78,8 +78,9 @@ class PatchGCN(torch.nn.Module):
         
         in_mlp_dim = hidden_dim*(n_gcn_layers+1)
         self.mlp = torch.nn.ModuleList()
-        for _ in range(mlp_depth):
-            fc_layer = LazyLinear(in_mlp_dim, hidden_dim)
+        for i in range(mlp_depth):
+
+            fc_layer = LazyLinear(in_mlp_dim if i == 0 else hidden_dim, hidden_dim)
             act_layer = torch.nn.ReLU()
             dropout_layer = torch.nn.Dropout(dropout)
             self.mlp.append(

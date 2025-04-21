@@ -1,6 +1,6 @@
 # DFTDMIL
 
-::: torchmil.models.DFTDMIL
+::: torchmil.models.DTFDMIL
     options:
         members:
             - __init__

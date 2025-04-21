@@ -5,7 +5,7 @@ from torchmil.models import MILModel
 from torchmil.nn import AttentionPool, LazyLinear
 from torchmil.nn.utils import get_feat_dim
 
-class DFTDMIL(MILModel):
+class DTFDMIL(MILModel):
     r"""
     Double-Tier Feature Distillation Multiple Instance Learning (DFTD-MIL) model, proposed in the paper [DTFD-MIL: Double-Tier Feature Distillation Multiple Instance Learning for Histopathology Whole Slide Image Classification](https://arxiv.org/abs/2203.12081).
 
@@ -53,7 +53,7 @@ class DFTDMIL(MILModel):
             criterion: Loss function. By default, Binary Cross-Entropy loss from logits.
         """
 
-        super(DFTDMIL, self).__init__()
+        super(DTFDMIL, self).__init__()
         self.feat_ext = feat_ext
         self.criterion = criterion
         self.n_groups = n_groups
