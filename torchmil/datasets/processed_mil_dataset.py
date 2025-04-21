@@ -268,30 +268,7 @@ class ProcessedMILDataset(torch.utils.data.Dataset):
             bag_dict = self._load_bag(bag_name)
             self.loaded_bags[bag_name] = bag_dict
 
-            tensor_bag_dict = {}
-            for key in bag_dict.keys():
-                if bag_dict[key] is None:
-                    continue
-                if type(bag_dict[key]) == np.ndarray:
-                    tensor_bag_dict[key] = torch.from_numpy(bag_dict[key])
-                else:
-                    tensor_bag_dict[key] = torch.as_tensor(bag_dict[key])
-
-            if 'coords' in bag_dict:
-                edge_index, edge_weight, norm_edge_weight = self._build_adj(bag_dict)
-                if self.norm_adj:
-                    edge_val = norm_edge_weight
-                else:
-                    edge_val = edge_weight
-                
-                tensor_bag_dict['adj'] = torch.sparse_coo_tensor(
-                    edge_index, edge_val, (bag_dict['coords'].shape[0], bag_dict['coords'].shape[0])).coalesce()
-                        
-                # tensor_bag_dict['coords'] = (tensor_bag_dict['coords'] / self.patch_size).float()
-
-            self.loaded_bags[bag_name] = tensor_bag_dict
-
-        if tensor_bag_dict['X'].shape[0] != tensor_bag_dict['y_inst'].shape[0]:
+        if bag_dict['X'].shape[0] != bag_dict['y_inst'].shape[0]:
             raise ValueError("Bag size and instance labels size must be the same.")
 
         return TensorDict(bag_dict)
