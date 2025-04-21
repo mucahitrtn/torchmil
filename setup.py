@@ -11,9 +11,8 @@ setup(
     url="https://github.com/Franblueee/torchmil",  # Your repository URL
     packages=find_packages(),  # Automatically find and include packages
     install_requires=[
-        "numpy",  # List dependencies here
-        "pandas",
         "torch",
+        "mkdocs",
     ],
     classifiers=[
         "Programming Language :: Python :: 3",
