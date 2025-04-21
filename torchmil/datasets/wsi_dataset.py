@@ -80,6 +80,7 @@ class WSIDataset(ProcessedMILDataset):
         dist_thr: float = None,
         adj_with_dist: bool = False,
         norm_adj: bool = True,
+        load_at_init: bool = True,
     ) -> None:
         """
         Class constructor.
@@ -94,6 +95,7 @@ class WSIDataset(ProcessedMILDataset):
             dist_thr: Distance threshold for building the adjacency matrix. If None, it is set to `sqrt(2) * patch_size`.
             adj_with_dist: If True, the adjacency matrix is built using the Euclidean distance between the patches features. If False, the adjacency matrix is binary.
             norm_adj: If True, normalize the adjacency matrix.
+            load_at_init: If True, load the bags at initialization. If False, load the bags on demand.
         """
         if dist_thr is None:
             # dist_thr = np.sqrt(2.0) * patch_size
@@ -108,6 +110,7 @@ class WSIDataset(ProcessedMILDataset):
             dist_thr=dist_thr,
             adj_with_dist=adj_with_dist,
             norm_adj=norm_adj,
+            load_at_init=load_at_init
         )
     def _load_coords(self, name):
         coords = super()._load_coords(name)

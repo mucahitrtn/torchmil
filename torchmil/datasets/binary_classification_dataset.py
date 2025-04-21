@@ -1,4 +1,5 @@
 import numpy as np
+import torch
 import warnings
 
 from torchmil.datasets import ProcessedMILDataset
@@ -26,7 +27,8 @@ class BinaryClassificationDataset(ProcessedMILDataset):
         bag_names: list = None,
         dist_thr: float = 1.5,
         adj_with_dist: bool = False,
-        norm_adj: bool = True
+        norm_adj: bool = True,
+        load_at_init: bool = True,
     ) -> None:
         super().__init__(
             features_path=features_path,
@@ -37,6 +39,7 @@ class BinaryClassificationDataset(ProcessedMILDataset):
             dist_thr=dist_thr,
             adj_with_dist=adj_with_dist,
             norm_adj=norm_adj,
+            load_at_init=load_at_init,
         )
 
     def _load_inst_labels(self, name):
@@ -53,21 +56,20 @@ class BinaryClassificationDataset(ProcessedMILDataset):
         labels = np.squeeze(labels)
         return labels
 
-    def _load_bag(self, name: str) -> dict[str, np.ndarray]:
+    def _load_bag(self, name: str) -> dict[str, torch.Tensor]:
         bag_dict = super()._load_bag(name)
-        bag_dict['Y'] = np.squeeze(bag_dict['Y'])
+        bag_dict['Y'] = bag_dict['Y'].squeeze()
 
         if bag_dict['y_inst'] is None:
             if bag_dict['Y'] == 0:
-                bag_dict['y_inst'] = np.zeros(bag_dict['X'].shape[0])
+                bag_dict['y_inst'] = torch.zeros(bag_dict['X'].shape[0])
             else:
-                warnings.warn(
-                    f'Instance labels not found for bag {name}. Setting all to -1.')
-                bag_dict['y_inst'] = np.full(bag_dict['X'].shape[0], -1)
+                msg = f'Instance labels not found for bag {name}. Setting all to -1.'
+                warnings.warn(msg)
+                bag_dict['y_inst'] = torch.full((bag_dict['X'].shape[0],), -1)
         else:
-            if bag_dict['Y'] != np.max(bag_dict['y_inst']):
-                warnings.warn(
-                    f'Instance labels are not consistent with bag label for bag {name}. Setting all instance labels to the bag label.'
-                )
-                bag_dict['y_inst'] = np.full(bag_dict['X'].shape[0], bag_dict['Y'])
+            if bag_dict['Y'] != (bag_dict['y_inst']).max():
+                msg = f"Instance labels (max(y_inst)={(bag_dict['y_inst']).max()}) are not consistent with bag label (Y={bag_dict['Y']}) for bag {name}. Setting all instance labels to -1 (unknown)."
+                warnings.warn(msg)
+                bag_dict['y_inst'] = torch.full((bag_dict['X'].shape[0],), -1)
         return bag_dict

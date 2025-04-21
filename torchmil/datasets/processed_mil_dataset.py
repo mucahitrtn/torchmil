@@ -67,7 +67,8 @@ class ProcessedMILDataset(torch.utils.data.Dataset):
         bag_names: list = None,
         dist_thr: float = 1.5,
         adj_with_dist: bool = False,
-        norm_adj: bool = True
+        norm_adj: bool = True,
+        load_at_init: bool = True
     ) -> None:
         """
         Class constructor.
@@ -81,6 +82,7 @@ class ProcessedMILDataset(torch.utils.data.Dataset):
             dist_thr: Distance threshold for building the adjacency matrix.
             adj_with_dist: If True, the adjacency matrix is built using the Euclidean distance between the instance features. If False, the adjacency matrix is binary.
             norm_adj: If True, normalize the adjacency matrix.
+            load_at_init: If True, load the bags at initialization. If False, load the bags on demand.
         """
         super().__init__()
 
@@ -92,12 +94,16 @@ class ProcessedMILDataset(torch.utils.data.Dataset):
         self.dist_thr = dist_thr
         self.adj_with_dist = adj_with_dist
         self.norm_adj = norm_adj
+        self.load_at_init = load_at_init
 
         if self.bag_names is None:
             self.bag_names = [ file for file in os.listdir(self.features_path) if file.endswith('.npy') ]
             self.bag_names = [ os.path.splitext(file)[0] for file in self.bag_names ]
 
         self.loaded_bags = {}
+        if self.load_at_init:
+            for name in self.bag_names:
+                self.loaded_bags[name] = self._load_bag(name)
     
     def _load_features(self, name: str) -> np.ndarray:
         """
@@ -171,7 +177,7 @@ class ProcessedMILDataset(torch.utils.data.Dataset):
             return None
         return np.load(coords_file)
 
-    def _load_bag(self, name: str) -> dict[str, np.ndarray]:
+    def _load_bag(self, name: str) -> dict[str, torch.Tensor]:
         """
         Load a bag from disk.
 
@@ -187,6 +193,21 @@ class ProcessedMILDataset(torch.utils.data.Dataset):
         bag_dict['Y'] = self._load_labels(name)
         bag_dict['y_inst'] = self._load_inst_labels(name)
         bag_dict['coords'] = self._load_coords(name)
+
+        if bag_dict['coords'] is not None:
+            edge_index, edge_weight, norm_edge_weight = self._build_adj(bag_dict)
+            if self.norm_adj:
+                edge_val = norm_edge_weight
+            else:
+                edge_val = edge_weight
+            
+            bag_dict['adj'] = torch.sparse_coo_tensor(
+                edge_index, edge_val, (bag_dict['coords'].shape[0], bag_dict['coords'].shape[0])).coalesce()
+            bag_dict['coords'] = torch.from_numpy(bag_dict['coords'])
+        
+        bag_dict['X'] = torch.from_numpy(bag_dict['X'])
+        bag_dict['Y'] = torch.from_numpy(bag_dict['Y'])
+        bag_dict['y_inst'] = torch.from_numpy(bag_dict['y_inst'])
 
         return bag_dict
 
@@ -241,38 +262,16 @@ class ProcessedMILDataset(torch.utils.data.Dataset):
 
         bag_name = self.bag_names[index]
 
-        if bag_name in self.loaded_bags:
-            tensor_bag_dict = self.loaded_bags[bag_name]
+        if bag_name in self.loaded_bags.keys():
+            bag_dict = self.loaded_bags[bag_name]
         else:
             bag_dict = self._load_bag(bag_name)
+            self.loaded_bags[bag_name] = bag_dict
 
-            tensor_bag_dict = {}
-            for key in bag_dict.keys():
-                if bag_dict[key] is None:
-                    continue
-                if type(bag_dict[key]) == np.ndarray:
-                    tensor_bag_dict[key] = torch.from_numpy(bag_dict[key])
-                else:
-                    tensor_bag_dict[key] = torch.as_tensor(bag_dict[key])
-
-            if 'coords' in bag_dict:
-                edge_index, edge_weight, norm_edge_weight = self._build_adj(bag_dict)
-                if self.norm_adj:
-                    edge_val = norm_edge_weight
-                else:
-                    edge_val = edge_weight
-                
-                tensor_bag_dict['adj'] = torch.sparse_coo_tensor(
-                    edge_index, edge_val, (bag_dict['coords'].shape[0], bag_dict['coords'].shape[0])).coalesce()
-                        
-                # tensor_bag_dict['coords'] = (tensor_bag_dict['coords'] / self.patch_size).float()
-
-            self.loaded_bags[bag_name] = tensor_bag_dict
-
-        if tensor_bag_dict['X'].shape[0] != tensor_bag_dict['y_inst'].shape[0]:
+        if bag_dict['X'].shape[0] != bag_dict['y_inst'].shape[0]:
             raise ValueError("Bag size and instance labels size must be the same.")
 
-        return TensorDict(tensor_bag_dict)
+        return TensorDict(bag_dict)
 
     def get_bag_labels(self) -> list:
         """
@@ -280,6 +279,13 @@ class ProcessedMILDataset(torch.utils.data.Dataset):
             List of bag labels.
         """
         return [ self._load_labels(name) for name in self.bag_names ]
+
+    def get_bag_names(self) -> list:
+        """
+        Returns:
+            List of bag names.
+        """
+        return self.bag_names
 
     def subset(self, indices: list) -> 'ProcessedMILDataset':
         """

@@ -48,7 +48,8 @@ class RSNAMILDataset(BinaryClassificationDataset, CTScanDataset):
         features : str = 'resnet50',
         partition : str = 'train',
         adj_with_dist: bool = False,
-        norm_adj: bool = True
+        norm_adj: bool = True,
+        load_at_init: bool = True
     ) -> None:
         """
         Arguments:
@@ -57,6 +58,7 @@ class RSNAMILDataset(BinaryClassificationDataset, CTScanDataset):
             partition: Partition of the dataset. Must be one of ['train', 'test'].
             adj_with_dist: If True, the adjacency matrix is built using the Euclidean distance between the patches features. If False, the adjacency matrix is binary.
             norm_adj: If True, normalize the adjacency matrix.       
+            load_at_init: If True, load the bags at initialization. If False, load the bags on demand.
         """
         features_path = f'{root}/features/features_{features}/'
         labels_path = f'{root}/labels/'

@@ -1,4 +1,5 @@
 import numpy as np
+import torch
 
 from .processed_mil_dataset import ProcessedMILDataset
 
@@ -58,6 +59,7 @@ class CTScanDataset(ProcessedMILDataset):
         ctscan_names: list = None,
         adj_with_dist: bool = False,
         norm_adj: bool = True,
+        load_at_init: bool = True
     ) -> None:
         """
         Class constructor.
@@ -69,6 +71,7 @@ class CTScanDataset(ProcessedMILDataset):
             ctscan_names: List of the names of the CT scans to load. If None, all CT scans in the `features_path` directory are loaded.
             adj_with_dist: If True, the adjacency matrix is built using the Euclidean distance between the slices features. If False, the adjacency matrix is binary.
             norm_adj: If True, normalize the adjacency matrix.
+            load_at_init: If True, load the bags at initialization. If False, load the bags on demand.
         """
 
         dist_thr = 1.10
@@ -79,7 +82,8 @@ class CTScanDataset(ProcessedMILDataset):
             bag_names=ctscan_names,
             adj_with_dist=adj_with_dist,
             dist_thr=dist_thr,
-            norm_adj=norm_adj
+            norm_adj=norm_adj,
+            load_at_init=load_at_init
         )
 
     def _load_bag(self, name: str) -> dict[str, np.ndarray]:
@@ -95,6 +99,6 @@ class CTScanDataset(ProcessedMILDataset):
         bag_dict = super()._load_bag(name)
 
         bag_size = bag_dict['X'].shape[0]
-        bag_dict['coords'] = np.arange(0, bag_size).reshape(-1, 1)
+        bag_dict['coords'] = torch.from_numpy(np.arange(0, bag_size).reshape(-1, 1))
 
         return bag_dict
