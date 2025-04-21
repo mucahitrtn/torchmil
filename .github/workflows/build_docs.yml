@@ -26,10 +26,10 @@ jobs:
           key: mkdocs-material-${{ env.cache_id }}
           path: .cache 
           restore-keys: |
-            mkdocs-material \
-            search \
-            mknotebooks \
-            mkdocstrings \
-            autorefs
-      - run: pip install mkdocs-material 
+            mkdocs-material-
+      - run: pip install mkdocs-material \
+              search \
+              mknotebooks \
+              mkdocstrings \
+              autorefs
       - run: mkdocs gh-deploy --force
