@@ -24,7 +24,7 @@ class Trainer:
         lr_scheduler: torch.optim.lr_scheduler._LRScheduler = None,
         annealing_scheduler_dict: dict[str:AnnealingScheduler] = None,
         device: str = "cuda",
-        logger=None,
+        logger = None,
         early_stop_patience: int = None,
         disable_pbar: bool = False,
         verbose: bool = True,

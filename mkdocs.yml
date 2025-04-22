@@ -112,7 +112,10 @@ nav:
   - Examples:
     - examples/index.md
     - Representing bags in torchmil: examples/data_representation.ipynb
+    - Datasets in torchmil: examples/datasets.ipynb
     - Training your first MIL model: examples/training_your_first_mil_model.ipynb
+    - WSI classification: examples/wsi_classification.ipynb
+    - CT scan classification: examples/ctscan_classification.ipynb
   - API reference:
     - api/index.md
     - <tt>torchmil.data</tt>:
