@@ -85,6 +85,21 @@ class CTScanDataset(ProcessedMILDataset):
             norm_adj=norm_adj,
             load_at_init=load_at_init
         )
+    
+    def _add_coords(self, bag_dict: dict[str, np.ndarray]) -> dict[str, np.ndarray]:
+        """
+        Add coordinates to the bag dictionary.
+
+        Arguments:
+            bag_dict: Dictionary containing the features, label and instance labels of the bag.
+
+        Returns:
+            bag_dict: Dictionary containing the features, label, instance labels and coordinates of the bag.
+        """
+        bag_size = bag_dict['X'].shape[0]
+        bag_dict['coords'] = np.arange(0, bag_size).reshape(-1, 1)
+
+        return bag_dict
 
     def _load_bag(self, name: str) -> dict[str, np.ndarray]:
         """
@@ -97,8 +112,5 @@ class CTScanDataset(ProcessedMILDataset):
             bag_dict: Dictionary containing the features, label, instance labels and coordinates of the bag.
         """
         bag_dict = super()._load_bag(name)
-
-        bag_size = bag_dict['X'].shape[0]
-        bag_dict['coords'] = torch.from_numpy(np.arange(0, bag_size).reshape(-1, 1))
-
+        bag_dict = self._add_coords(bag_dict)
         return bag_dict

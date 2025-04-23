@@ -103,7 +103,7 @@ class ProcessedMILDataset(torch.utils.data.Dataset):
         self.loaded_bags = {}
         if self.load_at_init:
             for name in self.bag_names:
-                self.loaded_bags[name] = self._load_bag(name)
+                self.loaded_bags[name] = self._build_bag(name)
     
     def _load_features(self, name: str) -> np.ndarray:
         """
@@ -194,6 +194,20 @@ class ProcessedMILDataset(torch.utils.data.Dataset):
         bag_dict['y_inst'] = self._load_inst_labels(name)
         bag_dict['coords'] = self._load_coords(name)
 
+        return bag_dict
+    
+    def _build_bag(self, name: str) -> dict[str, torch.Tensor]:
+        """
+        Build a bag from the features, labels, instance labels and coordinates. First, it loads the bag from disk using `_load_bag`, then it builds the adjacency matrix using `_build_adj`.
+
+        Arguments:
+            name: Name of the bag to build.
+
+        Returns:
+            bag_dict: Dictionary containing the features ('X'), label ('Y'), instance labels ('y_inst') and coordinates ('coords') of the bag.
+        """
+        bag_dict = self._load_bag(name)
+
         if bag_dict['coords'] is not None:
             edge_index, edge_weight, norm_edge_weight = self._build_adj(bag_dict)
             if self.norm_adj:
@@ -265,7 +279,7 @@ class ProcessedMILDataset(torch.utils.data.Dataset):
         if bag_name in self.loaded_bags.keys():
             bag_dict = self.loaded_bags[bag_name]
         else:
-            bag_dict = self._load_bag(bag_name)
+            bag_dict = self._build_bag(bag_name)
             self.loaded_bags[bag_name] = bag_dict
 
         if bag_dict['X'].shape[0] != bag_dict['y_inst'].shape[0]:

@@ -81,7 +81,10 @@ class RSNAMILDataset(BinaryClassificationDataset, CTScanDataset):
             ctscan_names=ctscan_names,
             adj_with_dist=adj_with_dist,
             norm_adj=norm_adj,
+            load_at_init=load_at_init
         )
     
     def _load_bag(self, name: str) -> dict[str, np.ndarray]:
-        return BinaryClassificationDataset._load_bag(self, name)
+        bag_dict = BinaryClassificationDataset._load_bag(self, name)
+        bag_dict = CTScanDataset._add_coords(self, bag_dict)
+        return bag_dict
