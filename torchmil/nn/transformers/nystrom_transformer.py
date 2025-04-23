@@ -98,7 +98,6 @@ class NystromTransformerEncoder(Encoder):
         n_layers : int = 4,
         n_landmarks : int = 256,
         pinv_iterations : int = 6,
-        residual : bool = True,
         dropout : float = 0.0,
         use_mlp : bool = False
     ) -> None:
@@ -109,7 +108,6 @@ class NystromTransformerEncoder(Encoder):
             n_layers: Number of layers.
             n_landmarks: Number of landmarks.
             pinv_iterations: Number of iterations for the pseudo-inverse.
-            residual: Whether to use residual in the attention layer.
             dropout: Dropout rate.
             use_mlp: Whether to use a MLP after the attention layer.   
         """
@@ -119,7 +117,7 @@ class NystromTransformerEncoder(Encoder):
 
         layers = torch.nn.ModuleList([
             NystromTransformerLayer(
-                att_dim=att_dim, in_dim=att_dim, out_dim=att_dim, n_heads=n_heads, n_landmarks=n_landmarks, pinv_iterations=pinv_iterations, residual=residual, dropout=dropout, use_mlp=use_mlp
+                att_dim=att_dim, in_dim=att_dim, out_dim=att_dim, n_heads=n_heads, n_landmarks=n_landmarks, pinv_iterations=pinv_iterations, dropout=dropout, use_mlp=use_mlp
             ) for _ in range(n_layers)
         ])
 

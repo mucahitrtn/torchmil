@@ -159,7 +159,6 @@ class CAMIL(MILModel):
         n_heads : int = 4,
         n_landmarks : int = None,
         pinv_iterations : int = 6,
-        residual : bool = True,
         dropout : float = 0.0,
         use_mlp : bool = False,
         feat_ext: torch.nn.Module = torch.nn.Identity(),
@@ -174,7 +173,6 @@ class CAMIL(MILModel):
             n_heads: Number of attention heads in the Nystrom Transformer layer.
             n_landmarks: Number of landmarks in the Nystrom Transformer layer.
             pinv_iterations: Number of iterations for computing the pseudo-inverse in the Nystrom Transformer layer.
-            residual: If True, use residual connections in the Nystrom Transformer layer.
             dropout: Dropout rate of the Nystrom Transformer Layer.
             use_mlp: If True, use MLP in the Nystrom Transformer layer.
             feat_ext: Feature extractor.
@@ -191,12 +189,12 @@ class CAMIL(MILModel):
         else:
             self.fc1 = torch.nn.Identity()
 
-        self.nystrom_transformer_layer = NystromTransformerLayer(att_dim=nystrom_att_dim, n_heads=n_heads, n_landmarks=n_landmarks, pinv_iterations=pinv_iterations, residual=residual, dropout=dropout, use_mlp=use_mlp)
+        self.nystrom_transformer_layer = NystromTransformerLayer(in_dim=nystrom_att_dim, att_dim=nystrom_att_dim, n_heads=n_heads, n_landmarks=n_landmarks, pinv_iterations=pinv_iterations, dropout=dropout, use_mlp=use_mlp)
         
-        self.camil_self_attention = CAMILSelfAttention(in_dim=feat_dim, att_dim=nystrom_att_dim)
-        self.camil_att_pool = CAMILAttentionPool(in_dim=feat_dim, att_dim=pool_att_dim, gated=gated_pool)
+        self.camil_self_attention = CAMILSelfAttention(in_dim=nystrom_att_dim, att_dim=nystrom_att_dim)
+        self.camil_att_pool = CAMILAttentionPool(in_dim=nystrom_att_dim, att_dim=pool_att_dim, gated=gated_pool)
 
-        self.classifier = nn.Linear(feat_dim, 1)
+        self.classifier = nn.Linear(nystrom_att_dim, 1)
 
         self.criterion = criterion
     

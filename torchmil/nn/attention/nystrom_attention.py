@@ -39,6 +39,10 @@ class NystromAttention(torch.nn.Module):
         eps : float = 1e-8
     ):
         super().__init__()
+
+        if out_dim is None:
+            out_dim = in_dim
+
         self.eps = eps
         head_dim = att_dim // n_heads
 
