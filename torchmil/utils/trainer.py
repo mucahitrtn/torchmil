@@ -143,7 +143,7 @@ class Trainer:
             if self.lr_scheduler is not None:
                 self.lr_scheduler.step()
                 
-            print(f'Best {self.obj_metric_name}: {self.best_obj_metric}, Current {self.obj_metric_name}: {val_metrics[f"val/{self.obj_metric_name}"]}')
+            self._print(f'Best {self.obj_metric_name}: {self.best_obj_metric}, Current {self.obj_metric_name}: {val_metrics[f"val/{self.obj_metric_name}"]}')
             
             if self.obj_metric_mode == 'max':
                 is_better = val_metrics[f"val/{self.obj_metric_name}"] > self.best_obj_metric
