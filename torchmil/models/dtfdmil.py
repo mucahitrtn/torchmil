@@ -116,32 +116,39 @@ class DTFDMIL(MILModel):
         inst_cam_list = []
         for bag_chunk in bag_chunks:
             X_chunk = X[:, bag_chunk, :]
-            mask_chunk = mask[:, bag_chunk] if mask is not None else None
+            mask_chunk = mask[:, bag_chunk].bool() if mask is not None else None
             chunk_size = X_chunk.size(1) 
 
             z = self.attention_pool(X_chunk, mask_chunk) # (batch_size, feat_dim), [batch_size, chunk_size)
 
-            Y_pred = self.classifier(z) # (batch_size, 1]
-            pseudo_pred_list.append(Y_pred)
+            pseudo_pred = self.classifier(z) # (batch_size, 1]
+            pseudo_pred_list.append(pseudo_pred)
 
-            inst_cam = self._cam_1d(self.classifier, X_chunk) # (batch_size, 1, chunk_size)
-            inst_cam = inst_cam.squeeze(1) # (batch_size, chunk_size)
-            inst_cam_list.append(inst_cam)
-
-            _, sort_idx = torch.sort(inst_cam, 1, descending=True) # (batch_size, chunk_size), [batch_size, chunk_size)
-            topk_idx_max = sort_idx[:, :chunk_size].long() # (batch_size, chunk_size)
-            topk_idx_min = sort_idx[:, -chunk_size:].long() # (batch_size, chunk_size)
-            topk_idx = torch.cat([topk_idx_max, topk_idx_min], dim=1) # (batch_size, 2*chunk_size)
-
-            if self.distill_mode == 'maxmin':
-                index = topk_idx.unsqueeze(-1).expand(-1, -1, feat_dim) # (batch_size, 2*chunk_size, feat_dim)
-                pseudo_feat = torch.gather(X_chunk, 1, index) # (batch_size, 2*chunk_size, feat_dim)
-            elif self.distill_mode == 'max':
-                index = topk_idx_max.unsqueeze(-1).expand(-1, -1, feat_dim) # (batch_size, chunk_size, feat_dim)
-                pseudo_feat = torch.gather(X_chunk, 1, index) # (batch_size, chunk_size, feat_dim)
-            elif self.distill_mode == 'afs':
+            if self.distill_mode == "afs":
                 pseudo_feat = z.unsqueeze(1) # (batch_size, 1, feat_dim)
+            else:
+                inst_cam = self._cam_1d(self.classifier, X_chunk) # (batch_size, 1, chunk_size)
+                inst_cam = inst_cam.squeeze(1) # (batch_size, chunk_size)
+                inst_cam_list.append(inst_cam)
 
+                inst_cam_max = inst_cam.masked_fill(~mask_chunk, -1e9) # (batch_size, chunk_size)
+                inst_cam_min = inst_cam.masked_fill(~mask_chunk, 1e9) # (batch_size, chunk_size)
+
+                sort_idx_max = torch.sort(inst_cam_max, 1, descending=True)[1] # (batch_size, chunk_size)
+                topk_idx_max = sort_idx_max[:, :chunk_size].long() # (batch_size, chunk_size)
+
+                sort_idx_min = torch.sort(inst_cam_min, 1, descending=False)[1] # (batch_size, chunk_size)
+                topk_idx_min = sort_idx_min[:, :chunk_size].long() # (batch_size, chunk_size)
+
+                topk_idx = torch.cat([topk_idx_max, topk_idx_min], dim=1) # (batch_size, 2*chunk_size)
+
+                if self.distill_mode == 'maxmin':
+                    index = topk_idx.unsqueeze(-1).expand(-1, -1, feat_dim) # (batch_size, 2*chunk_size, feat_dim)
+                    pseudo_feat = torch.gather(X_chunk, 1, index) # (batch_size, 2*chunk_size, feat_dim)
+                elif self.distill_mode == 'max':
+                    index = topk_idx_max.unsqueeze(-1).expand(-1, -1, feat_dim) # (batch_size, chunk_size, feat_dim)
+                    pseudo_feat = torch.gather(X_chunk, 1, index) # (batch_size, chunk_size, feat_dim)
+                
             pseudo_feat_list.append(pseudo_feat)
         
         pseudo_pred = torch.cat(pseudo_pred_list, dim=1) # (batch_size, n_groups]
