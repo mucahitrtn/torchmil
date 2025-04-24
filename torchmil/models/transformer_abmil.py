@@ -141,7 +141,7 @@ class TransformerABMIL(MILModel):
     def predict(
         self,
         X: torch.Tensor,
-        mask: torch.Tensor,
+        mask: torch.Tensor = None,
         return_inst_pred: bool = True
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """

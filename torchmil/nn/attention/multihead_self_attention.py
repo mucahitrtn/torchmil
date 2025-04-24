@@ -78,8 +78,9 @@ class MultiheadSelfAttention(torch.nn.Module):
         """
 
         if mask is not None:
-            mask = mask.unsqueeze(1).unsqueeze(1) # (batch_size, 1, 1, seq_len)
-            mask = mask.repeat(1, 1, query.size(2), 1).bool() # (batch_size, n_heads, seq_len, seq_len)
+            # the following is equivalent to mask.unsqueeze(-1) @ mask.unsqueeze(-1).transpose(1, 2)
+            mask = mask[:, None, :, None] * mask[:, None, None, :] # (batch_size, 1, seq_len, seq_len)
+            mask = mask.bool() # (batch_size, 1, seq_len, seq_len)
 
         if return_attention:
             query = query / (self.head_dim ** 0.5)

@@ -6,8 +6,6 @@ from torchmil.models import MILModel
 
 from torchmil.nn.utils import masked_softmax, get_feat_dim
 
-# TODO: the buttons #whatever are not working
-
 class CAMILSelfAttention(nn.Module):
     r"""
     Self-attention layer used in [CAMIL: Context-Aware Multiple Instance Learning for Cancer Detection and Subtyping in Whole Slide Images](https://arxiv.org/abs/2305.05314).
@@ -33,7 +31,8 @@ class CAMILSelfAttention(nn.Module):
     def forward(
         self, 
         X : torch.Tensor,
-        adj : torch.Tensor
+        adj : torch.Tensor,
+        mask : torch.Tensor = None
     ) -> torch.Tensor:
         """
         Forward pass.
@@ -41,10 +40,16 @@ class CAMILSelfAttention(nn.Module):
         Arguments:
             X: Bag of features of shape (batch_size, bag_size, in_dim)
             adj: Adjacency matrix of shape `(batch_size, bag_size, bag_size)`.
+            mask: Mask of shape `(batch_size, bag_size)`. If None, no masking is applied.
         
         Returns:
             L: Self-attention vectors with shape (batch_size, bag_size, in_dim)
         """
+
+        if mask is not None:
+            mask = mask[:, :, None] * mask[:, None, :] # (batch_size, bag_size, bag_size)
+        else:
+            mask = torch.ones(X.shape[0], X.shape[1], X.shape[1], device=X.device, dtype=X.dtype) # (batch_size, bag_size, bag_size)
         
         q, k = self.qk_nn(X).chunk(2, dim=-1) # (batch_size, bag_size, att_dim), (batch_size, bag_size, att_dim)
         v = self.v_nn(X) # (batch_size, bag_size, in_dim)
@@ -55,7 +60,7 @@ class CAMILSelfAttention(nn.Module):
         if adj.is_sparse:
             adj = adj.to_dense()
 
-        w = inv_scale*(q.matmul(k.transpose(-2, -1)) * adj).sum(dim = -1, keepdim = True) # (batch_size, bag_size, 1)
+        w = inv_scale*(q.matmul(k.transpose(-2, -1)) * adj * mask).sum(dim = -1, keepdim = True) # (batch_size, bag_size, 1)
         
         L = w.softmax(dim=1)*v # (batch_size, bag_size, in_dim)
 
@@ -97,7 +102,7 @@ class CAMILAttentionPool(nn.Module):
         self, 
         T : torch.Tensor,
         M : torch.Tensor,
-        mask : torch.Tensor,
+        mask : torch.Tensor = None,
         return_att : bool = False
     ) -> torch.Tensor:
         """
@@ -202,7 +207,7 @@ class CAMIL(MILModel):
         self, 
         X : torch.Tensor,
         adj : torch.Tensor,
-        mask : torch.Tensor,
+        mask : torch.Tensor = None,
         return_att : bool = False
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """
@@ -222,7 +227,7 @@ class CAMIL(MILModel):
         X = self.feat_ext(X) # (batch_size, bag_size, feat_dim)
         T = self.nystrom_transformer_layer(self.fc1(X)) # (batch_size, bag_size, feat_dim)
 
-        L = self.camil_self_attention(T, adj) # (batch_size, bag_size, feat_dim)
+        L = self.camil_self_attention(T, adj, mask) # (batch_size, bag_size, feat_dim)
 
         M = torch.sigmoid(L)*L + (1 - torch.sigmoid(L))*T # (batch_size, bag_size, feat_dim)
 
@@ -243,7 +248,7 @@ class CAMIL(MILModel):
         Y: torch.Tensor,
         X: torch.Tensor,
         adj: torch.Tensor,
-        mask: torch.Tensor
+        mask: torch.Tensor = None
     ) -> tuple[torch.Tensor, dict]:
         """
         Compute loss given true bag labels.
