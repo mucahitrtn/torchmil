@@ -33,7 +33,7 @@ class SmABMIL(MILModel):
         att_act: str = 'tanh',
         sm_mode: str = 'approx',
         sm_alpha: Union[float, str] = 'trainable',
-        sm_layers: int = 1,
+        sm_layers: int = 0,
         sm_steps: int = 10,
         sm_pre: bool = False,
         sm_post: bool = False,
@@ -83,7 +83,7 @@ class SmABMIL(MILModel):
         self,
         X: torch.Tensor,
         adj: torch.Tensor,
-        mask: torch.Tensor,
+        mask: torch.Tensor = None,
         return_att: bool = False
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """
@@ -122,7 +122,7 @@ class SmABMIL(MILModel):
         Y: torch.Tensor,
         X: torch.Tensor,
         adj: torch.Tensor,
-        mask: torch.Tensor
+        mask: torch.Tensor = None
     ) -> tuple[torch.Tensor, dict]:
         """
         Compute loss given true bag labels.
@@ -149,7 +149,7 @@ class SmABMIL(MILModel):
         self,
         X: torch.Tensor,
         adj: torch.Tensor,
-        mask: torch.Tensor,
+        mask: torch.Tensor = None,
         return_inst_pred: bool = True
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """

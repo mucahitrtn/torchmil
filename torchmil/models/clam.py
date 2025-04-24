@@ -112,7 +112,8 @@ class CLAM_SB(MILModel):
             self, 
             att : torch.Tensor,
             emb : torch.Tensor,
-            classifier : torch.nn.Module
+            classifier : torch.nn.Module,
+            mask = None
         ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
         Evaluate instance-level loss for in-the-class attention branch.
@@ -121,6 +122,7 @@ class CLAM_SB(MILModel):
             att: Attention values of shape `(bag_size,)`.
             emb: Embeddings of shape `(bag_size, feat_dim)`.
             classifier: Instance classifier.
+            mask: Mask of shape `(bag_size,)`. If provided, the attention values are masked before selection.
         
         Returns:
             instance_loss: Instance loss.
@@ -130,12 +132,23 @@ class CLAM_SB(MILModel):
         device = att.device
         bag_size = emb.shape[0]
 
+        if mask is not None:
+            bag_size = mask.sum().item()
+            mask = mask.bool()
+
         k_sample = min(self.k_sample, bag_size)
-        
+
+        if mask is not None:
+            att = att.masked_fill(~mask, -1e9) # (bag_size,)        
         top_p_ids = torch.topk(att, k_sample)[1] # (k_sample,)
         top_p = torch.index_select(emb, dim=0, index=top_p_ids) # (k_sample, feat_dim)
+
+        if mask is not None:
+            att = att.masked_fill(~mask, 1e9) # (bag_size,)
+        
         top_n_ids = torch.topk(-att, k_sample)[1] # (k_sample,)
         top_n = torch.index_select(emb, dim=0, index=top_n_ids) # (k_sample, feat_dim)
+
         p_targets = self.create_positive_targets(k_sample, device) # (k_sample,)
         n_targets = self.create_negative_targets(k_sample, device) # (k_sample,)
 
@@ -152,7 +165,8 @@ class CLAM_SB(MILModel):
             self, 
             att : torch.Tensor, 
             emb : torch.Tensor,
-            classifier : torch.nn.Module
+            classifier : torch.nn.Module,
+            mask = None
         ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
         Evaluate instance-level loss for out-of-the-class attention branch.
@@ -161,6 +175,7 @@ class CLAM_SB(MILModel):
             att: Attention values of shape `(bag_size,)`.
             emb: Embeddings of shape `(bag_size, feat_dim)`.
             classifier: Instance classifier.
+            mask: Mask of shape `(bag_size,)`. If provided, the attention values are masked before selection.
         
         Returns:
             instance_loss: Instance loss.
@@ -169,8 +184,15 @@ class CLAM_SB(MILModel):
         """
         device = att.device
         bag_size = emb.shape[0]
+        
+        if mask is not None:
+            bag_size = mask.sum().item()
+            mask = mask.bool()
 
         k_sample = min(self.k_sample, bag_size)
+
+        if mask is not None:
+            att = att.masked_fill(~mask, -1e9)
 
         top_p_ids = torch.topk(att, k_sample)[1] # (k_sample,)
         top_p = torch.index_select(emb, dim=0, index=top_p_ids) # (k_sample, feat_dim)
@@ -186,7 +208,8 @@ class CLAM_SB(MILModel):
         self, 
         att : torch.Tensor,
         emb : torch.Tensor,
-        labels : torch.Tensor
+        labels : torch.Tensor,
+        mask : torch.Tensor = None
     ) -> torch.Tensor:
         """
         Computes instance loss.
@@ -195,6 +218,7 @@ class CLAM_SB(MILModel):
             att: Attention values of shape `(batch_size, bag_size)`.
             emb: Embeddings of shape `(batch_size, bag_size, feat_dim)`.
             labels: Bag labels of shape `(batch_size,)`.
+            mask: Mask of shape `(batch_size, bag_size)`. If provided, the attention values are masked before selection.
         
         Returns:
             inst_loss: Instance loss.
@@ -210,9 +234,9 @@ class CLAM_SB(MILModel):
                 out_idx = 1
             else:
                 in_idx = 1
-                out_idx = 0    
-            inst_loss_in, _, _ = self.inst_eval(att[i], emb[i], self.inst_classifiers[in_idx])
-            inst_loss_out, _, _ = self.inst_eval_out(att[i], emb[i], self.inst_classifiers[out_idx])
+                out_idx = 0
+            inst_loss_in, _, _ = self.inst_eval(att[i], emb[i], self.inst_classifiers[in_idx], mask[i] if mask is not None else None)
+            inst_loss_out, _, _ = self.inst_eval_out(att[i], emb[i], self.inst_classifiers[out_idx], mask[i] if mask is not None else None)
 
             sum_inst_loss += inst_loss_in + inst_loss_out
         return sum_inst_loss
@@ -260,7 +284,7 @@ class CLAM_SB(MILModel):
         self, 
         Y : torch.Tensor, 
         X : torch.Tensor,
-        mask : torch.Tensor,
+        mask : torch.Tensor = None
     ) -> tuple[torch.Tensor, dict]:
         """
         Compute loss given true bag labels.
