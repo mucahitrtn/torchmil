@@ -109,6 +109,6 @@ def test_binary_classification_dataset(temp_binary_data):
         if expected_data["inst_labels"] is None:
             assert np.all(bag["y_inst"].numpy() == -1), f"Instance labels for {bag_name} should be -1"
         elif bag_name == "bag4":  # Check the bag with inconsistent labels
-            assert np.all(bag["y_inst"].numpy() == 0), f"Instance labels for {bag_name} should be bag label"
+            assert np.all(bag["y_inst"].numpy() == -1), f"Instance labels for {bag_name} should be -1"
         else:
             assert np.array_equal(bag["y_inst"].numpy(), expected_data["inst_labels"].squeeze()), f"Instance labels for {bag_name} are incorrect"

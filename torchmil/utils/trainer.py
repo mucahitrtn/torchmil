@@ -17,9 +17,9 @@ class Trainer:
         model: MILModel,
         optimizer: torch.optim.Optimizer,
         metrics_dict: dict[str : torchmetrics.Metric] = {
-            "auroc": torchmetrics.AUROC(task="binary")
+            "accuracy": torchmetrics.Accuracy(task="binary"),
         },
-        obj_metric : str = 'auroc',
+        obj_metric : str = 'accuracy',
         obj_metric_mode : str = 'max',
         lr_scheduler: torch.optim.lr_scheduler._LRScheduler = None,
         annealing_scheduler_dict: dict[str:AnnealingScheduler] = None,
@@ -34,7 +34,7 @@ class Trainer:
             model: MIL model to be trained. Must be an instance of [MILModel](../models/mil_model.md).
             optimizer: Optimizer for training the model.
             metrics_dict: Dictionary of metrics to be computed during training. Metrics should be instances of [torchmetrics.Metric](https://torchmetrics.readthedocs.io/en/v0.8.2/references/metric.html).
-            obj_metric: Objective metric to be used for early stopping and to track the best model. Must be one of the keys in `metrics_dict` or the loss used by the model.
+            obj_metric: Objective metric to be used for early stopping and to track the best model. Must be one of the keys in `metrics_dict`.
             obj_metric_mode: Mode for the objective metric. Must be one of 'max' or 'min'. If 'max', the best model is the one with the highest value of the objective metric. If 'min', the best model is the one with the lowest value of the objective metric.
             lr_scheduler: Learning rate scheduler.
             annealing_scheduler_dict: Dictionary of annealing schedulers for loss coefficients. Keys should be the loss names and values should be instances of [AnnealingScheduler](./annealing_scheduler.md).

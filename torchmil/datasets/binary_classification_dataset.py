@@ -68,25 +68,25 @@ class BinaryClassificationDataset(ProcessedMILDataset):
         labels = self._fix_labels(labels)
         return labels
     
-    def _consistency_check(self, bag_dict):
+    def _consistency_check(self, bag_dict, name):
         """
         Check if the instance labels are consistent with the bag label.
         """
         if bag_dict['y_inst'] is not None:
             if bag_dict['Y'] != (bag_dict['y_inst']).max():
-                msg = f"Instance labels (max(y_inst)={(bag_dict['y_inst']).max()}) are not consistent with bag label (Y={bag_dict['Y']}) for bag {bag_dict['name']}. Setting all instance labels to -1 (unknown)."
+                msg = f"Instance labels (max(y_inst)={(bag_dict['y_inst']).max()}) are not consistent with bag label (Y={bag_dict['Y']}) for bag {name}. Setting all instance labels to -1 (unknown)."
                 warnings.warn(msg)
                 bag_dict['y_inst'] = np.full((bag_dict['X'].shape[0],), -1)
         else:
             if bag_dict['Y'] == 0:
                 bag_dict['y_inst'] = np.zeros(bag_dict['X'].shape[0])
             else:
-                msg = f'Instance labels not found for bag {bag_dict["name"]}. Setting all to -1.'
+                msg = f'Instance labels not found for bag {name}. Setting all to -1.'
                 warnings.warn(msg)
                 bag_dict['y_inst'] = np.full((bag_dict['X'].shape[0],), -1)
         return bag_dict
 
     def _load_bag(self, name: str) -> dict[str, torch.Tensor]:
         bag_dict = super()._load_bag(name)
-        bag_dict = self._consistency_check(bag_dict)
+        bag_dict = self._consistency_check(bag_dict, name)
         return bag_dict
