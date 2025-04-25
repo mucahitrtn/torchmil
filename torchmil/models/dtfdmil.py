@@ -124,13 +124,13 @@ class DTFDMIL(MILModel):
             pseudo_pred = self.classifier(z) # (batch_size, 1]
             pseudo_pred_list.append(pseudo_pred)
 
+            inst_cam = self._cam_1d(self.classifier, X_chunk) # (batch_size, 1, chunk_size)
+            inst_cam = inst_cam.squeeze(1) # (batch_size, chunk_size)
+            inst_cam_list.append(inst_cam)
+
             if self.distill_mode == "afs":
                 pseudo_feat = z.unsqueeze(1) # (batch_size, 1, feat_dim)
             else:
-                inst_cam = self._cam_1d(self.classifier, X_chunk) # (batch_size, 1, chunk_size)
-                inst_cam = inst_cam.squeeze(1) # (batch_size, chunk_size)
-                inst_cam_list.append(inst_cam)
-
                 inst_cam_max = inst_cam.masked_fill(~mask_chunk, -1e9) # (batch_size, chunk_size)
                 inst_cam_min = inst_cam.masked_fill(~mask_chunk, 1e9) # (batch_size, chunk_size)
 
