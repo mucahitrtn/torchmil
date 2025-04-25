@@ -106,22 +106,22 @@ class MCStandardMILDataset(torch.utils.data.Dataset):
         # Poison in train mode
         if self.train:
             data.extend([self.poisoning.sample()])
-            inst_labels.extend(-1 * torch.ones(1))
+            inst_labels.extend([-1 * torch.ones(1)])
 
         # Sample num_positives from positive distributions
         # Single instance of positive parts
         idx = torch.randint(2, (1,))
         data.extend([self.pos_distr[idx].sample()])
-        inst_labels.extend(torch.ones(1))
+        inst_labels.extend([torch.ones(1)])
 
         # Negative instances sampling
         num_negatives = torch.randint(low=1, high=10, size=(1,)).item()
         data.extend([self.neg_distr.sample() for _ in range(num_negatives)])
-        inst_labels.extend(torch.zeros(num_negatives))
+        inst_labels.extend([torch.zeros(num_negatives)])
 
         # Stack data
         data = torch.stack(data).view(-1, data[0].shape[-1])
-        inst_labels = torch.cat([torch.zeros(self.B), -1 * torch.ones(1)])
+        inst_labels = torch.cat(inst_labels)
 
         return {"X": data, "Y": torch.tensor(0), "y_inst": inst_labels}
 
