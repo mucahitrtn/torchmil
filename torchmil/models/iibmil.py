@@ -151,7 +151,7 @@ class IIBMIL(torch.nn.Module):
 
         feat_dim = get_feat_dim(feat_ext, in_shape)
 
-        self.query_embed = torch.nn.Embedding(n_queries, feat_dim)
+        self.query_embed = torch.nn.Embedding(n_queries, att_dim)
 
         if feat_dim != att_dim:
             self.feat_proj = torch.nn.Linear(feat_dim, att_dim)
@@ -285,7 +285,7 @@ class IIBMIL(torch.nn.Module):
     def forward(
         self,
         X: torch.Tensor,
-        mask: torch.Tensor,
+        mask: torch.Tensor = None,
         return_inst_pred: bool = False,
         return_X_enc: bool = False,
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
@@ -304,7 +304,7 @@ class IIBMIL(torch.nn.Module):
             X_enc: Only returned when `return_X_enc=True`. Instance embeddings of shape `(batch_size, bag_size, att_dim)`.
         """
 
-        batch_size, _, _ = X.shape
+        batch_size = X.shape[0]
 
         X = self.feat_ext(X)  # (batch_size, bag_size, feat_dim)
         X = self.feat_proj(X)  # (batch_size, bag_size, att_dim)
@@ -329,6 +329,8 @@ class IIBMIL(torch.nn.Module):
         else:
             if return_X_enc:
                 return Y_pred, X_enc
+            else:
+                return Y_pred
 
     def compute_loss(
         self,
@@ -351,10 +353,7 @@ class IIBMIL(torch.nn.Module):
         Y_pred, y_pred, X_enc = self.forward(
             X, mask, return_inst_pred=True, return_X_enc=True
         )
-        # inst_loss = self._inst_loss(X_enc, y_pred, mask)
-        inst_loss = torch.zeros(
-            1,
-        )
+        inst_loss = self._inst_loss(X_enc, y_pred, mask)
         crit_loss = self.criterion(Y_pred.float(), Y.float())
         crit_name = self.criterion.__class__.__name__
         return Y_pred, {crit_name: crit_loss, "InstLoss": inst_loss}

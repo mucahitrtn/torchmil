@@ -59,6 +59,9 @@ class DTFDMIL(MILModel):
         self.n_groups = n_groups
         self.distill_mode = distill_mode
 
+        if distill_mode not in ['maxmin', 'max', 'afs']:
+            raise ValueError(f"Invalid distill_mode: {distill_mode}. Choose from ['maxmin', 'max', 'afs']")
+
         if in_shape is not None:
             feat_dim = get_feat_dim(feat_ext, in_shape)
         else:

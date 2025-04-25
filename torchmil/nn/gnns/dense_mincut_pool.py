@@ -68,7 +68,10 @@ def dense_mincut_pool(
         x, s = x * mask, s * mask
 
     out = torch.matmul(s.transpose(1, 2), x)
-    out_adj = torch.matmul(torch.matmul(s.transpose(1, 2), adj), s)
+    adj_s = torch.bmm(adj, s)
+    out_adj = torch.matmul(s.transpose(1, 2), adj_s)
+    
+    # out_adj = torch.matmul(torch.matmul(s.transpose(1, 2), adj), s)
 
     # MinCut regularization.
     mincut_num = trace(out_adj)

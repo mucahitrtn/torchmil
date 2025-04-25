@@ -128,19 +128,20 @@ class GTP(MILModel):
         X = self.transformer_encoder(X) # (batch_size, n_clusters+1, feat_dim)
 
         # z = X[:, 0] # (batch_size, feat_dim)
-        z = self.index_select(X, dim=1, index=torch.tensor([0], device=X.device)) # (batch_size, feat_dim)
+        z = self.index_select(X, dim=1, index=torch.tensor([0], device=X.device)) # (batch_size, 1, feat_dim)
 
-        Y_pred = self.classifier(z) # (batch_size, 1)
+        Y_pred = self.classifier(z) # (batch_size, 1, 1)
 
         if return_cam:
             R = self.classifier.relprop(Y_pred) # (batch_size, feat_dim)
             R = self.index_select.relprop(R) # (batch_size, n_clusters+1, feat_dim)
             _, att_rel_list = self.transformer_encoder.relprop(R, return_att_relevance=True) # (batch_size, n_clusters+1, feat_dim)
             cam = self._rollout_attention(att_rel_list) # (batch_size, n_clusters+1, n_clusters+1)
-            cam = cam[:, 1:, 1:] # (batch_size, n_clusters, n_clusters)
+            cam = cam[:, 0, 1:].unsqueeze(-1) # (batch_size, n_clusters, 1)
             cam = torch.bmm(S, cam).squeeze(-1) # (batch_size, bag_size)
 
-        Y_pred = Y_pred.squeeze(-1) # (batch_size,)
+        Y_pred = Y_pred.squeeze(-1).squeeze(-1) # (batch_size,)
+
         if return_loss:
             loss_dict = { 'MinCutLoss' : mc_loss, 'OrthoLoss' : o_loss }
             if return_cam:

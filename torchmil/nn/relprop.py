@@ -1,3 +1,4 @@
+from abc import abstractmethod
 import torch
 from einops import rearrange
 
@@ -43,6 +44,14 @@ class RelPropModule(torch.nn.Module):
     #         self.ctx = {'X': [x.detach().requires_grad_(True) if torch.is_tensor(x) else x for x in X]}
     #     else:
     #         raise ValueError(f"Unsupported input type {type(X)}")
+
+    @abstractmethod
+    def forward(self, *args, **kwargs):
+        """
+        Forward method. This method should be overridden by subclasses.
+        """
+        pass
+
 
     def _jvp(self, Y, X, Z):
         """
@@ -379,7 +388,7 @@ class RelPropTransformerLayer(torch.nn.Module):
 
 class RelPropTransformerEncoder(torch.nn.Module):
     r"""
-
+    Transformer encoder with support for Relevance Propagation.
     """
 
     def __init__(
