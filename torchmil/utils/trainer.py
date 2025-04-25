@@ -58,10 +58,10 @@ class Trainer:
 
         if self.early_stop_patience is None:
             self.early_stop_patience = float('inf')
-        
+
         if self.obj_metric_mode not in ['max', 'min']:
             raise ValueError(f"obj_metric_mode must be one of ['max', 'min'], but got {self.obj_metric_mode}")
-        
+
         self.best_model_state_dict = None
         self.best_obj_metric = None
         self.model = self.model.to(self.device)
@@ -142,14 +142,14 @@ class Trainer:
 
             if self.lr_scheduler is not None:
                 self.lr_scheduler.step()
-                
+
             self._print(f'Best {self.obj_metric_name}: {self.best_obj_metric}, Current {self.obj_metric_name}: {val_metrics[f"val/{self.obj_metric_name}"]}')
-            
+
             if self.obj_metric_mode == 'max':
                 is_better = val_metrics[f"val/{self.obj_metric_name}"] > self.best_obj_metric
             else:
                 is_better = val_metrics[f"val/{self.obj_metric_name}"] < self.best_obj_metric
-            
+
             if not is_better:
                 early_stop_count += 1
                 self._print(f"Early stopping count: {early_stop_count}")

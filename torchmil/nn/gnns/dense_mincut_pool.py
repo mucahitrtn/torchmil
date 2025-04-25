@@ -8,9 +8,9 @@ def trace(x : torch.Tensor) -> torch.Tensor:
 
     Arguments:
         x: Input tensor of shape `(batch_size, n, n)`.
-    
+
     Returns:
-        Tensor: Trace of the input tensor of shape `(batch_size,)`.    
+        Tensor: Trace of the input tensor of shape `(batch_size,)`.
     """
     return torch.einsum('bnn->b', x)
 
@@ -20,9 +20,9 @@ def diag(x : torch.Tensor) -> torch.Tensor:
 
     Arguments:
         x: Input tensor of shape `(batch_size, n)`.
-    
+
     Returns:
-        Tensor: Rank-3 tensor of shape `(batch_size, n, n)    
+        Tensor: Rank-3 tensor of shape `(batch_size, n, n)
     """
     if x.is_sparse:
         x = x.to_dense()
@@ -48,7 +48,7 @@ def dense_mincut_pool(
         s: Dense learned assignments tensor of shape `(batch_size, n_nodes, n_cluster)`.
         mask: Mask tensor of shape `(batch_size, n_nodes)`.
         temp: Temperature.
-    
+
     Returns:
         x_: Pooled node feature tensor of shape `(batch_size, n_cluster, in_dim)`.
         adj_: Coarsened adjacency tensor of shape `(batch_size, n_cluster, n_cluster)`.

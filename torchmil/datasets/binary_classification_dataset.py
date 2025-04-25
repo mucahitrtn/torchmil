@@ -8,8 +8,8 @@ class BinaryClassificationDataset(ProcessedMILDataset):
     r"""
     Dataset for binary classification MIL problems. See [`torchmil.datasets.ProcessedMILDataset`](./processed_mil_dataset.md) for more information.
 
-    For a given bag with bag label $Y$ and instance labels $\left\{ y_1, \ldots, y_N \right \}$, this dataset assumes that 
-    
+    For a given bag with bag label $Y$ and instance labels $\left\{ y_1, \ldots, y_N \right \}$, this dataset assumes that
+
     \begin{gather}
         Y \in \left\{ 0, 1 \right\}, \quad y_n \in \left\{ 0, 1 \right\}, \quad \forall n \in \left\{ 1, \ldots, N \right\},\\
         Y = \max \left\{ y_1, \ldots, y_N \right\}.
@@ -67,7 +67,7 @@ class BinaryClassificationDataset(ProcessedMILDataset):
         labels = super()._load_labels(name)
         labels = self._fix_labels(labels)
         return labels
-    
+
     def _consistency_check(self, bag_dict, name):
         """
         Check if the instance labels are consistent with the bag label.

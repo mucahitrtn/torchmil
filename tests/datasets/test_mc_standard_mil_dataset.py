@@ -57,4 +57,3 @@ def test_positive_bag_has_both_concepts():
                 found = True
                 break
     assert found, "No positive bag contains both concept types."
-

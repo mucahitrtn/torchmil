@@ -37,7 +37,7 @@ def test_ctscan_dataset_init(mock_ctscan_data):
 def test_load_bag_coords(mock_ctscan_data):
     dataset = CTScanDataset(**mock_ctscan_data)
     bag = dataset._load_bag(mock_ctscan_data["ctscan_names"][0])
-    
+
     assert "coords" in bag
     assert isinstance(bag["coords"], np.ndarray)
     assert bag["coords"].shape[0] == bag["X"].shape[0]

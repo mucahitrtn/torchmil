@@ -1,7 +1,7 @@
 class AnnealingScheduler:
     def __init__(
-            self, 
-            *args, 
+            self,
+            *args,
             **kwargs
         ):
         self.args = args
@@ -16,9 +16,9 @@ class AnnealingScheduler:
 
 class ConstantAnnealingScheduler(AnnealingScheduler):
     def __init__(
-            self, 
+            self,
             coef = 1.0,
-            *args, 
+            *args,
             **kwargs
         ):
         super(ConstantAnnealingScheduler, self).__init__(*args, **kwargs)
@@ -29,11 +29,11 @@ class ConstantAnnealingScheduler(AnnealingScheduler):
 
 class LinearAnnealingScheduler(AnnealingScheduler):
     def __init__(
-            self, 
-            coef_init = 0.0, 
-            coef_end = 1.0, 
+            self,
+            coef_init = 0.0,
+            coef_end = 1.0,
             n_steps = 100,
-            *args, 
+            *args,
             **kwargs
         ):
         super(LinearAnnealingScheduler, self).__init__(*args, **kwargs)
@@ -53,14 +53,14 @@ class LinearAnnealingScheduler(AnnealingScheduler):
 
 class CyclicalAnnealingScheduler(AnnealingScheduler):
     def __init__(
-            self, 
+            self,
             cycle_len,
-            min_coef = 0.0, 
-            max_coef = 1.0, 
+            min_coef = 0.0,
+            max_coef = 1.0,
             cycle_prop = 0.5,
             warmup_steps=0,
             verbose=False,
-            *args, 
+            *args,
             **kwargs
         ):
         super(CyclicalAnnealingScheduler, self).__init__(*args, **kwargs)
@@ -83,13 +83,13 @@ class CyclicalAnnealingScheduler(AnnealingScheduler):
 
         if self.step_count >= self.warmup_steps:
             mod_step = self.step_count % self.cycle_len
-            
+
             if mod_step < self.cut_step:
                 self.coef = self.min_coef + mod_step * self.coef_dif / self.cut_step
             else:
                 self.coef = self.max_coef
-        
+
         self.step_count += 1
-        
+
         if self.verbose:
             print(f'[AnnealingScheduler] coef: {self.coef}')

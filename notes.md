@@ -1,9 +1,9 @@
 
 # Notes
 
-### Data Handling of Bags. 
+### Data Handling of Bags.
 
-A single bag in `torchmil` is described by an instance of `torchmil.Bag`. 
+A single bag in `torchmil` is described by an instance of `torchmil.Bag`.
 This class is used to store all the information about a bag. It is similar to the `torch_geometric.data.Data` in Pytorch Geometric. It has the following attributes:
 
 - `bag.X`: The features of the bag (a 2D tensor of shape (num_instances, num_features)).

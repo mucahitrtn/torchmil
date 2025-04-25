@@ -9,8 +9,8 @@ class GCNConv(torch.nn.Module):
     Adapts the implementation from [torch_geometric](https://pytorch-geometric.readthedocs.io/en/latest/generated/torch_geometric.nn.conv.GCNConv.html).
     """
     def __init__(
-        self, 
-        in_dim : int, 
+        self,
+        in_dim : int,
         out_dim : int,
         add_self_loops : bool = False,
         bias : bool = True
@@ -20,7 +20,7 @@ class GCNConv(torch.nn.Module):
             in_dim: Input dimension.
             out_dim: Output dimension.
             add_self_loops: Whether to add self-loops.
-            bias: Whether to use bias.        
+            bias: Whether to use bias.
         """
 
         super(GCNConv,self).__init__()
@@ -33,13 +33,13 @@ class GCNConv(torch.nn.Module):
         x : torch.Tensor,
         adj : torch.Tensor
     ) -> torch.Tensor:
-        """        
+        """
         Arguments:
             x : Node features of shape (batch_size, n_nodes, in_dim).
             adj : Adjacency matrix of shape (batch_size, n_nodes, n_nodes).
-        
+
         Returns:
-            y : Output tensor of shape (batch_size, n_nodes, out_dim).        
+            y : Output tensor of shape (batch_size, n_nodes, out_dim).
         """
 
         y = torch.bmm(adj, x)

@@ -12,14 +12,14 @@ class ProcessedMILDataset(torch.utils.data.Dataset):
     This class represents a general MIL dataset where the bags have been processed.
 
     **MIL processing and directory structure.**
-    It is assumed that the bags have been processed and saved as numpy files. 
+    It is assumed that the bags have been processed and saved as numpy files.
     A feature file should yield an array of shape `(bag_size, ...)`, where `...` represents the shape of the features.
     A label file should yield an array of shape arbitrary shape, e.g., `(1,)` for binary classification.
     An instance label file should yield an array of shape `(bag_size, ...)`, where `...` represents the shape of the instance labels.
     A coordinates file should yield an array of shape `(bag_size, coords_dim)`, where `coords_dim` is the dimension of the coordinates.
-        
+
     This dataset expects the following directory structure:
-    
+
     ```
     features_path
     ├── bag1.npy
@@ -42,11 +42,11 @@ class ProcessedMILDataset(torch.utils.data.Dataset):
     **Adjacency matrix.**
     If the coordinates of the instances are available, the adjacency matrix will be built using the Euclidean distance between the coordinates.
     Formally, the adjacency matrix $\mathbf{A} = \left[ A_{ij} \right]$ is defined as:
-    
+
     \begin{equation}
     A_{ij} = \begin{cases}
     d_{ij}, & \text{if } \left\| \mathbf{c}_i - \mathbf{c}_j \right\| \leq \text{dist_thr}, \\
-    0, & \text{otherwise}, 
+    0, & \text{otherwise},
     \end{cases} \quad d_{ij} = \begin{cases}
     1, & \text{if } \text{adj_with_dist=False}, \\
     \exp\left( -\frac{\left\| \mathbf{x}_i - \mathbf{x}_j \right\|}{d} \right), & \text{if } \text{adj_with_dist=True}.
@@ -54,7 +54,7 @@ class ProcessedMILDataset(torch.utils.data.Dataset):
     \end{equation}
 
     where $\mathbf{c}_i$ and $\mathbf{c}_j$ are the coordinates of the instances $i$ and $j$, respectively, $\text{dist_thr}$ is a threshold distance,
-    and $\mathbf{x}_i \in \mathbb{R}^d$ and $\mathbf{x}_j \in \mathbb{R}^d$ are the features of instances $i$ and $j$, respectively.    
+    and $\mathbf{x}_i \in \mathbb{R}^d$ and $\mathbf{x}_j \in \mathbb{R}^d$ are the features of instances $i$ and $j$, respectively.
     """
 
 
@@ -104,7 +104,7 @@ class ProcessedMILDataset(torch.utils.data.Dataset):
         if self.load_at_init:
             for name in self.bag_names:
                 self.loaded_bags[name] = self._build_bag(name)
-    
+
     def _load_features(self, name: str) -> np.ndarray:
         """
         Load the features of a bag from disk.
@@ -137,7 +137,7 @@ class ProcessedMILDataset(torch.utils.data.Dataset):
             return None
         out = np.load(label_file)
         return out
-    
+
     def _load_inst_labels(self, name: str) -> np.ndarray:
         """
         Load the instance labels of a bag from disk.
@@ -195,7 +195,7 @@ class ProcessedMILDataset(torch.utils.data.Dataset):
         bag_dict['coords'] = self._load_coords(name)
 
         return bag_dict
-    
+
     def _build_bag(self, name: str) -> dict[str, torch.Tensor]:
         """
         Build a bag from the features, labels, instance labels and coordinates. First, it loads the bag from disk using `_load_bag`, then it builds the adjacency matrix using `_build_adj`.
@@ -214,11 +214,11 @@ class ProcessedMILDataset(torch.utils.data.Dataset):
                 edge_val = norm_edge_weight
             else:
                 edge_val = edge_weight
-            
+
             bag_dict['adj'] = torch.sparse_coo_tensor(
                 edge_index, edge_val, (bag_dict['coords'].shape[0], bag_dict['coords'].shape[0])).coalesce()
             bag_dict['coords'] = torch.from_numpy(bag_dict['coords'])
-        
+
         bag_dict['X'] = torch.from_numpy(bag_dict['X'])
         bag_dict['Y'] = torch.from_numpy(bag_dict['Y'])
         bag_dict['y_inst'] = torch.from_numpy(bag_dict['y_inst'])
@@ -263,12 +263,12 @@ class ProcessedMILDataset(torch.utils.data.Dataset):
         """
         Arguments:
             index: Index of the bag to retrieve.
-        
+
         Returns:
             bag_dict: Dictionary containing the following keys:
-            
+
                 - X: Features of the bag, of shape `(bag_size, ...)`.
-                - Y: Label of the bag. 
+                - Y: Label of the bag.
                 - y_inst: Instance labels of the bag, of shape `(bag_size, ...)`.
                 - adj: Adjacency matrix of the bag. It is a sparse COO tensor of shape `(bag_size, bag_size)`. If `norm_adj=True`, the adjacency matrix is normalized.
                 - coords: Coordinates of the bag, of shape `(bag_size, coords_dim)`.
@@ -311,12 +311,9 @@ class ProcessedMILDataset(torch.utils.data.Dataset):
         Returns:
             subset_dataset: Subset of the dataset.
         """
-        
+
         new_dataset = copy.deepcopy(self)
         new_dataset.bag_names = [self.bag_names[i] for i in indices]
-        new_dataset.loaded_bags = { k : v for k, v in new_dataset.loaded_bags.items() if k in new_dataset.bag_names } 
+        new_dataset.loaded_bags = { k : v for k, v in new_dataset.loaded_bags.items() if k in new_dataset.bag_names }
 
         return new_dataset
-
-
-        

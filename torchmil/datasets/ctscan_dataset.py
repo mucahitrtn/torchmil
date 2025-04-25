@@ -12,12 +12,12 @@ class CTScanDataset(ProcessedMILDataset):
     Usually, a CT scan is a 3D volume and is composed of a sequence of slices.
     Each slice is a 2D image that represents a cross-section of the body.
     In the context of MIL, a CT scan is considered a bag, and the slices are considered instances.
-    
+
     **Directory structure.**
-    It is assumed that the bags have been processed and saved as numpy files. 
+    It is assumed that the bags have been processed and saved as numpy files.
     For more information on the processing of the bags, refer to the [`ProcessedMILDataset` class](processed_mil_dataset.md).
     This dataset expects the following directory structure:
-    
+
     ```
     features_path
     ├── ctscan1.npy
@@ -40,7 +40,7 @@ class CTScanDataset(ProcessedMILDataset):
     \begin{equation}
     A_{ij} = \begin{cases}
     d_{ij}, & \text{if } \lvert i - j \rvert = 1, \\
-    0, & \text{otherwise},    
+    0, & \text{otherwise},
     \end{cases} \quad d_{ij} = \begin{cases}
     1, & \text{if } \text{adj_with_dist=False}, \\
     \exp\left( -\frac{\left\| \mathbf{x}_i - \mathbf{x}_j \right\|}{d} \right), & \text{if } \text{adj_with_dist=True}.
@@ -85,7 +85,7 @@ class CTScanDataset(ProcessedMILDataset):
             norm_adj=norm_adj,
             load_at_init=load_at_init
         )
-    
+
     def _add_coords(self, bag_dict: dict[str, np.ndarray]) -> dict[str, np.ndarray]:
         """
         Add coordinates to the bag dictionary.

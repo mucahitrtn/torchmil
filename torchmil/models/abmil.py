@@ -11,7 +11,7 @@ class ABMIL(MILModel):
 
     Given an input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times P}$, the model optionally applies a feature extractor, $\text{FeatExt}(\cdot)$, to transform the instance features: $\mathbf{X} = \text{FeatExt}(\mathbf{X}) \in \mathbb{R}^{N \times D}$.
 
-    Then, it aggregates the instance features into a bag representation $\mathbf{z} \in \mathbb{R}^{D}$ using the attention-based pooling, 
+    Then, it aggregates the instance features into a bag representation $\mathbf{z} \in \mathbb{R}^{D}$ using the attention-based pooling,
 
     $$
     \mathbf{z}, \mathbf{f} = \operatorname{AttentionPool}(\mathbf{X}).
@@ -50,7 +50,7 @@ class ABMIL(MILModel):
             feat_dim = None
         self.pool = AttentionPool(
             in_dim=feat_dim, att_dim=att_dim, act=att_act, gated=gated)
-        
+
         self.classifier = LazyLinear(in_features=feat_dim, out_features=1)
 
     def forward(

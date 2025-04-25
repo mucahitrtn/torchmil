@@ -7,7 +7,7 @@ def seq_to_spatial(
     """
     Computes the spatial representation of a bag given the sequential representation and the coordinates.
 
-    Given the input tensor `X` of shape `(batch_size, bag_size, dim)` and the coordinates `coords` of shape `(batch_size, bag_size, n)`, 
+    Given the input tensor `X` of shape `(batch_size, bag_size, dim)` and the coordinates `coords` of shape `(batch_size, bag_size, n)`,
     this function returns the spatial representation `X_enc` of shape `(batch_size, coord1, coord2, ..., coordn, dim)`.
 
     This representation is characterized by the fact that the coordinates are used to index the elements of spatial representation:
@@ -16,7 +16,7 @@ def seq_to_spatial(
     Arguments:
         X (Tensor): Sequential representation of shape `(batch_size, bag_size, dim)`.
         coords (Tensor): Coordinates of shape `(batch_size, bag_size, n)`.
-    
+
     Returns:
         X_esp: Spatial representation of shape `(batch_size, coord1, coord2, ..., coordn, dim)`.
     """
@@ -52,7 +52,7 @@ def spatial_to_seq(
     """
     Computes the sequential representation of a bag given the spatial representation and the coordinates.
 
-    Given the spatial tensor `X_esp` of shape `(batch_size, coord1, coord2, ..., coordn, dim)` and the coordinates `coords` of shape `(batch_size, bag_size, n)`, 
+    Given the spatial tensor `X_esp` of shape `(batch_size, coord1, coord2, ..., coordn, dim)` and the coordinates `coords` of shape `(batch_size, bag_size, n)`,
     this function returns the sequential representation `X` of shape `(batch_size, bag_size, dim)`.
 
     This representation is characterized by the fact that the coordinates are used to index the elements of spatial representation:
@@ -61,7 +61,7 @@ def spatial_to_seq(
     Arguments:
         X_esp (Tensor): Spatial representation of shape `(batch_size, coord1, coord2, ..., coordn, dim)`.
         coords (Tensor): Coordinates of shape `(batch_size, bag_size, n)`.
-    
+
     Returns:
         X_seq: Sequential representation of shape `(batch_size, bag_size, dim)`.
     """

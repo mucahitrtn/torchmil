@@ -5,25 +5,25 @@ import torch
 class Sm(torch.nn.Module):
     r"""
     The $\texttt{Sm}$ operator, proposed in the paper [$\texttt{Sm}$: enhanced localization in Multiple Instance Learning for medical imaging classification](https://arxiv.org/abs/2410.03276).
-    
+
     Given an input graph with node features $\mathbf{U} \in \mathbb{R}^{N \times D}$ and adjacency matrix $\mathbf{A} \in \mathbb{R}^{N \times N}$, in the exact mode the $\texttt{Sm}$ operator is defined as:
-    
+
     \begin{align}
         \texttt{Sm}(\mathbf{U}) = ( \mathbf{I} + \gamma \mathbf{L} )^{-1} \mathbf{U},
     \end{align}
 
     where $\gamma \in (0, \infty)$ is a hyperparameter, $\mathbf{L} = \mathbf{D} - \mathbf{A}$ is the graph Laplacian, and $\mathbf{D}$ is the degree matrix.
-    If `mode='approx'`, the $\texttt{Sm}$ operator is approximated as $\texttt{Sm}(\mathbf{U}) = G(T)$, where 
+    If `mode='approx'`, the $\texttt{Sm}$ operator is approximated as $\texttt{Sm}(\mathbf{U}) = G(T)$, where
 
     \begin{align}
         G(0) = \mathbf{U}, \quad G(t) = \alpha ( \mathbf{I} - \mathbf{L} ) G(t-1) + (1-\alpha) \mathbf{U},
     \end{align}
 
     for $t \in \{1, \ldots, T\}$, and $\alpha \in (0, 1)$ is a hyperparameter.
-    
+
     """
     def __init__(
-        self, 
+        self,
         alpha : Union[float, str] = 'trainable',
         num_steps : int = 10,
         mode : str = 'approx'
@@ -47,7 +47,7 @@ class Sm(torch.nn.Module):
             raise ValueError("mode must be 'approx' or 'exact'")
 
     def forward(
-        self, 
+        self,
         f : torch.Tensor,
         adj_mat : torch.Tensor
     ) -> torch.Tensor:
@@ -68,7 +68,7 @@ class ApproxSm(torch.nn.Module):
     r"""
     $\texttt{Sm}$ operator in the approximate mode, proposed in the paper [$\texttt{Sm}$: enhanced localization in Multiple Instance Learning for medical imaging classification](https://arxiv.org/abs/2410.03276).
 
-    Given an input graph with node features $\mathbf{U} \in \mathbb{R}^{N \times D}$ and adjacency matrix $\mathbf{A} \in \mathbb{R}^{N \times N}$, it computes $\texttt{Sm}(\mathbf{U}) = G(T)$, where 
+    Given an input graph with node features $\mathbf{U} \in \mathbb{R}^{N \times D}$ and adjacency matrix $\mathbf{A} \in \mathbb{R}^{N \times N}$, it computes $\texttt{Sm}(\mathbf{U}) = G(T)$, where
 
     \begin{align}
         G(0) = \mathbf{U}, \quad G(t) = \alpha ( \mathbf{I} - \mathbf{L} ) G(t-1) + (1-\alpha) \mathbf{U},
@@ -78,14 +78,14 @@ class ApproxSm(torch.nn.Module):
 
     """
     def __init__(
-        self, 
+        self,
         alpha : Union[float, str] = 'trainable',
         num_steps : int = 10
     ) -> None:
         """
         Arguments:
             alpha: Alpha value for the Sm operator. If 'trainable', alpha is a trainable parameter.
-            num_steps: Number of steps to approximate the exact Sm operator.            
+            num_steps: Number of steps to approximate the exact Sm operator.
         """
         super().__init__()
         self.alpha = alpha
@@ -97,9 +97,9 @@ class ApproxSm(torch.nn.Module):
             self.coef = torch.nn.Parameter(torch.tensor(1.0), requires_grad=True)
         else:
             raise ValueError("alpha must be float or 'trainable'")
-            
+
     def forward(
-        self, 
+        self,
         f : torch.Tensor,
         adj_mat : torch.Tensor
     ) -> torch.Tensor:
@@ -127,27 +127,27 @@ class ApproxSm(torch.nn.Module):
 
         if recover_f:
             g = g[:, :, 0].unsqueeze(-1) # (batch_size, bag_size, 1)
-        
+
         return g
 
 class ExactSm(torch.nn.Module):
-    
+
     r"""
     $\texttt{Sm}$ operator in the exact mode, proposed in the paper [$\texttt{Sm}$: enhanced localization in Multiple Instance Learning for medical imaging classification](https://arxiv.org/abs/2410.03276).
 
-    Given an input graph with node features $\mathbf{U} \in \mathbb{R}^{N \times D}$ and adjacency matrix $\mathbf{A} \in \mathbb{R}^{N \times N}$, it computes 
-    
+    Given an input graph with node features $\mathbf{U} \in \mathbb{R}^{N \times D}$ and adjacency matrix $\mathbf{A} \in \mathbb{R}^{N \times N}$, it computes
+
     \begin{align}
         \texttt{Sm}(\mathbf{U}) = ( \mathbf{I} + \gamma \mathbf{L} )^{-1} \mathbf{U},
     \end{align}
 
     where $\gamma \in (0, \infty)$ is a hyperparameter, $\mathbf{L} = \mathbf{D} - \mathbf{A}$ is the graph Laplacian, and $\mathbf{D}$ is the degree matrix.
-    
+
 
     """
 
     def __init__(
-        self, 
+        self,
         alpha : Union[float, str] = 'trainable'
     ) -> None:
         """
@@ -156,7 +156,7 @@ class ExactSm(torch.nn.Module):
         """
         super().__init__()
         self.alpha = alpha
-        
+
         if isinstance(self.alpha, float):
             self.coef = (1.0/(1.0-self.alpha)-1)
         elif self.alpha == 'trainable':
@@ -175,9 +175,9 @@ class ExactSm(torch.nn.Module):
         Arguments:
             f: Input tensor of shape `(batch_size, bag_size, ...)`.
             adj_mat: Adjacency matrix tensor of shape `(batch_size, bag_size, bag_size)`.
-        
+
         Returns:
-            g: Output tensor of shape `(batch_size, bag_size, ...)`.        
+            g: Output tensor of shape `(batch_size, bag_size, ...)`.
         """
         batch_size = f.shape[0]
         bag_size = f.shape[1]
@@ -189,7 +189,7 @@ class ExactSm(torch.nn.Module):
         return g
 
     def _solve_system(
-        self, 
+        self,
         A : torch.Tensor,
         b : torch.Tensor
         ):
@@ -199,7 +199,7 @@ class ExactSm(torch.nn.Module):
         Arguments:
             A: Matrix of shape `(batch_size, n, n)`.
             b: Vector of shape `(batch_size, n, ...)`.
-        
+
         Returns:
             x: Solution of the system of shape `(batch_size, n, ...)`.
         """

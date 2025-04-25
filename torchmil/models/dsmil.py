@@ -21,7 +21,7 @@ class DSMIL(MILModel):
     $$
 
     Then, the **second stream** computes the bag representation $\mathbf{z} \in \mathbb{R}^D$ as
-    
+
     $$
     \mathbf{z} = \frac{ \exp \left( \mathbf{q}_i^\top \mathbf{q}_m \right)}{\sum_{k=1}^N \exp \left( \mathbf{q}_k^\top \mathbf{q}_m \right)} \mathbf{v}_i,
     $$
@@ -42,7 +42,7 @@ class DSMIL(MILModel):
 
     """
     def __init__(
-            self, 
+            self,
             in_shape: tuple = None,
             att_dim: int = 128,
             nonlinear_q: bool = False,
@@ -69,14 +69,14 @@ class DSMIL(MILModel):
 
         if nonlinear_q:
             self.q_nn = nn.Sequential(
-                nn.Linear(feat_dim, att_dim), 
-                nn.ReLU(), 
-                nn.Linear(att_dim, att_dim), 
+                nn.Linear(feat_dim, att_dim),
+                nn.ReLU(),
+                nn.Linear(att_dim, att_dim),
                 nn.Tanh()
             )
         else:
             self.q_nn = nn.Linear(feat_dim, att_dim)
-        
+
         if nonlinear_v:
             self.v_nn = nn.Sequential(
                 nn.Dropout(dropout),
@@ -85,12 +85,12 @@ class DSMIL(MILModel):
             )
         else:
             self.v_nn = nn.Identity()
-        
+
         self.inst_classifier = nn.Linear(feat_dim, 1)
         self.bag_classifier = nn.Linear(feat_dim, 1)
 
     def forward(
-        self, 
+        self,
         X: torch.Tensor,
         mask: torch.Tensor = None,
         return_att: bool = False,
@@ -120,7 +120,7 @@ class DSMIL(MILModel):
 
         V = self.v_nn(X) # (batch_size, bag_size, feat_dim)
         Q = self.q_nn(X) # (batch_size, bag_size, att_dim)
-        
+
         # sort class scores along the instance dimension
         indices_max = torch.sort(y_logits, 1, descending=True)[1] # (batch_size, bag_size, 1)
         idx_max = indices_max[:, 0, :] # (batch_size, 1)
@@ -131,22 +131,22 @@ class DSMIL(MILModel):
 
         # compute inner product of Q to each entry of q_max
         A = torch.bmm(Q, Q_max.transpose(1, 2)) # (batch_size, bag_size, 1)
-        
+
         # scale and normalize the attention scores
         scale = np.sqrt(Q_max.size(-1))
-        A = A / scale 
+        A = A / scale
 
         A = masked_softmax(A, mask) # (batch_size, bag_size, 1)
 
         # compute bag representation
         z = torch.bmm(A.transpose(1, 2), V) # (batch_size, 1, feat_dim)
-                
+
         Y_pred = self.bag_classifier(z) # (batch_size, 1, 1)
         Y_pred = Y_pred.squeeze(-1) # (batch_size, 1)
 
         Y_pred = Y_pred.squeeze(-1) # (batch_size,)
         y_logits = y_logits.squeeze(-1) # (batch_size, bag_size)
-        
+
         if return_att:
             if return_inst_pred:
                 return Y_pred, A, y_logits
@@ -159,7 +159,7 @@ class DSMIL(MILModel):
                 return Y_pred
 
     def compute_loss(
-        self, 
+        self,
         Y: torch.Tensor,
         X: torch.Tensor,
         mask: torch.Tensor,
@@ -171,7 +171,7 @@ class DSMIL(MILModel):
             Y: Bag labels of shape `(batch_size,)`.
             X: Bag features of shape `(batch_size, bag_size, ...)`.
             mask: Mask of shape `(batch_size, bag_size)`.
-        
+
         Returns:
             Y_pred: Bag label logits of shape `(batch_size,)`.
             loss_dict: Dictionary containing the loss value.
@@ -184,7 +184,7 @@ class DSMIL(MILModel):
         crit_name = self.criterion.__class__.__name__
         max_loss = self.criterion(max_pred.float(), Y.float())
         return bag_pred, { crit_name : crit_loss, f'{crit_name}_max': max_loss }
-    
+
     def predict(
         self,
         X: torch.Tensor,
@@ -198,7 +198,7 @@ class DSMIL(MILModel):
             X: Bag features of shape `(batch_size, bag_size, ...)`.
             mask: Mask of shape `(batch_size, bag_size)`.
             return_inst_pred: If `True`, returns instance labels predictions, in addition to bag label predictions.
-        
+
         Returns:
             Y_pred: Bag label logits of shape `(batch_size,)`.
             y_inst_pred: If `return_inst_pred=True`, returns instance labels predictions of shape `(batch_size, bag_size)`.

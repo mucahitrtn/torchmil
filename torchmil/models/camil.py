@@ -20,7 +20,7 @@ class CAMILSelfAttention(nn.Module):
 
     """
     def __init__(
-        self, 
+        self,
         in_dim : int,
         att_dim : int = 512
     ) -> None:
@@ -29,7 +29,7 @@ class CAMILSelfAttention(nn.Module):
         self.v_nn = torch.nn.Linear(in_dim, in_dim, bias = False)
 
     def forward(
-        self, 
+        self,
         X : torch.Tensor,
         adj : torch.Tensor,
         mask : torch.Tensor = None
@@ -41,7 +41,7 @@ class CAMILSelfAttention(nn.Module):
             X: Bag of features of shape (batch_size, bag_size, in_dim)
             adj: Adjacency matrix of shape `(batch_size, bag_size, bag_size)`.
             mask: Mask of shape `(batch_size, bag_size)`. If None, no masking is applied.
-        
+
         Returns:
             L: Self-attention vectors with shape (batch_size, bag_size, in_dim)
         """
@@ -50,7 +50,7 @@ class CAMILSelfAttention(nn.Module):
             mask = mask[:, :, None] * mask[:, None, :] # (batch_size, bag_size, bag_size)
         else:
             mask = torch.ones(X.shape[0], X.shape[1], X.shape[1], device=X.device, dtype=X.dtype) # (batch_size, bag_size, bag_size)
-        
+
         q, k = self.qk_nn(X).chunk(2, dim=-1) # (batch_size, bag_size, att_dim), (batch_size, bag_size, att_dim)
         v = self.v_nn(X) # (batch_size, bag_size, in_dim)
         att_dim = q.shape[-1]
@@ -61,7 +61,7 @@ class CAMILSelfAttention(nn.Module):
             adj = adj.to_dense()
 
         w = inv_scale*(q.matmul(k.transpose(-2, -1)) * adj * mask).sum(dim = -1, keepdim = True) # (batch_size, bag_size, 1)
-        
+
         L = w.softmax(dim=1)*v # (batch_size, bag_size, in_dim)
 
         return L
@@ -70,7 +70,7 @@ class CAMILSelfAttention(nn.Module):
 class CAMILAttentionPool(nn.Module):
     r"""
     Attention pooling layer as described in [CAMIL: Context-Aware Multiple Instance Learning for Cancer Detection and Subtyping in Whole Slide Images](https://arxiv.org/abs/2305.05314).
-    
+
     Given a bag of features $\mathbf{T} = \left[ \mathbf{t}_1, \ldots, \mathbf{t}_N \right]^\top \in \mathbb{R}^{N \times D}$ and $\mathbf{M} = \left[ \mathbf{m}_1, \ldots, \mathbf{m}_N \right]^\top \in \mathbb{R}^{N \times D}$, this layer computes the final bag representation $\mathbf{z}$ as
 
     \begin{gather}
@@ -84,8 +84,8 @@ class CAMILAttentionPool(nn.Module):
 
     """
     def __init__(
-        self, 
-        in_dim : int, 
+        self,
+        in_dim : int,
         att_dim : int = 128,
         gated: bool = False
     ) -> None:
@@ -99,7 +99,7 @@ class CAMILAttentionPool(nn.Module):
             self.act_gated = torch.nn.Sigmoid()
 
     def forward(
-        self, 
+        self,
         T : torch.Tensor,
         M : torch.Tensor,
         mask : torch.Tensor = None,
@@ -113,7 +113,7 @@ class CAMILAttentionPool(nn.Module):
             M: (batch_size, bag_size, in_dim)
             mask: (batch_size, bag_size)
             return_att: If True, returns attention values in addition to `z`.
-        
+
         Returns:
             z: (batch_size, in_dim)
             f: (batch_size, bag_size) if `return_att
@@ -134,25 +134,25 @@ class CAMILAttentionPool(nn.Module):
             return z
 
 class CAMIL(MILModel):
-    r""" 
+    r"""
     Context-Aware Multiple Instance Learning (CAMIL) model, presented in the paper [CAMIL: Context-Aware Multiple Instance Learning for Cancer Detection and Subtyping in Whole Slide Images](https://arxiv.org/abs/2305.05314).
 
     Given an input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times P}$, the model optionally applies a feature extractor, $\text{FeatExt}(\cdot)$, to transform the instance features: $\mathbf{X} = \text{FeatExt}(\mathbf{X}) \in \mathbb{R}^{N \times D}$.
 
-    Then, a global bag representation is computed using a [NystromTransformerLayer](../nn/transformers/nystrom_transformer.md/#torchmil.nn.transformers.NystromTransformerLayer) layer, 
+    Then, a global bag representation is computed using a [NystromTransformerLayer](../nn/transformers/nystrom_transformer.md/#torchmil.nn.transformers.NystromTransformerLayer) layer,
 
     $$ \mathbf{T} = \operatorname{NystromTransformerLayer}(\mathbf{X})$$
 
     Next, a local bag representation is computed using the [CAMILSelfAttention](./#torchmil.models.camil.CAMILSelfAttention) layer,
-    
-    $$ \mathbf{L} = \operatorname{CAMILSelfAttention}(\mathbf{T}) $$ 
+
+    $$ \mathbf{L} = \operatorname{CAMILSelfAttention}(\mathbf{T}) $$
 
     Finally, the local and global information is fused as
 
     $$ \mathbf{M} = \operatorname{sigmoid}(\mathbf{L}) \odot \mathbf{L} + (1 - \operatorname{sigmoid}(\mathbf{L})) \odot \mathbf{T},$$
 
     where $\odot$ denotes element-wise multiplication and $\operatorname{sigmoid}$ is the sigmoid function.
-    
+
     Lastly, the final bag representation is computed using the [CAMILAttentionPool](./#torchmil.models.camil.CAMILAttentionPool), modification of the Gatted Attention Pool mechanism. The bag representation is then fed into a linear classifier to predict the bag label.
     """
     def __init__(
@@ -195,16 +195,16 @@ class CAMIL(MILModel):
             self.fc1 = torch.nn.Identity()
 
         self.nystrom_transformer_layer = NystromTransformerLayer(in_dim=nystrom_att_dim, att_dim=nystrom_att_dim, n_heads=n_heads, n_landmarks=n_landmarks, pinv_iterations=pinv_iterations, dropout=dropout, use_mlp=use_mlp)
-        
+
         self.camil_self_attention = CAMILSelfAttention(in_dim=nystrom_att_dim, att_dim=nystrom_att_dim)
         self.camil_att_pool = CAMILAttentionPool(in_dim=nystrom_att_dim, att_dim=pool_att_dim, gated=gated_pool)
 
         self.classifier = nn.Linear(nystrom_att_dim, 1)
 
         self.criterion = criterion
-    
+
     def forward(
-        self, 
+        self,
         X : torch.Tensor,
         adj : torch.Tensor,
         mask : torch.Tensor = None,
@@ -237,12 +237,12 @@ class CAMIL(MILModel):
             z = self.camil_att_pool(T, M, mask) # (batch_size, feat_dim)
 
         Y_pred = self.classifier(z).squeeze(dim=-1) # (batch_size,)
-        
+
         if return_att:
             return Y_pred, att
         else:
             return Y_pred
-    
+
     def compute_loss(
         self,
         Y: torch.Tensor,
@@ -270,7 +270,7 @@ class CAMIL(MILModel):
         crit_name = self.criterion.__class__.__name__
 
         return Y_pred, {crit_name: crit_loss}
-    
+
     def predict(
         self,
         X: torch.Tensor,

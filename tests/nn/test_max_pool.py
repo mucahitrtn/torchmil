@@ -1,6 +1,6 @@
 import torch
 import pytest
-from torchmil.nn import MaxPool 
+from torchmil.nn import MaxPool
 
 @pytest.fixture
 def maxpool_instance():

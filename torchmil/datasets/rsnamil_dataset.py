@@ -15,15 +15,15 @@ def keep_only_existing_files(path, names, ext='.npy'):
 
 class RSNAMILDataset(BinaryClassificationDataset, CTScanDataset):
     r"""
-    RSNA Intracranial Hemorrhage Detection dataset for Multiple Instance Learning (MIL). 
+    RSNA Intracranial Hemorrhage Detection dataset for Multiple Instance Learning (MIL).
 
     The [original dataset](https://www.kaggle.com/competitions/rsna-intracranial-hemorrhage-detection) has been processed to be used for MIL binary classification problems.
     It can be downloaded from [here](https://huggingface.co/datasets/Franblueee/RSNA_ICH_MIL).
 
     A slice is considered positive if it shows evidence of hemorrhage. The CT scan label is positive if at least one slice is positive.
-    
+
     The following directory structure is expected:
-        
+
         ```
         root
         ├── features
@@ -57,7 +57,7 @@ class RSNAMILDataset(BinaryClassificationDataset, CTScanDataset):
             features: Type of features to use. Must be one of ['resnet18', 'resnet50', 'vit_b_32']
             partition: Partition of the dataset. Must be one of ['train', 'test'].
             adj_with_dist: If True, the adjacency matrix is built using the Euclidean distance between the patches features. If False, the adjacency matrix is binary.
-            norm_adj: If True, normalize the adjacency matrix.       
+            norm_adj: If True, normalize the adjacency matrix.
             load_at_init: If True, load the bags at initialization. If False, load the bags on demand.
         """
         features_path = f'{root}/features/features_{features}/'
@@ -83,7 +83,7 @@ class RSNAMILDataset(BinaryClassificationDataset, CTScanDataset):
             norm_adj=norm_adj,
             load_at_init=load_at_init
         )
-    
+
     def _load_bag(self, name: str) -> dict[str, np.ndarray]:
         bag_dict = BinaryClassificationDataset._load_bag(self, name)
         bag_dict = CTScanDataset._add_coords(self, bag_dict)

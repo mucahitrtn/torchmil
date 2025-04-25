@@ -37,7 +37,7 @@ class IIBMILDecoderLayer(torch.nn.Module):
         )
 
     def forward(
-        self, 
+        self,
         U: torch.Tensor,
         X: torch.Tensor,
         mask: torch.Tensor = None
@@ -110,7 +110,7 @@ class IIBMIL(torch.nn.Module):
 
     Given an input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times P}$, the model optionally applies a feature extractor, $\text{FeatExt}(\cdot)$, to transform the instance features: $\mathbf{X} = \text{FeatExt}(\mathbf{X}) \in \mathbb{R}^{N \times D}$.
 
-    Then, a [TransformerEncoder](../nn/transformers/conventional_transformer.md) is applied to transform the instance features using context information. 
+    Then, a [TransformerEncoder](../nn/transformers/conventional_transformer.md) is applied to transform the instance features using context information.
     Subsequently, the model uses **bag-level** and **instance-level** supervision:
 
     **Bag-level supervision**: The instances are aggregated into a class token using $\texttt{n_queries}$ queries embeddings and the [IIBMILDecoder](./#torchmil.models.iibmil.IIBMILDecoder). A linear layer is then applied to predict the bag label.
@@ -331,7 +331,7 @@ class IIBMIL(torch.nn.Module):
                 return Y_pred, X_enc
 
     def compute_loss(
-        self, 
+        self,
         Y: torch.Tensor,
         X: torch.Tensor,
         mask: torch.Tensor = None

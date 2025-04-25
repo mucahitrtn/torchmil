@@ -7,13 +7,13 @@ from torchmil.models import MILModel
 
 class PPEG(torch.nn.Module):
     """
-    Pyramid Positional Encoding Generator, as described in the [TransMIL paper](https://arxiv.org/abs/2106.00908). 
-    
+    Pyramid Positional Encoding Generator, as described in the [TransMIL paper](https://arxiv.org/abs/2106.00908).
+
     """
     def __init__(self, dim : int) -> None:
         """
         Arguments:
-            dim: Input dimension.   
+            dim: Input dimension.
         """
         super(PPEG, self).__init__()
         self.proj = torch.nn.Conv2d(dim, dim, 7, 1, 7//2, groups=dim)
@@ -21,7 +21,7 @@ class PPEG(torch.nn.Module):
         self.proj2 = torch.nn.Conv2d(dim, dim, 3, 1, 3//2, groups=dim)
 
     def forward(
-            self, 
+            self,
             x : torch.Tensor,
             H : int,
             W : int
@@ -32,10 +32,10 @@ class PPEG(torch.nn.Module):
         Arguments:
             x: Input tensor of shape `(batch_size, H*W+1, dim)`.
             H: Height of the grid.
-            W: Width of the grid. 
+            W: Width of the grid.
 
         Returns:
-            y: Output tensor of shape `(batch_size, H*W+1, dim)`.       
+            y: Output tensor of shape `(batch_size, H*W+1, dim)`.
         """
         batch_size, _, dim = x.shape
         cls_token, feat_token = x[:, 0], x[:, 1:] # (batch_size, dim), (batch_size, H*W, dim)
@@ -61,7 +61,7 @@ class TransMIL(MILModel):
     Finally, a linear classifier is used to predict the bag label from the class token.
     """
     def __init__(
-            self, 
+            self,
             in_shape: tuple,
             att_dim : int = 512,
             n_layers : int = 2,
@@ -84,7 +84,7 @@ class TransMIL(MILModel):
             dropout: Dropout rate in the Nyströmformer layer.
             use_mlp: Whether to use a MLP after the Nyströmformer layer.
             feat_ext: Feature extractor. By default, the identity function (no feature extraction).
-            criterion: Loss function. By default, Binary Cross-Entropy loss from logits.        
+            criterion: Loss function. By default, Binary Cross-Entropy loss from logits.
         """
 
         assert n_layers >= 2, "Number of layers must be at least 2."
@@ -109,16 +109,16 @@ class TransMIL(MILModel):
 
         self.layers = torch.nn.ModuleList([
             NystromTransformerLayer(
-                in_dim=att_dim, 
-                att_dim=att_dim, 
+                in_dim=att_dim,
+                att_dim=att_dim,
                 out_dim=att_dim,
-                n_heads=n_heads, 
-                n_landmarks=n_landmarks, 
-                pinv_iterations=pinv_iterations, 
-                dropout=dropout, 
+                n_heads=n_heads,
+                n_landmarks=n_landmarks,
+                pinv_iterations=pinv_iterations,
+                dropout=dropout,
                 use_mlp=use_mlp,
                 learn_weights=True
-            ) 
+            )
             for _ in range(n_layers)
         ])
 
@@ -128,7 +128,7 @@ class TransMIL(MILModel):
         self.criterion = criterion
 
     def forward(
-            self, 
+            self,
             X : torch.Tensor,
             return_att : bool = False
         ) -> tuple[torch.Tensor, torch.Tensor]:
@@ -138,12 +138,12 @@ class TransMIL(MILModel):
         Arguments:
             X: Input tensor of shape `(batch_size, bag_size, in_dim)`.
             return_att: Whether to return the attention values.
-        
+
         Returns:
             Y_pred: Bag label logits of shape `(batch_size,)`.
             att: Only returned when `return_att=True`. Attention values of shape (batch_size, bag_size).
         """
-        
+
         device = X.device
         batch_size, bag_size = X.shape[0], X.shape[1]
 
@@ -169,8 +169,8 @@ class TransMIL(MILModel):
         # remaining transformer layers (except the last one)
         for layer in self.layers[1:-1]:
             X = layer(X)
-        
-        # last transformer layer            
+
+        # last transformer layer
         if return_att:
             current_len = padded_size*padded_size+1
             pad_len = self.n_landmarks - (current_len % self.n_landmarks) if current_len % self.n_landmarks > 0 else 0
@@ -195,7 +195,7 @@ class TransMIL(MILModel):
             return bag_pred, att
         else:
             return bag_pred
-    
+
     def compute_loss(
         self,
         Y: torch.Tensor,

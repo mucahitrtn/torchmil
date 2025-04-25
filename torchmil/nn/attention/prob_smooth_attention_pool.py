@@ -6,7 +6,7 @@ from torchmil.nn.utils import masked_softmax, LazyLinear
 class ProbSmoothAttentionPool(torch.nn.Module):
     r"""
     Probabilistic Smooth Attention Pooling, proposed in in [Probabilistic Smooth Attention for Deep Multiple Instance Learning in Medical Imaging]() and [Smooth Attention for Deep Multiple Instance Learning: Application to CT Intracranial Hemorrhage Detection](https://arxiv.org/abs/2307.09457)
-    
+
     Given an input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times \texttt{in_dim}}$,
     this model computes an attention distribution $q(\mathbf{f} \mid \mathbf{X}) = \mathcal{N}\left(\mathbf{f} \mid \mathbf{\mu}_{\mathbf{f}}, \operatorname{diag}(\mathbf{\sigma}_{\mathbf{f}}^2) \right)$, where:
 
@@ -19,9 +19,9 @@ class ProbSmoothAttentionPool(torch.nn.Module):
     where $\operatorname{MLP}$ is a multi-layer perceptron, and $\mathbf{w}_{\mu},\mathbf{w}_{\sigma} \in \mathbb{R}^{2\texttt{att_dim} \times 1}$.
     If `covar_mode='zero'`, the variance vector $\mathbf{\sigma}_{\mathbf{f}}^2$ is set to zero, resulting in a deterministic attention distribution.
 
-    
 
-    Then, $M$ samples from the attention distribution are drawn as $\widehat{\mathbf{f}}^{(m)} \sim q(\mathbf{f} \mid \mathbf{X})$. 
+
+    Then, $M$ samples from the attention distribution are drawn as $\widehat{\mathbf{f}}^{(m)} \sim q(\mathbf{f} \mid \mathbf{X})$.
     With these samples, the bag representation is computed as:
 
     $$
@@ -31,15 +31,15 @@ class ProbSmoothAttentionPool(torch.nn.Module):
     where $\widehat{\mathbf{F}} = \left[ \widehat{\mathbf{f}}^{(1)}, \ldots, \widehat{\mathbf{f}}^{(M)} \right]^\top \in \mathbb{R}^{N \times M}$.
 
     **Kullback-Leibler Divergence.** Given a bag with adjancency matrix $\mathbf{A}$, the KL divergence between the attention distribution and the prior distribution is computed as:
-    
+
     $$
-        \ell_{\text{KL}} = 
+        \ell_{\text{KL}} =
             \begin{cases}
                 \mathbf{\mu}_{\mathbf{f}}^\top \mathbf{L} \mathbf{\mu}_{\mathbf{f}} \quad & \text{if } \texttt{covar_mode='zero'}, \\
                 \mathbf{\mu}_{\mathbf{f}}^\top \mathbf{L} \mathbf{\mu}_{\mathbf{f}} + \operatorname{Tr}(\mathbf{L} \mathbf{\Sigma}_{\mathbf{f}}) - \frac{1}{2}\log \det( \mathbf{\Sigma}_{\mathbf{f}} ) + \operatorname{const} \quad & \text{if } \texttt{covar_mode='diag'}, \\
             \end{cases}
     $$
-    
+
     where $\operatorname{const}$ is a constant term that does not depend on the parameters, $\mathbf{\Sigma}_{\mathbf{f}} = \operatorname{diag}(\mathbf{\sigma}_{\mathbf{f}}^2)$, $\mathbf{L} = \mathbf{D} - \mathbf{A}$ is the graph Laplacian matrix, and $\mathbf{D}$ is the degree matrix of $\mathbf{A}$.
     """
     def __init__(
@@ -56,7 +56,7 @@ class ProbSmoothAttentionPool(torch.nn.Module):
             att_dim: Attention dimension.
             covar_mode: Covariance mode. Must be 'diag' or 'zero'.
             n_samples_train: Number of samples during training.
-            n_samples_test: Number of samples during testing.        
+            n_samples_test: Number of samples during testing.
         """
         super(ProbSmoothAttentionPool, self).__init__()
         self.covar_mode = covar_mode
@@ -65,23 +65,23 @@ class ProbSmoothAttentionPool(torch.nn.Module):
 
         if self.covar_mode not in ['diag', 'zero']:
             raise ValueError("covar_mode must be 'diag' or 'zero'")
-                
+
         self.in_mlp = torch.nn.Sequential(
             LazyLinear(in_dim, 2*att_dim),
             torch.nn.GELU(),
             torch.nn.Linear(2*att_dim, 2*att_dim),
             torch.nn.GELU()
         )
-        
+
         self.mu_f_nn = torch.nn.Linear(2*att_dim, 1)
-    
+
         if self.covar_mode == 'diag':
             self.log_diag_Sigma_nn = torch.nn.Linear(2*att_dim, 1)
 
         self.eps = 1e-6
-    
+
     def _sample_f(
-        self, 
+        self,
         mu_f : Tensor,
         log_diag_Sigma_f : Tensor,
         n_samples : int = 1
@@ -108,7 +108,7 @@ class ProbSmoothAttentionPool(torch.nn.Module):
         return f
 
     def _kl_div(
-        self, 
+        self,
         mu_f : Tensor,
         log_diag_Sigma_f : Tensor,
         adj_mat : Tensor
@@ -131,7 +131,7 @@ class ProbSmoothAttentionPool(torch.nn.Module):
             diag_adj = torch.diagonal(adj_mat, dim1=1, dim2=2).unsqueeze(dim=-1) # (batch_size, bag_size, 1)
         else:
             adj_mat_dense = adj_mat.to('cpu').coalesce().to_dense()
-            diag_adj = torch.diagonal(adj_mat_dense, dim1=1, dim2=2).unsqueeze(dim=-1).to(mu_f.device) # (batch_size, bag_size, 1)        
+            diag_adj = torch.diagonal(adj_mat_dense, dim1=1, dim2=2).unsqueeze(dim=-1).to(mu_f.device) # (batch_size, bag_size, 1)
 
         muT_mu = torch.sum(mu_f**2, dim=(1,2)) # (batch_size,)
         adj_mat_mu = torch.bmm(adj_mat, mu_f) # (batch_size, bag_size, 1)
@@ -152,11 +152,11 @@ class ProbSmoothAttentionPool(torch.nn.Module):
             log_det_Sigma = torch.zeros((1,), device=mu_f.device)
 
         kl_div = torch.mean(muT_lap_mu + tr_Sigma - tr_adj_Sigma - 0.5*log_det_Sigma) # ()
-        
+
         return kl_div
-    
+
     def forward(
-        self, 
+        self,
         X : Tensor,
         adj : Tensor = None,
         mask : Tensor = None,
@@ -172,7 +172,7 @@ class ProbSmoothAttentionPool(torch.nn.Module):
             return_att: If True, returns a sample from the attention distribution `f` in addition to `z`.
             return_attdist: If True, returns the attention distribution (`mu_f`, `diag_Sigma_f`) in addition to `z`.
             return_kl_div: If True, returns the KL divergence between the attention distribution and the prior distribution.
-        
+
         Returns:
             z: Bag representation of shape `(batch_size, D)`.
             f: Sample from the attention distribution of shape `(batch_size, bag_size, n_samples)`. Only returned when `return_att=True`.
@@ -185,14 +185,14 @@ class ProbSmoothAttentionPool(torch.nn.Module):
             n_samples = self.n_samples_train
         else:
             n_samples = self.n_samples_test
-        
+
         batch_size = X.shape[0]
         bag_size = X.shape[1]
-        
+
         if mask is None:
             mask = torch.ones(batch_size, bag_size, device=X.device) # (batch_size, bag_size)
         mask = mask.unsqueeze(dim=-1) # (batch_size, bag_size, 1)
-        
+
         H = self.in_mlp(X) # (batch_size, bag_size, 2*att_dim)
         mu_f = self.mu_f_nn(H) # (batch_size, bag_size, 1)
         log_diag_Sigma_f = self.log_diag_Sigma_nn(H) # (batch_size, bag_size, 1)

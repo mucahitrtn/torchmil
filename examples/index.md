@@ -1,6 +1,6 @@
 # Examples
 
-Here you can find a collection of examples that demonstrate how to use **torchmil** in practice. 
+Here you can find a collection of examples that demonstrate how to use **torchmil** in practice.
 
 - [**Representing data in torchmil:**](data_representation.ipynb) we explain how data is represented in **torchmil**. We cover bags, instances, graphs, mini-batching, and more.
 - [**Datasets in torchmil:**](datasets.ipynb) we explain how datasets are implemented in **torchmil**. We cover processed datasets vs non-processed datasets, and how to create your own dataset.

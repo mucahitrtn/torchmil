@@ -12,7 +12,7 @@ class LazyLinear(torch.nn.Module):
             self.module = torch.nn.Linear(in_features, out_features, bias=bias, device=device, dtype=dtype)
         else:
             self.module = torch.nn.LazyLinear(out_features, bias=bias, device=device, dtype=dtype)
-    
+
     def forward(self, x):
         return self.module(x)
 
@@ -22,11 +22,11 @@ def masked_softmax(
     ) -> torch.Tensor:
     """
     Compute masked softmax along the second dimension.
-    
+
     Arguments:
         X (Tensor): Input tensor of shape `(batch_size, N, ...)`.
         mask (Tensor): Mask of shape `(batch_size, N)`. If None, no masking is applied.
-    
+
     Returns:
         Tensor: Masked softmax of shape `(batch_size, N, ...)`.
     """
@@ -37,20 +37,20 @@ def masked_softmax(
     # Ensure mask is of the same shape as X
     if mask.dim() < X.dim():
         mask = mask.unsqueeze(-1)
-    
+
     # exp_X = torch.exp(X)
     # exp_X_masked = exp_X * mask
     # sum_exp_X_masked = exp_X_masked.sum(dim=1, keepdim=True)
     # softmax_X = exp_X_masked / (sum_exp_X_masked + 1e-8)
     # return softmax_X
-        
+
     X_masked = X.masked_fill(mask == 0, -float('inf'))
 
     return torch.nn.functional.softmax(X_masked, dim=1)
 
 class MaskedSoftmax(torch.nn.Module):
     """
-    Compute masked softmax along the second dimension.    
+    Compute masked softmax along the second dimension.
     """
     def __init__(self):
         super().__init__()
@@ -62,12 +62,12 @@ class MaskedSoftmax(torch.nn.Module):
         Arguments:
             X: Input tensor of shape `(batch_size, N, ...)`.
             mask: Mask tensor of shape `(batch_size, N)`.
-        
+
         Returns:
             Tensor: Masked softmax of shape `(batch_size, N, ...)`.
         """
         return masked_softmax(X, mask)
-    
+
 def get_feat_dim(
         feat_ext : torch.nn.Module,
         input_shape : tuple[int, ...]
@@ -103,7 +103,7 @@ class SinusoidalPositionalEncodingND(torch.nn.Module):
         self.channels = channels
 
         print("Channels: ", channels)
-    
+
     def _get_embedding(self, sin_inp):
         emb = torch.stack((sin_inp.sin(), sin_inp.cos()), dim=-1)
         return torch.flatten(emb, -2, -1)
@@ -112,7 +112,7 @@ class SinusoidalPositionalEncodingND(torch.nn.Module):
         """
         Arguments:
             tensor (Tensor): Input tensor of shape `(batch_size, l1, l2, ..., lN, channels)`.
-        
+
         Returns:
             Tensor: Positional encoding of shape `(batch_size, l1, l2, ..., lN, channels)`.
         """
@@ -142,14 +142,14 @@ class SinusoidalPositionalEncodingND(torch.nn.Module):
             emb[..., i*self.channels : (i+1)*self.channels] = emb_i
 
         return emb[None, ..., :orig_ch].repeat(shape[0], *(1 for _ in range(self.n_dim)), 1)
-    
+
 def log_sum_exp(x):
     """
     Compute log(sum(exp(x), 1)) in a numerically stable way.
 
     Arguments:
         x: Input tensor of shape `(batch_size, n_classes)`.
-    
+
     Returns:
         log_sum_exp: Log sum exp of shape `(batch_size,)
     """
@@ -188,10 +188,10 @@ def detect_large(x, k, tau, thresh):
 class SmoothTop1SVM(torch.nn.Module):
     """
     Smooth Top-1 SVM loss, as described in [Smooth Loss Functions for Deep Top-k Classification](https://arxiv.org/abs/1802.07595).
-    Implementation adapted from [the original code](https://github.com/oval-group/smooth-topk).    
+    Implementation adapted from [the original code](https://github.com/oval-group/smooth-topk).
     """
     def __init__(
-        self, 
+        self,
         n_classes : int,
         alpha : float = 1.0,
         tau : float = 1.0
@@ -211,7 +211,7 @@ class SmoothTop1SVM(torch.nn.Module):
         self.labels = torch.from_numpy(np.arange(n_classes))
 
     def forward(
-        self, 
+        self,
         x : torch.Tensor,
         y : torch.Tensor
     ) -> torch.Tensor:
@@ -221,11 +221,11 @@ class SmoothTop1SVM(torch.nn.Module):
         Arguments:
             x: Input tensor of shape `(batch_size, n_classes)`. If `n_classes=1`, the tensor is assumed to be the positive class score.
             y: Target tensor of shape `(batch_size,)`.
-        
+
         Returns:
             loss: Loss tensor of shape `(batch_size,)`.
         """
-        
+
         # if x.shape[1] == 1:
         #     x = torch.cat([x, -x], 1) # add dummy dimension for binary classification
 
@@ -250,7 +250,7 @@ class SmoothTop1SVM(torch.nn.Module):
         Arguments:
             x: Input tensor of shape `(batch_size, n_classes)`.
             y: Target tensor of shape `(batch_size,)`.
-        
+
         Returns:
             loss: Hard loss tensor of shape `(batch_size,)`.
         """
@@ -269,7 +269,7 @@ class SmoothTop1SVM(torch.nn.Module):
         Arguments:
             x: Input tensor of shape `(batch_size, n_classes)`.
             y: Target tensor of shape `(batch_size,)`.
-        
+
         Returns:
             loss: Smooth loss tensor of shape `(batch_size,)`.
         """

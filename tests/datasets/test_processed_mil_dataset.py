@@ -4,7 +4,7 @@ import numpy as np
 import torch
 
 from torchmil.utils import build_adj, normalize_adj, add_self_loops
-from torchmil.datasets import ProcessedMILDataset 
+from torchmil.datasets import ProcessedMILDataset
 
 
 @pytest.fixture(name="mil_data")

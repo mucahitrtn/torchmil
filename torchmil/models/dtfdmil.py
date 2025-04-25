@@ -14,10 +14,10 @@ class DTFDMIL(MILModel):
 
     Then, the instances in a bag are randomly grouped in $M$ pseudo-bags $\{\mathbf{X}_1, \cdots, \mathbf{X}_M\}$ with approximately the same number of instances. Each pseudo-bag is assigned its parent's bag label $Y_m = Y$. Then, the model has two prediction tiers:
 
-    In **Tier 1**, the model uses the attention pool (see [AttentionPool](../nn/attention/attention_pool.md) for details) and a classifier, jointly noted as $T_1$ to predict the label of each pseudo-bag, 
+    In **Tier 1**, the model uses the attention pool (see [AttentionPool](../nn/attention/attention_pool.md) for details) and a classifier, jointly noted as $T_1$ to predict the label of each pseudo-bag,
 
     $$ \widehat{Y}_m = T_1(\mathbf{X}_m).$$
-      
+
     The loss associated to this tier is the binary cross entropy computed using the pseudo-bag labels $Y_m$ and the predicted label $\widehat{Y}_m$.
 
     In **Tier 2**, Grad-CAM (see [Grad-CAM](https://arxiv.org/abs/1610.02391) for details) is used to compute the probability of each instance. Based on that probability, a feature vector $\mathbf{z}^m$ is distilled for the $m$-th pseudo-bag. Then, the model uses another attention pool and a classifier, jointly noted as $T_2$ to predict the final label of the bag,
@@ -32,10 +32,10 @@ class DTFDMIL(MILModel):
     $$ \ell = \ell_{\text{BCE}}(Y, \widehat{Y}) + \frac{1}{M} \sum_{m=1}^{M} \ell_{\text{BCE}}(Y_m, \widehat{Y}_m),$$
 
     where $\ell_{\text{BCE}}$ is the binary cross entropy loss.
-    
+
     """
     def __init__(
-        self, 
+        self,
         in_shape: tuple = None,
         att_dim: int = 128,
         n_groups : int = 8,
@@ -69,14 +69,14 @@ class DTFDMIL(MILModel):
 
         self.u_attention_pool = AttentionPool(in_dim = feat_dim, att_dim = att_dim)
         self.u_classifier = LazyLinear(feat_dim, 1)
-    
+
     def _cam_1d(self, classifier, features):
         tweight = list(classifier.parameters())[-2]
         cam_maps = torch.einsum('bgf,cf->bcg', [features, tweight])
         return cam_maps
 
     def forward(
-        self, 
+        self,
         X : torch.Tensor,
         mask : torch.Tensor = None,
         return_pseudo_pred : bool = False,
@@ -90,7 +90,7 @@ class DTFDMIL(MILModel):
             mask: Mask of shape `(batch_size, bag_size)`.
             return_pseudo_pred: If True, returns pseudo label logits in addition to `Y_pred`.
             return_inst_cam: If True, returns instance-level CAM values in addition to `Y_pred`.
-        
+
         Returns:
             Y_pred: Bag label logits of shape `(batch_size,)`.
             inst_cam: Only returned when `return_inst_cam=True`. Instance-level CAM values of shape (batch_size, bag_size).
@@ -117,7 +117,7 @@ class DTFDMIL(MILModel):
         for bag_chunk in bag_chunks:
             X_chunk = X[:, bag_chunk, :]
             mask_chunk = mask[:, bag_chunk].bool() if mask is not None else None
-            chunk_size = X_chunk.size(1) 
+            chunk_size = X_chunk.size(1)
 
             z = self.attention_pool(X_chunk, mask_chunk) # (batch_size, feat_dim), [batch_size, chunk_size)
 
@@ -148,20 +148,20 @@ class DTFDMIL(MILModel):
                 elif self.distill_mode == 'max':
                     index = topk_idx_max.unsqueeze(-1).expand(-1, -1, feat_dim) # (batch_size, chunk_size, feat_dim)
                     pseudo_feat = torch.gather(X_chunk, 1, index) # (batch_size, chunk_size, feat_dim)
-                
+
             pseudo_feat_list.append(pseudo_feat)
-        
+
         pseudo_pred = torch.cat(pseudo_pred_list, dim=1) # (batch_size, n_groups]
         pseudo_feat = torch.cat(pseudo_feat_list, dim=1) # (batch_size, n_groups, k, feat_dim); k = 2*chunk_size or chunk_size or 1
         pseudo_feat = pseudo_feat.view(batch_size, -1, feat_dim) # (batch_size, n_groups*k, feat_dim)
-        
+
         pseudo_z = self.u_attention_pool(pseudo_feat) # (batch_size, feat_dim)
         Y_pred = self.u_classifier(pseudo_z) # (batch_size, 1]
         Y_pred = Y_pred.squeeze(-1) # (batch_size,]
 
         if return_inst_cam:
             inst_cam = torch.cat(inst_cam_list, dim=1) # (batch_size, bag_size)
-            
+
             inst_cam_reorder = torch.zeros_like(inst_cam)
             bag_chunks_idx = np.concatenate(bag_chunks)
             inst_cam_reorder[:, bag_chunks_idx] = inst_cam
@@ -176,9 +176,9 @@ class DTFDMIL(MILModel):
                 return Y_pred, pseudo_pred
             else:
                 return Y_pred
-    
+
     def compute_loss(
-        self, 
+        self,
         Y : torch.Tensor,
         X : torch.Tensor,
         mask : torch.Tensor = None,
@@ -200,16 +200,16 @@ class DTFDMIL(MILModel):
         crit_name = self.criterion.__class__.__name__
         crit_loss_t1 = self.criterion(Y_pred, Y.float())
         Y_repeat = Y.unsqueeze(1).repeat(1, n_groups) # (batch_size, num_groups]
-        crit_loss_t2 = self.criterion(pseudo_pred, Y_repeat.float()).mean() 
+        crit_loss_t2 = self.criterion(pseudo_pred, Y_repeat.float()).mean()
         return Y_pred, { f'{crit_name}_t1': crit_loss_t1, f'{crit_name}_t2': crit_loss_t2 }
-    
+
     def predict(
-        self, 
+        self,
         X : torch.Tensor,
         mask : torch.Tensor = None,
         return_inst_pred : bool = True,
     ) -> tuple[torch.Tensor, torch.Tensor]:
-        """ 
+        """
         Predict bag and (optionally) instance labels.
 
         Arguments:
@@ -222,6 +222,3 @@ class DTFDMIL(MILModel):
             y_inst_pred: If `return_inst_pred=True`, returns instance labels predictions of shape `(batch_size, bag_size)`.
         """
         return self.forward(X, mask, return_inst_cam=return_inst_pred)
-
-
-

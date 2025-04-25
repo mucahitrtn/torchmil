@@ -15,15 +15,15 @@ def keep_only_existing_files(path, names, ext='.npy'):
 
 class PANDAMILDataset(BinaryClassificationDataset, WSIDataset):
     r"""
-    Prostate cANcer graDe Assessment (PANDA) dataset for Multiple Instance Learning (MIL). 
+    Prostate cANcer graDe Assessment (PANDA) dataset for Multiple Instance Learning (MIL).
 
     The [original PANDA dataset](https://www.kaggle.com/c/prostate-cancer-grade-assessment/data) has been processed to be used for MIL binary classification problems.
     It can be downloaded from [here](https://huggingface.co/datasets/Franblueee/PANDA_MIL/).
 
     A patch is considered positive if at least 50% of its pixels are annotated as tumor. The WSI label is positive if at least one patch is positive.
-    
+
     The following directory structure is expected:
-        
+
         ```
         root
         ├── patches_{patch_size}
@@ -65,7 +65,7 @@ class PANDAMILDataset(BinaryClassificationDataset, WSIDataset):
             patch_size: Size of the patches. Currently, only 512 is supported.
             adj_with_dist: If True, the adjacency matrix is built using the Euclidean distance between the patches features. If False, the adjacency matrix is binary.
             norm_adj: If True, normalize the adjacency matrix.
-            load_at_init: If True, load the bags at initialization. If False, load the bags on demand.     
+            load_at_init: If True, load the bags at initialization. If False, load the bags on demand.
         """
         features_path = f'{root}/patches_{patch_size}/features/features_{features}/'
         labels_path = f'{root}/patches_{patch_size}/labels/'
@@ -93,6 +93,6 @@ class PANDAMILDataset(BinaryClassificationDataset, WSIDataset):
             norm_adj=norm_adj,
             load_at_init=load_at_init
         )
-    
+
     def _load_bag(self, name: str) -> dict[str, np.ndarray]:
         return BinaryClassificationDataset._load_bag(self, name)

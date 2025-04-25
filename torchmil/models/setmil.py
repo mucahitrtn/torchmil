@@ -234,9 +234,9 @@ class SETMIL(MILModel):
         return X
 
     def forward(
-        self, 
-        X: torch.Tensor, 
-        coords: torch.Tensor, 
+        self,
+        X: torch.Tensor,
+        coords: torch.Tensor,
         return_att: bool = False
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """

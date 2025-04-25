@@ -2,19 +2,19 @@ import torch
 from einops import rearrange
 
 # from . import (
-#     RelPropClone, 
-#     RelPropAdd, 
-#     RelPropIdentity, 
-#     RelPropLinear, 
-#     RelPropLayerNorm, 
-#     RelPropSequential, 
-#     RelPropGELU, 
+#     RelPropClone,
+#     RelPropAdd,
+#     RelPropIdentity,
+#     RelPropLinear,
+#     RelPropLayerNorm,
+#     RelPropSequential,
+#     RelPropGELU,
 #     RelPropMultiheadSelfAttention
 # )
 
 def forward_hook(module, input, output):
     ctx = {}
-    
+
     X = []
     for arg in input:
         if torch.is_tensor(arg):
@@ -35,7 +35,7 @@ class RelPropModule(torch.nn.Module):
         self.ctx = None
         # self.register_module_forward_hook(forward_hook)
         torch.nn.modules.module.register_module_forward_hook(forward_hook, always_call=True)
-    
+
     # def _register_context(self, X):
     #     if torch.is_tensor(X):
     #         self.ctx = {'X': X.detach().requires_grad_(True)}
@@ -43,21 +43,21 @@ class RelPropModule(torch.nn.Module):
     #         self.ctx = {'X': [x.detach().requires_grad_(True) if torch.is_tensor(x) else x for x in X]}
     #     else:
     #         raise ValueError(f"Unsupported input type {type(X)}")
-    
+
     def _jvp(self, Y, X, Z):
         """
         Compute the Jacobian-vector product J_{X}(Y) Zs.
 
         Arguments:
             Z:
-            X: 
+            X:
             Y:
         """
         return torch.autograd.grad(Y, X, Z, retain_graph=True)
 
     def _relprop(self, ctx, R, **kwargs):
         raise NotImplementedError
-    
+
     def relprop(self, R, **kwargs):
         return self._relprop(self.ctx, R, **kwargs)
 
@@ -67,10 +67,10 @@ class SimpleRelPropModule(RelPropModule):
 
 class RelPropReLU(torch.nn.ReLU, SimpleRelPropModule):
     pass
-    
+
 class RelPropSoftmax(torch.nn.Softmax, SimpleRelPropModule):
     pass
-    
+
 class RelPropLayerNorm(torch.nn.LayerNorm, SimpleRelPropModule):
     pass
 
@@ -91,7 +91,7 @@ class RelPropIndexSelect(RelPropModule):
         self.dim = dim
         self.index = index
         return torch.index_select(X, dim, index)
-    
+
     def _relprop(self, ctx, R, **kwargs):
         X = ctx['X'][0]
         Y = self.forward(X, self.dim, self.index)
@@ -145,7 +145,7 @@ class RelPropAdd2(RelPropModule):
         X1, X2 = X
         C1, C2 = C
 
-        a = X1 * C1 
+        a = X1 * C1
         b = X2 * C2
 
         a_sum = a.sum()
@@ -177,7 +177,7 @@ class RelPropLinear(torch.nn.Linear, RelPropModule):
         nw = torch.clamp(self.weight, max=0)
         px = torch.clamp(X, min=0)
         nx = torch.clamp(X, max=0)
-            
+
         activator_relevances = self._compute_relevances(R, pw, nw, px, nx)
         inhibitor_relevances = self._compute_relevances(R, nw, pw, px, nx)
 
@@ -191,7 +191,7 @@ class RelPropMultiheadSelfAttention(RelPropModule):
     """
 
     def __init__(
-        self, 
+        self,
         in_dim : int,
         out_dim : int = None,
         att_dim : int = 512,
@@ -224,18 +224,18 @@ class RelPropMultiheadSelfAttention(RelPropModule):
             self.qkv_nn = RelPropLinear(in_dim, 3 * att_dim, bias=False)
         else:
             self.qkv_nn = RelPropIdentity()
-        
+
         if out_dim != att_dim:
             self.out_proj = RelPropLinear(att_dim, out_dim)
         else:
             self.out_proj = RelPropIdentity()
-        
+
         self.softmax = RelPropSoftmax(dim=-1)
         self.dropout = RelPropDropout(dropout)
 
         self.matmul1 = RelPropEinsum("b h i d, b h j d -> b h i j")
         self.matmul2 = RelPropEinsum("b h i j, b h j d -> b h i d")
-    
+
     def save_att_grad(self, grad):
         self.att_grad = grad
 
@@ -257,7 +257,7 @@ class RelPropMultiheadSelfAttention(RelPropModule):
         return Y
 
     def relprop(
-        self, 
+        self,
         R : torch.Tensor,
         return_att_relevance: bool = False,
         **kwargs
@@ -296,21 +296,21 @@ class RelPropTransformerLayer(torch.nn.Module):
         super().__init__()
 
         self.att_module = RelPropMultiheadSelfAttention(
-            att_dim=att_dim, 
-            in_dim=in_dim, 
-            out_dim=att_dim, 
+            att_dim=att_dim,
+            in_dim=in_dim,
+            out_dim=att_dim,
             n_heads=n_heads,
             dropout=dropout
         )
 
         if out_dim is None:
             out_dim = in_dim
-        
+
         if in_dim != att_dim:
             self.in_proj = RelPropLinear(in_dim, att_dim)
         else:
             self.in_proj = RelPropIdentity()
-        
+
         self.use_mlp = use_mlp
         if use_mlp:
             self.mlp_module = RelPropSequential(
@@ -320,7 +320,7 @@ class RelPropTransformerLayer(torch.nn.Module):
                 RelPropLinear(4*att_dim, att_dim),
                 RelPropDropout(dropout)
             )
-        
+
         if out_dim != att_dim:
             self.out_proj = RelPropLinear(att_dim, out_dim)
         else:
@@ -334,7 +334,7 @@ class RelPropTransformerLayer(torch.nn.Module):
 
         self.clone1 = RelPropClone()
         self.clone2 = RelPropClone()
-    
+
     def forward(
         self,
         X: torch.Tensor,
@@ -350,7 +350,7 @@ class RelPropTransformerLayer(torch.nn.Module):
         return Y
 
     def relprop(
-        self, 
+        self,
         R : torch.Tensor,
         return_att_relevance: bool = False,
         **kwargs
@@ -363,7 +363,7 @@ class RelPropTransformerLayer(torch.nn.Module):
             R2 = self.mlp_module.relprop(R2, **kwargs)
             R2 = self.norm2.relprop(R2, **kwargs)
             R = self.clone2.relprop((R1, R2), **kwargs)
-        
+
         (R1, R2) = self.add1.relprop(R, **kwargs)
         R1 = self.in_proj.relprop(R1, **kwargs)
         if return_att_relevance:
@@ -401,22 +401,22 @@ class RelPropTransformerEncoder(torch.nn.Module):
             n_layers: Number of layers.
             use_mlp: Whether to use feedforward layer.
             add_self: Whether to add input to output.
-            dropout: Dropout rate.        
+            dropout: Dropout rate.
         """
 
         super().__init__()
 
         if out_dim is None:
             out_dim = in_dim
-        
+
         self.layers = torch.nn.ModuleList([
             RelPropTransformerLayer(
-                in_dim=in_dim if i == 0 else att_dim, 
+                in_dim=in_dim if i == 0 else att_dim,
                 out_dim=out_dim if i == n_layers - 1 else att_dim,
                 att_dim=att_dim,  n_heads=n_heads, use_mlp=use_mlp, dropout=dropout
-            ) 
+            )
             for i in range(n_layers)
-        ])        
+        ])
         self.norm = RelPropLayerNorm(out_dim)
 
     def forward(
@@ -430,13 +430,13 @@ class RelPropTransformerEncoder(torch.nn.Module):
             X: Input tensor of shape `(batch_size, bag_size, in_dim)`.
 
         Returns:
-            Y: Output tensor of shape `(batch_size, bag_size, in_dim)`.        
+            Y: Output tensor of shape `(batch_size, bag_size, in_dim)`.
         """
 
         Y = X
         for layer in self.layers:
             Y = layer(Y)
-        
+
         Y = self.norm(Y) # (batch_size, bag_size, att_dim)
 
         return Y
@@ -460,5 +460,3 @@ class RelPropTransformerEncoder(torch.nn.Module):
             for layer in self.layers[::-1]:
                 R = layer.relprop(R, **kwargs)
             return R
-
-                

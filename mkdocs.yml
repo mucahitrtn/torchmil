@@ -17,7 +17,7 @@ theme:
     - navigation.indexes
     - navigation.tabs
     - navigation.tabs.sticky
-    
+
   palette:
     # Light mode / dark mode
     # We deliberately don't automatically use `media` to check a user's preferences. We default to light mode as
@@ -46,7 +46,7 @@ theme:
 
 strict: False
 
-extra_javascript: 
+extra_javascript:
   # The below two make MathJax work, see https://squidfunk.github.io/mkdocs-material/reference/mathjax/
   - _static/mathjax.js
   - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
@@ -96,8 +96,8 @@ plugins:
           options:
             show_source: false  # don't include source code
             show_bases: true
-            show_root_heading: true  
-            show_root_full_path: true  # 
+            show_root_heading: true
+            show_root_full_path: true  #
             inherited_members: true  # Allow looking up inherited methods
             show_if_no_docstring: false
             show_signature_annotations: false
@@ -191,4 +191,3 @@ nav:
       - api/utils/annealing_scheduler.md
       - api/utils/graph_utils.md
       - api/utils/trainer.md
-      

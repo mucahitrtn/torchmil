@@ -1,6 +1,6 @@
 import torch
 import pytest
-from torchmil.nn import MeanPool 
+from torchmil.nn import MeanPool
 
 @pytest.fixture
 def meanpool_instance():

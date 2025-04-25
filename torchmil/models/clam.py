@@ -8,14 +8,14 @@ class CLAM_SB(MILModel):
     r"""
 
     Clustering-constrained Attention Multiple Instance Learning (CLAM), proposed in the paper [Data Efficient and Weakly Supervised Computational Pathology on Whole Slide Images](https://arxiv.org/abs/2004.09666).
-    
+
     **Overview.**
     The forward pass of CLAM is identical to the forward pass of [ABMIL](./abmil.md). The difference lies in the instance-level regularization, which we describe below.
 
     **Instance-level regularization.**
-    CLAM uses a binary clustering objective during training. 
+    CLAM uses a binary clustering objective during training.
     For this, in the binary MIL setting, two clustering classifiers are considered: $c_0 \colon \mathbb{R}^D \to \mathbb{R}$ and $c_1 \colon \mathbb{R}^D \to \mathbb{R}$.
-    To supervise this objective, the attention values computes by the attention pooling are used to generate *pseudo labels*. 
+    To supervise this objective, the attention values computes by the attention pooling are used to generate *pseudo labels*.
 
     Given an input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times P}$ with label $Y$ and attention values $\mathbf{f} = \left[ f_1, \ldots, f_N \right]^\top \in \mathbb{R}^{N}$,
     the instance-level regularization is performed as follows:
@@ -27,20 +27,20 @@ class CLAM_SB(MILModel):
             D_{\text{out}} = \left\{ \mathbf{x}_i \mid f_i \in \text{BottomK}(\mathbf{f}, k) \right\}.
         \end{gather}
 
-    2. The instances in $D_{\text{in}}$ are assigned a pseudo label of 1 for $c_Y$, and a pseudo label of 0 for $c_{1-Y}$. 
-    The instances in $D_{\text{out}}$ are assigned a pseudo label of 0 for $c_Y$. The pseudo labels are used to train the clustering classifiers, 
+    2. The instances in $D_{\text{in}}$ are assigned a pseudo label of 1 for $c_Y$, and a pseudo label of 0 for $c_{1-Y}$.
+    The instances in $D_{\text{out}}$ are assigned a pseudo label of 0 for $c_Y$. The pseudo labels are used to train the clustering classifiers,
 
         \begin{gather}
             \ell_{\text{in}} = \frac{1}{2K} \left( \sum_{\mathbf{x} \in D_{\text{in}}}\ell_{\text{inst}}(c_Y(\mathbf{x}), 1) + \sum_{\mathbf{x} \in D_{\text{out}}}\ell_{\text{inst}}(c_{Y}(\mathbf{x}), 0) \right), \\
             \ell_{\text{out}} = \frac{1}{K} \sum_{\mathbf{x} \in D_{\text{in}}}\ell_{\text{inst}}(c_{1-Y}(\mathbf{x}), 0),
         \end{gather}
 
-    where $\ell_{\text{inst}}$ is the instance-level loss function (the default is [SmoothTop1SVM](https://jmlr.csail.mit.edu/papers/volume2/crammer01a/crammer01a.pdf)) and $Y$ is the true bag label. 
+    where $\ell_{\text{inst}}$ is the instance-level loss function (the default is [SmoothTop1SVM](https://jmlr.csail.mit.edu/papers/volume2/crammer01a/crammer01a.pdf)) and $Y$ is the true bag label.
     The total instance-level loss is $\ell_{\text{in}} + \ell_{\text{out}}$, which is added to the bag-level loss to train the model.
 
     """
     def __init__(
-        self, 
+        self,
         in_shape : tuple = None,
         att_dim : int = 128,
         att_act : str = 'tanh',
@@ -58,7 +58,7 @@ class CLAM_SB(MILModel):
             k_sample: Number of instances to sample.
             gated: If True, use gated attention in the attention pooling.
             feat_ext: Feature extractor.
-            criterion: Loss function. By default, Binary Cross-Entropy loss from logits.        
+            criterion: Loss function. By default, Binary Cross-Entropy loss from logits.
         """
         super().__init__()
         self.criterion = criterion
@@ -79,7 +79,7 @@ class CLAM_SB(MILModel):
             self.inst_loss_fn = torch.nn.BCEWithLogitsLoss()
         else:
             raise ValueError(f"Invalid instance loss name: {inst_loss_name}")
-    
+
     @staticmethod
     def create_positive_targets(length : int, device : torch.device) -> torch.Tensor:
         """
@@ -88,12 +88,12 @@ class CLAM_SB(MILModel):
         Arguments:
             length: Length of the target tensor.
             device: Device to create the tensor.
-        
+
         Returns:
-            pos_targets: Tensor of shape `(length,)` with all elements set to 1.        
+            pos_targets: Tensor of shape `(length,)` with all elements set to 1.
         """
         return torch.full((length, ), 1, device=device).long()
-    
+
     @staticmethod
     def create_negative_targets(length : int, device : torch.device) -> torch.Tensor:
         """
@@ -102,14 +102,14 @@ class CLAM_SB(MILModel):
         Arguments:
             length: Length of the target tensor.
             device: Device to create the tensor.
-        
+
         Returns:
-            neg_targets: Tensor of shape `(length,)` with all elements set to 0.        
+            neg_targets: Tensor of shape `(length,)` with all elements set to 0.
         """
         return torch.full((length, ), 0, device=device).long()
-    
+
     def inst_eval(
-            self, 
+            self,
             att : torch.Tensor,
             emb : torch.Tensor,
             classifier : torch.nn.Module,
@@ -123,12 +123,12 @@ class CLAM_SB(MILModel):
             emb: Embeddings of shape `(bag_size, feat_dim)`.
             classifier: Instance classifier.
             mask: Mask of shape `(bag_size,)`. If provided, the attention values are masked before selection.
-        
+
         Returns:
             instance_loss: Instance loss.
             all_preds: Predicted instance labels of shape `(2 * k_sample,)`.
             all_targets: Generated instance labels of shape `(2 * k_sample,)`.
-        """ 
+        """
         device = att.device
         bag_size = emb.shape[0]
 
@@ -139,13 +139,13 @@ class CLAM_SB(MILModel):
         k_sample = min(self.k_sample, bag_size)
 
         if mask is not None:
-            att = att.masked_fill(~mask, -1e9) # (bag_size,)        
+            att = att.masked_fill(~mask, -1e9) # (bag_size,)
         top_p_ids = torch.topk(att, k_sample)[1] # (k_sample,)
         top_p = torch.index_select(emb, dim=0, index=top_p_ids) # (k_sample, feat_dim)
 
         if mask is not None:
             att = att.masked_fill(~mask, 1e9) # (bag_size,)
-        
+
         top_n_ids = torch.topk(-att, k_sample)[1] # (k_sample,)
         top_n = torch.index_select(emb, dim=0, index=top_n_ids) # (k_sample, feat_dim)
 
@@ -160,10 +160,10 @@ class CLAM_SB(MILModel):
         all_preds_one_hot = torch.nn.functional.one_hot(all_preds.squeeze(-1), num_classes=2).float() # (2 * k_sample, 2)
         instance_loss = self.inst_loss_fn(logits.float(), all_preds_one_hot)
         return instance_loss, all_preds, all_targets
-    
+
     def inst_eval_out(
-            self, 
-            att : torch.Tensor, 
+            self,
+            att : torch.Tensor,
             emb : torch.Tensor,
             classifier : torch.nn.Module,
             mask = None
@@ -176,7 +176,7 @@ class CLAM_SB(MILModel):
             emb: Embeddings of shape `(bag_size, feat_dim)`.
             classifier: Instance classifier.
             mask: Mask of shape `(bag_size,)`. If provided, the attention values are masked before selection.
-        
+
         Returns:
             instance_loss: Instance loss.
             p_preds: Predicted instance labels of shape `(k_sample,)`.
@@ -184,7 +184,7 @@ class CLAM_SB(MILModel):
         """
         device = att.device
         bag_size = emb.shape[0]
-        
+
         if mask is not None:
             bag_size = mask.sum().item()
             mask = mask.bool()
@@ -205,7 +205,7 @@ class CLAM_SB(MILModel):
         return instance_loss, p_preds, p_targets
 
     def compute_inst_loss(
-        self, 
+        self,
         att : torch.Tensor,
         emb : torch.Tensor,
         labels : torch.Tensor,
@@ -219,7 +219,7 @@ class CLAM_SB(MILModel):
             emb: Embeddings of shape `(batch_size, bag_size, feat_dim)`.
             labels: Bag labels of shape `(batch_size,)`.
             mask: Mask of shape `(batch_size, bag_size)`. If provided, the attention values are masked before selection.
-        
+
         Returns:
             inst_loss: Instance loss.
         """
@@ -243,7 +243,7 @@ class CLAM_SB(MILModel):
 
 
     def forward(
-        self, 
+        self,
         X : torch.Tensor,
         mask : torch.Tensor = None,
         return_att : bool = False,
@@ -257,7 +257,7 @@ class CLAM_SB(MILModel):
             mask: Mask of shape `(batch_size, bag_size)`.
             return_att: If True, returns attention values (before normalization) in addition to `Y_pred`.
             return_emb: If True, returns embeddings in addition to `Y_pred`.
-        
+
         Returns:
             Y_pred: Bag label logits of shape `(batch_size,)`.
             att: Only returned when `return_att=True`. Attention values (before normalization) of shape (batch_size, bag_size).
@@ -269,7 +269,7 @@ class CLAM_SB(MILModel):
         z, f = self.pool(X, mask, return_att=True) # z: (batch_size, D), f: (batch_size, bag_size)
 
         Y_pred = self.classifier(z).squeeze(1) # (batch_size,)
-        
+
         if return_emb:
             if return_att:
                 return Y_pred, f, X
@@ -279,10 +279,10 @@ class CLAM_SB(MILModel):
             return Y_pred, f
         else:
             return Y_pred
-    
+
     def compute_loss(
-        self, 
-        Y : torch.Tensor, 
+        self,
+        Y : torch.Tensor,
         X : torch.Tensor,
         mask : torch.Tensor = None
     ) -> tuple[torch.Tensor, dict]:
@@ -293,7 +293,7 @@ class CLAM_SB(MILModel):
             Y: Bag labels of shape `(batch_size,)`.
             X: Bag features of shape `(batch_size, bag_size, ...)`.
             mask: Mask of shape `(batch_size, bag_size)`.
-        
+
         Returns:
             Y_pred: Bag label logits of shape `(batch_size,)`.
             loss_dict: Dictionary containing the loss value.
@@ -306,8 +306,8 @@ class CLAM_SB(MILModel):
         return Y_pred, { crit_name: crit_loss, 'InstLoss' : inst_loss}
 
     def predict(
-        self, 
-        X : torch.Tensor, 
+        self,
+        X : torch.Tensor,
         mask : torch.Tensor = None,
         return_inst_pred : bool = True
     ) -> tuple[torch.Tensor, torch.Tensor]:

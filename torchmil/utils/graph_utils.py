@@ -13,14 +13,14 @@ def degree(
         index: Edge index of the adjacency matrix, shape (2, n_edges).
         edge_weight: Edge weight of the adjacency matrix, shape (n_edges,).
         n_nodes: Number of nodes in the graph.
-    
+
     Returns:
         degree: Degree of the adjacency matrix.
     """
 
     if edge_weight is None:
         edge_weight = np.ones(index.shape[1])
-    
+
     if n_nodes is None:
         n_nodes = index.max() + 1
 
@@ -40,7 +40,7 @@ def add_self_loops(
             edge_index: Edge index of the adjacency matrix, shape (2, n_edges).
             edge_weight: Edge weight of the adjacency matrix, shape (n_edges,).
             n_nodes: Number of nodes in the graph.
-        
+
         Returns:
             new_edge_index: Edge index of the adjacency matrix with self-loops.
             new_edge_weight: Edge weight of the adjacency matrix with self-loops.
@@ -48,10 +48,10 @@ def add_self_loops(
 
         if n_nodes is None:
             n_nodes = edge_index.max() + 1
-        
+
         if edge_weight is None:
             edge_weight = np.ones(edge_index.shape[1])
-        
+
         loop_index = np.arange(0, n_nodes)
         loop_index = np.tile(loop_index, (2,1))
 
@@ -60,7 +60,7 @@ def add_self_loops(
             new_edge_weight = np.ones(n_nodes)
         else:
             if edge_weight is None:
-                edge_weight = np.ones(edge_index.shape[1])                 
+                edge_weight = np.ones(edge_index.shape[1])
             new_edge_index = np.hstack([edge_index, loop_index])
             new_edge_weight = np.concatenate([edge_weight, np.ones(n_nodes)])
         return new_edge_index, new_edge_weight
@@ -78,7 +78,7 @@ def normalize_adj(
         edge_index: Edge index of the adjacency matrix.
         edge_weight: Edge weight of the adjacency matrix.
         n_nodes: Number of nodes in the graph.
-    
+
     Returns:
         edge_weight: Edge weight of the normalized adjacency matrix.
     """
@@ -116,10 +116,10 @@ def build_adj(
         feat: Features of the nodes, used to compute the edge weights. If None, the adjacency matrix is binary.
         dist_thr: Distance threshold to consider two nodes as neighbors. Default is 1.0.
         add_self_loops: Whether to add self-loops.
-    
+
     Returns:
         edge_index: Edge index of the adjacency matrix.
-        edge_weight: Edge weight of the adjacency matrix    
+        edge_weight: Edge weight of the adjacency matrix
     """
 
     kdtree = KDTree(coords)
@@ -146,12 +146,12 @@ def build_adj(
                 else:
                     dist = 1.0
                 edge_weight.append(dist)
-    
+
     if len(edge_index) == 0:
         edge_index = np.array([[], []]).astype(np.longlong)
         edge_weight = np.array([])
     else:
         edge_index = np.array(edge_index).T.astype(np.longlong)  # (2, n_edges)
-        edge_weight = np.array(edge_weight)  # (n_edges,)    
+        edge_weight = np.array(edge_weight)  # (n_edges,)
 
     return edge_index, edge_weight

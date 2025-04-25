@@ -28,7 +28,7 @@ class DeepGCNLayer(torch.nn.Module):
         self.act = act if act is not None else torch.nn.Identity()
         self.dropout = torch.nn.Dropout(dropout)
         self.block = block
-    
+
     def forward(
         self,
         x : torch.Tensor,
@@ -36,11 +36,11 @@ class DeepGCNLayer(torch.nn.Module):
     ) -> torch.Tensor:
         """
         Forward method.
-        
+
         Arguments:
             x: Node features of shape `(batch_size, n_nodes, in_dim)`.
             adj: Adjacency matrix of shape `(batch_size, n_nodes, n_nodes)`.
-        
+
         Returns:
             y: Output tensor of shape `(batch_size, n_nodes, out_dim)`.
         """

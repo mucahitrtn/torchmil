@@ -1,5 +1,5 @@
 from .collate import (
-    collate_fn, 
+    collate_fn,
     pad_tensors
 )
 

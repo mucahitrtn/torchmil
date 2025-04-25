@@ -10,7 +10,7 @@ def slices_to_canvas(
     Arguments:
         slices_list: List of images of CT scan slices. Each image is a numpy array with shape `(slice_size, slice_size, 3)`.
         slice_size: Size of the slices.
-    
+
     Returns:
         canvas: Canvas with all the slices. It has shape `(slice_size, bag_len*slice_size, 3)`.
     """
@@ -24,7 +24,7 @@ def slices_to_canvas(
     for i, img in enumerate(slices_list):
         x = i*slice_size
         canvas[0:slice_size, x:x+slice_size] = img
-    
+
     return canvas
 
 def draw_slices_contour(
@@ -33,13 +33,13 @@ def draw_slices_contour(
     contour_prop : float = 0.05,
 ) -> np.ndarray:
     """
-    Given a canvas with CT scan slices already drawn, draw a contour around each slice.    
+    Given a canvas with CT scan slices already drawn, draw a contour around each slice.
 
     Arguments:
         canvas: Canvas with all the slices. It has shape `(slice_size, bag_len*slice_size, 3)`.
         slice_size: Size of the slices.
         contour_prop: Proportion of the slice size that the contour will cover.
-    
+
     Returns:
         canvas: Canvas with the contours drawn. It has shape `(slice_size, bag_len*slice_size, 3)`.
     """
@@ -74,7 +74,7 @@ def draw_heatmap_ctscan(
         alpha: Alpha value for blending the heatmap with the canvas.
         max_color: Color for the maximum value in the heatmap.
         min_color: Color for the minimum value in the heatmap.
-    
+
     Returns:
         canvas: Canvas with the heatmap drawn. It has shape `(slice_size, bag_len*slice_size, 3)`.
     """
@@ -87,5 +87,5 @@ def draw_heatmap_ctscan(
         y = 0
         color = value*max_color + (1-value)*min_color
         canvas_copy[y:y+slice_size, x:x+slice_size] = (1-alpha)*canvas_copy[y:y+slice_size, x:x+slice_size] + alpha*color
-    
+
     return canvas_copy

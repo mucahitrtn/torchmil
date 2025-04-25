@@ -6,7 +6,7 @@ SDP_BACKEND = [SDPBackend.MATH, SDPBackend.FLASH_ATTENTION, SDPBackend.EFFICIENT
 
 class MultiheadSelfAttention(torch.nn.Module):
     r"""
-    The Multihead Self Attention module, as described in [Attention is All You Need](https://arxiv.org/abs/1706.03762). 
+    The Multihead Self Attention module, as described in [Attention is All You Need](https://arxiv.org/abs/1706.03762).
 
     Given an input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times \texttt{in_dim}}$,
     this module computes:
@@ -21,7 +21,7 @@ class MultiheadSelfAttention(torch.nn.Module):
     If $\texttt{out_dim} \neq \texttt{att_dim}$, $\mathbf{Y}$ is passed through a linear layer with output dimension $\texttt{out_dim}$.
     """
     def __init__(
-        self, 
+        self,
         in_dim : int,
         out_dim : int = None,
         att_dim : int = 512,
@@ -49,14 +49,14 @@ class MultiheadSelfAttention(torch.nn.Module):
             self.qkv_nn = torch.nn.Linear(in_dim, 3 * att_dim, bias = False)
         else:
             self.qkv_nn = None
-        
+
         if out_dim != att_dim:
             self.out_proj = torch.nn.Linear(att_dim, out_dim)
         else:
             self.out_proj = torch.nn.Identity()
 
     def _scaled_dot_product_attention(
-            self, 
+            self,
             query : torch.Tensor,
             key : torch.Tensor,
             value : torch.Tensor,
@@ -74,7 +74,7 @@ class MultiheadSelfAttention(torch.nn.Module):
             mask: Mask tensor of shape `(batch_size, seq_len)`.
             return_attention: Whether to return the attention matrices.
         Returns:
-            out: Output tensor of shape `(batch_size, n_heads, seq_len, head_dim)`.                
+            out: Output tensor of shape `(batch_size, n_heads, seq_len, head_dim)`.
         """
 
         if mask is not None:
@@ -105,7 +105,7 @@ class MultiheadSelfAttention(torch.nn.Module):
         Returns:
             query: Query tensor of shape `(batch_size, seq_len, att_dim)`.
             key: Key tensor of shape `(batch_size, seq_len, att_dim)`.
-            value: Value tensor of shape `(batch_size, seq_len, att_dim)`.        
+            value: Value tensor of shape `(batch_size, seq_len, att_dim)`.
         """
         if self.learn_weights:
             q, k, v = self.qkv_nn(x).chunk(3, dim=-1) # (batch_size, seq_len, att_dim), (batch_size, seq_len, att_dim), (batch_size, seq_len, att_dim)
@@ -114,7 +114,7 @@ class MultiheadSelfAttention(torch.nn.Module):
         return q, k, v
 
     def forward(
-            self, 
+            self,
             x : torch.Tensor,
             mask : torch.Tensor = None,
             return_attention : bool = False

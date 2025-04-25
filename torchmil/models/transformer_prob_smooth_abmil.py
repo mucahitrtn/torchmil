@@ -12,7 +12,7 @@ class TransformerProbSmoothABMIL(MILModel):
     Proposed in [Probabilistic Smooth Attention for Deep Multiple Instance Learning in Medical Imaging]().
 
     Given an input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times P}$, the model optionally applies a feature extractor, $\text{FeatExt}(\cdot)$, to transform the instance features: $\mathbf{X} = \text{FeatExt}(\mathbf{X}) \in \mathbb{R}^{N \times D}$.
-    Then, it transforms the instance features using a transformer encoder, 
+    Then, it transforms the instance features using a transformer encoder,
 
     $$ \mathbf{X} = \text{TransformerEncoder}(\mathbf{X}) \in \mathbb{R}^{N \times D}. $$
 
@@ -35,14 +35,14 @@ class TransformerProbSmoothABMIL(MILModel):
     The bag representation $\widehat{\mathbf{z}}$ is fed into a classifier, implemented as a linear layer, to produce bag label predictions $Y_{\text{pred}} \in \mathbb{R}^{m}$.
 
     Notably, the attention distribution naturally induces a distribution over the bag label predictions. This model thus generates multiple predictions for each bag, corresponding to different samples from this distribution.
-        
+
 
     **Regularization.**
     The probabilistic pooling mechanism introduces a regularization term to the loss function that encourages *smoothness* in the attention values.
     Given an input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times P}$ with adjacency matrix $\mathbf{A} \in \mathbb{R}^{N \times N}$, the regularization term corresponds to
-    
+
     $$
-        \ell_{\text{KL}}(\mathbf{X}, \mathbf{A}) = 
+        \ell_{\text{KL}}(\mathbf{X}, \mathbf{A}) =
             \begin{cases}
                 \mathbf{\mu}_{\mathbf{f}}^\top \mathbf{L} \mathbf{\mu}_{\mathbf{f}} \quad & \text{if } \texttt{covar_mode='zero'}, \\
                 \mathbf{\mu}_{\mathbf{f}}^\top \mathbf{L} \mathbf{\mu}_{\mathbf{f}} + \operatorname{Tr}(\mathbf{L} \mathbf{\Sigma}_{\mathbf{f}}) - \frac{1}{2}\log \det( \mathbf{\Sigma}_{\mathbf{f}} ) + \operatorname{const} \quad & \text{if } \texttt{covar_mode='diag'}, \\
@@ -50,7 +50,7 @@ class TransformerProbSmoothABMIL(MILModel):
     $$
 
     where $\operatorname{const}$ is a constant term that does not depend on the parameters, $\mathbf{\Sigma}_{\mathbf{f}} = \operatorname{diag}(\mathbf{\sigma}_{\mathbf{f}}^2)$, $\mathbf{L} = \mathbf{D} - \mathbf{A}$ is the graph Laplacian matrix, and $\mathbf{D}$ is the degree matrix of $\mathbf{A}$.
-    This term is then averaged for all bags in the batch and added to the loss function.    
+    This term is then averaged for all bags in the batch and added to the loss function.
     """
 
     def __init__(
@@ -61,7 +61,7 @@ class TransformerProbSmoothABMIL(MILModel):
         n_samples_train: int = 1000,
         n_samples_test: int = 5000,
         feat_ext: torch.nn.Module = torch.nn.Identity(),
-        transf_att_dim : int = 512, 
+        transf_att_dim : int = 512,
         transf_n_layers : int = 1,
         transf_n_heads : int = 8,
         transf_use_mlp : bool = True,
@@ -84,7 +84,7 @@ class TransformerProbSmoothABMIL(MILModel):
             transf_add_self: Whether to add input to output in transformer encoder.
             transf_dropout: Dropout rate in transformer encoder.
             criterion: Loss function. By default, Binary Cross-Entropy loss from logits for binary classification.
-        
+
         """
         super().__init__()
         self.criterion = criterion
@@ -94,14 +94,14 @@ class TransformerProbSmoothABMIL(MILModel):
             feat_dim = get_feat_dim(feat_ext, in_shape)
         else:
             feat_dim = None
-        
+
         self.transformer_encoder = TransformerEncoder(
-            in_dim=feat_dim, 
-            att_dim=transf_att_dim, 
-            n_layers=transf_n_layers, 
-            n_heads=transf_n_heads, 
+            in_dim=feat_dim,
+            att_dim=transf_att_dim,
+            n_layers=transf_n_layers,
+            n_heads=transf_n_heads,
             use_mlp=transf_use_mlp,
-            add_self=transf_add_self, 
+            add_self=transf_add_self,
             dropout=transf_dropout
         )
 

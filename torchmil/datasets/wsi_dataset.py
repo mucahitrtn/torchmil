@@ -15,22 +15,22 @@ class WSIDataset(ProcessedMILDataset):
     Different tools are available to obtain the previous directory structure from a set of WSIs.
     For example, given a set of WSIs in the original format (e.g., .tif extension), patches can be extracted using tools such as [CLAM](https://github.com/mahmoodlab/CLAM).
     This tool outputs the coordinates of the patches, which can be used to extract the patches from the WSIs.
-    Then, a feature vector can be extracted from each patch using a pretrained model. 
+    Then, a feature vector can be extracted from each patch using a pretrained model.
 
     **Binary MIL for WSIs.**
-    In binary classification, the label $Y$ of the WSI usually represents the presence ($Y=1$) or absence ($Y=0$) of a certain characteristic in the WSI. 
+    In binary classification, the label $Y$ of the WSI usually represents the presence ($Y=1$) or absence ($Y=0$) of a certain characteristic in the WSI.
     This characteristic can be present in one or more patches of the WSI, but the exact location of the characteristic is unknown.
-    This translates into a patch having an unknown label $y_n$, which is positive ($y_n=1$) if it contains the characteristic, and negative ($y_n=0$) otherwise. 
+    This translates into a patch having an unknown label $y_n$, which is positive ($y_n=1$) if it contains the characteristic, and negative ($y_n=0$) otherwise.
     Consequently, $Y = \max\left\{ y_1, y_2, \ldots, y_N \right\}$, where $N$ is the number of patches in the WSI.
     This means that the WSI is positive (contains the characteristic) if at least one of its patches is positive (contains the characteristic).
     In the case that the WSI has been annotated at the patch level, the instance labels $y_n$ can be used solely for evaluation purposes.
     See [`torchmil.datasets.BinaryClassificationDataset`](./binary_classification_dataset.md) for more information.
 
     **Directory structure.**
-    It is assumed that the bags have been processed and saved as numpy files. 
+    It is assumed that the bags have been processed and saved as numpy files.
     For more information on the processing of the bags, refer to the [`ProcessedMILDataset` class](processed_mil_dataset.md).
     This dataset expects the following directory structure:
-    
+
     ```
     features_path
     ├── wsi1.npy
@@ -52,17 +52,17 @@ class WSIDataset(ProcessedMILDataset):
 
     **Adjacency matrix.**
     If the coordinates of the patches are available, an adjacency matrix representing the spatial relationships between the patches is built.
-    
+
     \begin{equation}
     A_{ij} = \begin{cases}
     d_{ij}, & \text{if } \left\| \mathbf{c}_i - \mathbf{c}_j \right\| \leq \text{dist_thr}, \\
-    0, & \text{otherwise}, 
+    0, & \text{otherwise},
     \end{cases} \quad d_{ij} = \begin{cases}
     1, & \text{if } \text{adj_with_dist=False}, \\
     \exp\left( -\frac{\left\| \mathbf{x}_i - \mathbf{x}_j \right\|}{d} \right), & \text{if } \text{adj_with_dist=True}.
     \end{cases}
     \end{equation}
-    
+
     where $\mathbf{c}_i$ and $\mathbf{c}_j$ are the coordinates of the patches $i$ and $j$, respectively, $\text{dist_thr}$ is a threshold distance,
     and $\mathbf{x}_i \in \mathbb{R}^d$ and $\mathbf{x}_j \in \mathbb{R}^d$ are the features of patches $i$ and $j$, respectively.
     If no `dist_thr` is provided, it is set to $\sqrt{2} \times \text{patch_size}$.

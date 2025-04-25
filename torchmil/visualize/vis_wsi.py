@@ -14,7 +14,7 @@ def patches_to_canvas(
         row_array: Array with the row indices of the patches.
         column_array: Array with the column indices of the patches.
         patch_size: Size of the patches.
-    
+
     Returns:
         canvas: Canvas with all the patches. It has shape `(max_row*patch_size, max_column*patch_size, 3)`.
     """
@@ -30,7 +30,7 @@ def patches_to_canvas(
         column = column_array[i]
         patch = patches_list[i]
         canvas[row*patch_size:(row+1)*patch_size, column*patch_size:(column+1)*patch_size] = patch
-    
+
     return canvas
 
 def draw_patches_contour(
@@ -49,7 +49,7 @@ def draw_patches_contour(
         column_array: Array with the column indices of the patches.
         patch_size: Size of the patches.
         contour_prop: Proportion of the patch size that the contour will cover.
-    
+
     Returns:
         canvas: Canvas with the contours drawn. It has shape `(max_row*patch_size, max_column*patch_size, 3)`.
     """
@@ -64,10 +64,10 @@ def draw_patches_contour(
         contour_len = contour_prop*patch_size
         canvas_copy[y:y+patch_size, int(x-contour_len):int(x+contour_len)] = 0
         canvas_copy[y:y+patch_size, int(x+patch_size-contour_len):int(x+patch_size+contour_len)] = 0
-        
+
         canvas_copy[int(y-contour_len):int(y+contour_len), x:x+patch_size] = 0
         canvas_copy[int(y+patch_size-contour_len):int(y+patch_size+contour_len), x:x+patch_size] = 0
-    
+
     return canvas_copy
 
 def draw_heatmap_wsi(
@@ -93,9 +93,9 @@ def draw_heatmap_wsi(
         alpha: Alpha value of the heatmap.
         max_color: Color of the highest value of the heatmap.
         min_color: Color of the lowest value of the heatmap.
-    
+
     Returns:
-        canvas: Canvas with the heatmap drawn. It has shape `(max_row*patch_size, max_column*patch_size, 3)`.    
+        canvas: Canvas with the heatmap drawn. It has shape `(max_row*patch_size, max_column*patch_size, 3)`.
     """
 
     canvas_copy = np.copy(canvas)
@@ -116,5 +116,5 @@ def draw_heatmap_wsi(
             color = 255*(w*max_color + (1.0-w)*min_color)
 
         canvas_copy[y:y+patch_size, x:x+patch_size] = (alpha)*color + (1.0-alpha)*canvas[y:y+patch_size, x:x+patch_size]
-            
+
     return canvas_copy

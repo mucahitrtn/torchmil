@@ -12,11 +12,11 @@ from typing import Union
 class ToyDataset(torch.utils.data.Dataset):
 
     r"""
-    
+
     This class represents a synthetic dataset for Multiple Instance Learning (MIL) tasks.
-    It generates synthetic bags of instances from a given dataset, where each bag is labeled based on the presence or absence of specific "positive" instances. 
+    It generates synthetic bags of instances from a given dataset, where each bag is labeled based on the presence or absence of specific "positive" instances.
     This class is particularly useful for simulating MIL scenarios, where the goal is to learn from bags of instances rather than individual data points.
-    
+
     **Bag generation.**
     The dataset generates bags by sampling instances from the input  `(data, labels)` pair.
     A bag is labeled as positive if it contains at least one instance from a predefined set of positive labels (`obj_labels`).
@@ -30,7 +30,7 @@ class ToyDataset(torch.utils.data.Dataset):
     - Y: The bag's label (1 for positive, 0 for negative).
     - y_inst: The instance-level labels within the bag.
 
-    **MNIST example.** 
+    **MNIST example.**
     We can create a MIL dataset from the original MNIST as follows:
 
     ```python
@@ -53,12 +53,12 @@ class ToyDataset(torch.utils.data.Dataset):
 
     # Retrieve a bag
     bag = toy_dataset[0]
-    X, Y, y_inst = bag['X'], bag['Y'], bag['y_inst']    
-    ```    
+    X, Y, y_inst = bag['X'], bag['Y'], bag['y_inst']
+    ```
     """
 
     def __init__(
-            self, 
+            self,
             data : np.ndarray,
             labels : np.ndarray,
             num_bags : int,
@@ -77,7 +77,7 @@ class ToyDataset(torch.utils.data.Dataset):
             obj_labels: List of labels to consider as positive.
             bag_size: Number of instances per bag. If a tuple `(min_size, max_size)` is provided, the bag size is sampled uniformly from this range.
             pos_class_prob: Probability of generating a positive bag.
-            seed: Random seed.        
+            seed: Random seed.
         """
 
         super().__init__()
@@ -93,7 +93,7 @@ class ToyDataset(torch.utils.data.Dataset):
         self.bags_list = self._create_bags()
 
         # print(f"Expected number of bags: {self.num_bags}, Created bags: {len(self.bags_list)}")
-    
+
     def _create_bags(self):
         pos_idx = np.where(np.isin(self.labels, self.obj_labels))[0]
         np.random.shuffle(pos_idx)
@@ -169,24 +169,24 @@ class ToyDataset(torch.utils.data.Dataset):
                 'y_inst': torch.from_numpy(inst_labels).long()
             })
             bags_list.append(bag_dict)
-        
+
         # Shuffle bags
         np.random.shuffle(bags_list)
-        
+
         return bags_list
-    
+
     def __len__(self) -> int:
         """
         Returns:
             Number of bags in the dataset
         """
         return len(self.bags_list)
-    
+
     def __getitem__(self, index: int) -> TensorDict:
         """
         Arguments:
             index: Index of the bag to retrieve.
-        
+
         Returns:
             bag_dict: Dictionary containing the following keys:
 

@@ -2,7 +2,7 @@ import torch
 
 class MaxPool(torch.nn.Module):
     r"""
-    Max pooling aggregation. 
+    Max pooling aggregation.
 
     Given an input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times D}$,
     this model aggregates the instance features into a bag representation $\mathbf{z} \in \mathbb{R}^{D}$ as,
@@ -17,7 +17,7 @@ class MaxPool(torch.nn.Module):
         """
         """
         super(MaxPool, self).__init__()
-    
+
     def forward(
         self,
         X : torch.Tensor,
@@ -31,7 +31,7 @@ class MaxPool(torch.nn.Module):
         Returns:
             z: Output tensor of shape `(batch_size, in_dim)`.
         """
-        
+
         batch_size, bag_size, _ = X.shape
 
         if mask is None:

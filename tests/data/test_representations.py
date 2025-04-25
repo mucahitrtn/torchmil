@@ -6,13 +6,13 @@ from torchmil.data.representations import seq_to_spatial, spatial_to_seq
 def test_seq_to_spatial_basic():
     # Test case 1: Basic test with small input tensors
     X = torch.tensor([[
-        [1, 2], 
-        [3, 4], 
+        [1, 2],
+        [3, 4],
         [5, 6]
     ]], dtype=torch.float32)
     coords = torch.tensor([[
-        [0, 0], 
-        [1, 0], 
+        [0, 0],
+        [1, 0],
         [0, 1]
     ]], dtype=torch.long)
     X_esp = seq_to_spatial(X, coords)
@@ -20,11 +20,11 @@ def test_seq_to_spatial_basic():
     assert X_esp.shape == expected_shape
     expected_result = torch.tensor([[
         [
-            [1, 2], 
+            [1, 2],
             [5, 6]
-        ], 
+        ],
         [
-            [3, 4], 
+            [3, 4],
             [0, 0]
         ]
     ]], dtype=torch.float32)

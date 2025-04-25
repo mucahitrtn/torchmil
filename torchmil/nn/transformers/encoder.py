@@ -15,7 +15,7 @@ class Encoder(torch.nn.Module):
     where $\ldots$ denotes additional arguments.
     The list of layers, $\operatorname{Layer}^{l}$ for $l = 1, \ldots, L$, is given by the `layers` argument, and should be a subclass of [Layer](./#torchmil.nn.transformers.Layer).
 
-    This module outputs $\operatorname{Encoder}(\mathbf{X}) = \mathbf{X}^{L}$ if `add_self=False`, 
+    This module outputs $\operatorname{Encoder}(\mathbf{X}) = \mathbf{X}^{L}$ if `add_self=False`,
     and $\operatorname{Encoder}(\mathbf{X}) = \mathbf{X}^{L} + \mathbf{X}$ if `add_self=True`.
     """
 
@@ -45,7 +45,7 @@ class Encoder(torch.nn.Module):
             X: Input tensor of shape `(batch_size, bag_size, in_dim)`.
 
         Returns:
-            Y: Output tensor of shape `(batch_size, bag_size, in_dim)`.        
+            Y: Output tensor of shape `(batch_size, bag_size, in_dim)`.
         """
 
         Y = X  # (batch_size, bag_size, in_dim)

@@ -9,16 +9,16 @@ from torchmil.nn.sm import Sm
 class SmAttentionPool(torch.nn.Module):
     r"""
     Attention-based pooling with the Sm operator, as proposed in [Sm: enhanced localization in Multiple Instance Learning for medical imaging classification](https://arxiv.org/abs/2410.03276).
-    
-    Given an input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times \texttt{in_dim}}$, 
-    this model aggregates the instance features into a bag representation $\mathbf{z} \in \mathbb{R}^{\texttt{in_dim}}$ as, 
+
+    Given an input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times \texttt{in_dim}}$,
+    this model aggregates the instance features into a bag representation $\mathbf{z} \in \mathbb{R}^{\texttt{in_dim}}$ as,
 
     \begin{gather}
         \mathbf{f} = \operatorname{SmMLP}(\mathbf{X}) \in \mathbb{R}^{N}, \\
-        \mathbf{z} = \mathbf{X}^\top \operatorname{Softmax}(\mathbf{f}) = \sum_{n=1}^N s_n \mathbf{x}_n, 
+        \mathbf{z} = \mathbf{X}^\top \operatorname{Softmax}(\mathbf{f}) = \sum_{n=1}^N s_n \mathbf{x}_n,
     \end{gather}
 
-    where $s_n$ is the normalized attention score for the $n$-th instance. 
+    where $s_n$ is the normalized attention score for the $n$-th instance.
 
     To compute the attention values, $\operatorname{SmMLP}$ is defined as $\operatorname{SmMLP}(\mathbf{X}) = \mathbf{Y}^L$ where
 
@@ -27,7 +27,7 @@ class SmAttentionPool(torch.nn.Module):
         \mathbf{Y}^l = \operatorname{act}( \texttt{Sm}(\mathbf{Y}^{l-1}\mathbf{W}^l)), \quad \text{for } l = 1, \ldots, L-1, \\
         \mathbf{Y}^L = \mathbf{Y}^{L-1}\mathbf{w},
     \end{gather}
-    
+
     where $\mathbf{W^0} \in \mathbb{R}^{\texttt{in_dim} \times \texttt{att_dim}}$, $\mathbf{W}^l \in \mathbb{R}^{\texttt{att_dim} \times \texttt{att_dim}}$, $\mathbf{w} \in \mathbb{R}^{\texttt{att_dim} \times 1}$,
     $\operatorname{act} \ \colon \mathbb{R} \to \mathbb{R}$ is the activation function,
     and $\texttt{Sm}$ is the Sm operator, see [Sm](../sm.md) for more details.
@@ -36,7 +36,7 @@ class SmAttentionPool(torch.nn.Module):
     """
 
     def __init__(
-            self, 
+            self,
             in_dim : int,
             att_dim : int = 128,
             act : str = 'gelu',
@@ -85,23 +85,23 @@ class SmAttentionPool(torch.nn.Module):
             act_layer_fn = torch.nn.GELU
         else:
             raise ValueError(f"[{self.__class__.__name__}] act must be 'tanh', 'relu' or 'gelu'")
-        self.act_layer = act_layer_fn() 
-        
+        self.act_layer = act_layer_fn()
+
         self.sm = Sm(alpha = sm_alpha, num_steps = sm_steps, mode = sm_mode)
 
         self.mlp = torch.nn.ModuleList()
         for _ in range(sm_layers):
             self.mlp.append(torch.nn.Linear(att_dim, att_dim))
-        
+
         if self.sm_spectral_norm:
             self.apply(self._init_spectral_norm)
-            
+
     def _init_spectral_norm(self, m) -> None:
         if isinstance(m, torch.nn.Linear):
             torch.nn.utils.spectral_norm(m)
-    
+
     def forward(
-            self, 
+            self,
             X : Tensor,
             adj : Tensor,
             mask : Tensor = None,
@@ -115,7 +115,7 @@ class SmAttentionPool(torch.nn.Module):
             adj: Adjacency matrix of shape `(batch_size, bag_size, bag_size)`.
             mask: Mask of shape `(batch_size, bag_size)`.
             return_att: If True, returns attention values (before normalization) in addition to `z`.
-        
+
         Returns:
             z: Bag representation of shape `(batch_size, in_dim)`.
             f: Only returned when `return_att=True`. Attention values (before normalization) of shape (batch_size, bag_size).
@@ -123,7 +123,7 @@ class SmAttentionPool(torch.nn.Module):
 
         batch_size = X.shape[0]
         bag_size = X.shape[1]
-        
+
         if mask is None:
             mask = torch.ones(batch_size, bag_size, device=X.device)
         mask = mask.unsqueeze(dim=-1) # (batch_size, bag_size, 1)

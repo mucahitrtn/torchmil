@@ -5,12 +5,12 @@ from ..irpe import get_rpe_config, build_rpe
 class iRPEMultiheadSelfAttention(torch.nn.Module):
     """
     Multihead Self-Attention with image Relative Position Encoding (iRPE), as described in [Rethinking and Improving Relative Position Encoding for Vision Transformer](https://openaccess.thecvf.com/content/ICCV2021/html/Wu_Rethinking_and_Improving_Relative_Position_Encoding_for_Vision_Transformer_ICCV_2021_paper.html).
-    
+
     The iRPE implementation is based on the [official codebase](https://github.com/microsoft/Cream/tree/main/iRPE).
-    
+
     """
     def __init__(
-        self, 
+        self,
         in_dim : int,
         out_dim : int = None,
         att_dim : int = 512,
@@ -51,12 +51,12 @@ class iRPEMultiheadSelfAttention(torch.nn.Module):
             self.qkv_nn = torch.nn.Linear(in_dim, 3 * att_dim, bias = False)
         else:
             self.qkv_nn = None
-        
+
         if out_dim != att_dim:
             self.out_proj = torch.nn.Linear(att_dim, out_dim)
         else:
             self.out_proj = torch.nn.Identity()
-        
+
         rpe_config = get_rpe_config(
             ratio=rpe_ratio,
             method=rpe_method,
@@ -69,7 +69,7 @@ class iRPEMultiheadSelfAttention(torch.nn.Module):
         self.rpe_q, self.rpe_k, self.rpe_v = build_rpe(rpe_config, head_dim=self.head_dim, num_heads=n_heads)
 
     def _scaled_dot_product_attention(
-            self, 
+            self,
             query : torch.Tensor,
             key : torch.Tensor,
             value : torch.Tensor,
@@ -92,13 +92,13 @@ class iRPEMultiheadSelfAttention(torch.nn.Module):
             return_attention: Whether to return the attention matrices.
 
         Returns:
-            out: Output tensor of shape `(batch_size, n_heads, seq_len, head_dim)`.                
+            out: Output tensor of shape `(batch_size, n_heads, seq_len, head_dim)`.
         """
 
         if mask is not None:
             mask = mask.unsqueeze(1).unsqueeze(1) # (batch_size, 1, 1, seq_len)
             mask = mask.repeat(1, 1, query.size(2), 1).bool() # (batch_size, n_heads, seq_len, seq_len)
-        
+
         query = query / (self.head_dim ** 0.5)
         qk = torch.einsum("bhid,bhjd->bhij", query, key) # (batch_size, n_heads, seq_len, seq_len)
 
@@ -115,7 +115,7 @@ class iRPEMultiheadSelfAttention(torch.nn.Module):
 
         if self.rpe_v is not None:
             out += self.rpe_v(att_d, height=height, width=width)
-        
+
         if return_attention:
             return out, att
         else:
@@ -131,7 +131,7 @@ class iRPEMultiheadSelfAttention(torch.nn.Module):
         Returns:
             query: Query tensor of shape `(batch_size, seq_len, att_dim)`.
             key: Key tensor of shape `(batch_size, seq_len, att_dim)`.
-            value: Value tensor of shape `(batch_size, seq_len, att_dim)`.        
+            value: Value tensor of shape `(batch_size, seq_len, att_dim)`.
         """
         if self.learn_weights:
             q, k, v = self.qkv_nn(x).chunk(3, dim=-1) # (batch_size, seq_len, att_dim), (batch_size, seq_len, att_dim), (batch_size, seq_len, att_dim)
@@ -140,7 +140,7 @@ class iRPEMultiheadSelfAttention(torch.nn.Module):
         return q, k, v
 
     def forward(
-            self, 
+            self,
             x : torch.Tensor,
             mask : torch.Tensor = None,
             return_attention : bool = False,

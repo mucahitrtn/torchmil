@@ -1,7 +1,7 @@
 import torch
 import pytest
 
-from torchmil.models import CLAM_SB  
+from torchmil.models import CLAM_SB
 
 @pytest.fixture
 def batch_size():

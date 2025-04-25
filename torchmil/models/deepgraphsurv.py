@@ -8,10 +8,10 @@ class DeepGraphSurv(torch.nn.Module):
     r"""
     DeepGraphSurv model, as proposed in [Graph CNN for Survival Analysis on Whole Slide Pathological Images](https://link.springer.com/chapter/10.1007/978-3-030-00934-2_20).
 
-    Given an input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times P}$ with adjacency matrix $\mathbf{A} \in \mathbb{R}^{N \times N}$, 
+    Given an input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times P}$ with adjacency matrix $\mathbf{A} \in \mathbb{R}^{N \times N}$,
     the model optionally applies a feature extractor, $\text{FeatExt}(\cdot)$, to transform the instance features: $\mathbf{X} = \text{FeatExt}(\mathbf{X}) \in \mathbb{R}^{N \times D}$.
-    
-    Then, the *representation branch* transforms the instance features using a Graph Convolutional Network (GCN), and the 
+
+    Then, the *representation branch* transforms the instance features using a Graph Convolutional Network (GCN), and the
     *attention branch* computes the attention values $\mathbf{f}$ using another GCN,
 
     \begin{gather}
@@ -22,17 +22,17 @@ class DeepGraphSurv(torch.nn.Module):
     These GCNs are implemented using the DeepGCN layer (see [DeepGCNLayer](../nn/gnns/deepgcn.md)) with GCNConv, LayerNorm, and ReLU activation (see [GCNConv](../nn/gnns/gcn_conv.md)).
 
     Writing $\mathbf{H} = \left[ \mathbf{h}_1, \ldots, \mathbf{h}_N \right]^\top$,
-    the attention values are used to compute the bag representation $\mathbf{z} \in \mathbb{R}^{\texttt{hidden_dim}}$ as 
+    the attention values are used to compute the bag representation $\mathbf{z} \in \mathbb{R}^{\texttt{hidden_dim}}$ as
 
     \begin{equation}
     \mathbf{z} = \mathbf{H}^\top \operatorname{Softmax}(\mathbf{f}) = \sum_{n=1}^N s_n \mathbf{h}_n,
     \end{equation}
 
-    where $s_n$ is the normalized attention score for the $n$-th instance. 
+    where $s_n$ is the normalized attention score for the $n$-th instance.
     The bag representation $\mathbf{z}$ is then fed into a classifier (one linear layer) to predict the bag label.
     """
-    def __init__(self, 
-        in_shape: tuple = None, 
+    def __init__(self,
+        in_shape: tuple = None,
         n_layers_rep : int = 4,
         n_layers_att : int = 2,
         hidden_dim : int = None,
@@ -50,7 +50,7 @@ class DeepGraphSurv(torch.nn.Module):
             att_dim: Attention dimension.
             dropout: Dropout rate.
             feat_ext: Feature extractor.
-            criterion: Loss function.       
+            criterion: Loss function.
         """
         super(DeepGraphSurv, self).__init__()
         self.criterion = criterion
@@ -60,7 +60,7 @@ class DeepGraphSurv(torch.nn.Module):
             feat_dim = get_feat_dim(feat_ext, in_shape)
         else:
             feat_dim = None
-        
+
         if hidden_dim is None:
             hidden_dim = feat_dim
 
@@ -72,7 +72,7 @@ class DeepGraphSurv(torch.nn.Module):
             self.layers_rep.append(
                 DeepGCNLayer(conv_layer, norm_layer, act_layer, dropout=dropout, block='plain')
             )
-        
+
         self.layers_att = torch.nn.ModuleList()
         for i in range(n_layers_att):
             conv_layer = GCNConv(hidden_dim if i==0 else att_dim, att_dim, add_self_loops=True)
@@ -81,13 +81,13 @@ class DeepGraphSurv(torch.nn.Module):
             self.layers_att.append(
                 DeepGCNLayer(conv_layer, norm_layer, act_layer, dropout=dropout, block='plain')
             )
-        
+
         self.proj1d = LazyLinear(att_dim, 1)
 
         self.classifier = LazyLinear(hidden_dim, 1)
 
     def forward(
-        self, 
+        self,
         X : torch.Tensor,
         adj : torch.Tensor,
         mask : torch.Tensor,
@@ -110,21 +110,21 @@ class DeepGraphSurv(torch.nn.Module):
 
         for layer in self.layers_rep:
             X = layer(X, adj)
-        
+
         H = X # (batch_size, bag_size, hidden_dim)
         for layer in self.layers_att:
             H = layer(H, adj) # (batch_size, bag_size, att_dim)
         f = self.proj1d(H) # (batch_size, bag_size, 1)
         s = masked_softmax(f, mask) # (batch_size, bag_size, 1)
-        
+
         z = torch.bmm(X.transpose(1,2), s).squeeze(-1) # (batch_size, hidden_dim)
-        
+
         Y_pred = self.classifier(z).squeeze(-1) # (batch_size,)
 
         if return_att:
             return Y_pred, f.squeeze(-1)
         else:
-            return Y_pred        
+            return Y_pred
 
     def compute_loss(
         self,
@@ -139,7 +139,7 @@ class DeepGraphSurv(torch.nn.Module):
             X: Bag features of shape `(batch_size, bag_size, ...)`.
             adj: Adjacency matrix of shape `(batch_size, bag_size, bag_size)`.
             mask: Mask of shape `(batch_size, bag_size)`.
-        
+
         Returns:
             Y_pred: Bag label logits of shape `(batch_size,)`.
             loss_dict: Dictionary containing the loss
@@ -162,7 +162,7 @@ class DeepGraphSurv(torch.nn.Module):
             adj: Adjacency matrix of shape `(batch_size, bag_size, bag_size)`.
             mask: Mask of shape `(batch_size, bag_size)`.
             return_inst_pred: If True, returns instance predictions.
-        
+
         Returns:
             Y_pred: Bag label logits of shape `(batch_size,)`.
             y_inst_pred: If `return_inst_pred=True`, returns instance labels predictions of shape `(batch_size, bag_size)`.

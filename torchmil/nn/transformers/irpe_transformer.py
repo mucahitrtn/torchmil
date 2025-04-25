@@ -118,7 +118,7 @@ class iRPETransformerEncoder(Encoder):
 
     See [iRPEMultiheadSelfAttention](../attention/irpe_multihead_self_attention.md) for more details about $\operatorname{iRPESelfAttention}$.
 
-    This module outputs $\operatorname{TransformerEncoder}(\mathbf{X}) = \mathbf{X}^{L}$ if `add_self=False`, 
+    This module outputs $\operatorname{TransformerEncoder}(\mathbf{X}) = \mathbf{X}^{L}$ if `add_self=False`,
     and $\operatorname{TransformerEncoder}(\mathbf{X}) = \mathbf{X}^{L} + \mathbf{X}$ if `add_self=True`.
     """
 

@@ -23,8 +23,8 @@ def moore_penrose_iter_pinv(x, iters = 6):
 class NystromAttention(torch.nn.Module):
     """
     Nystrom attention, as described in the paper [Nyströmformer: A Nyström-Based Algorithm for Approximating Self-Attention](https://arxiv.org/abs/2102.03902).
-    
-    Implementation based on the [official code](https://github.com/lucidrains/nystrom-attention).    
+
+    Implementation based on the [official code](https://github.com/lucidrains/nystrom-attention).
     """
 
     def __init__(
@@ -56,12 +56,12 @@ class NystromAttention(torch.nn.Module):
             self.qkv_nn = torch.nn.Linear(in_dim, att_dim * 3, bias = False)
         else:
             self.qkv_nn = None
-        
+
         if out_dim != att_dim:
             self.out_proj = torch.nn.Linear(att_dim, out_dim)
         else:
             self.out_proj = torch.nn.Identity()
-    
+
     def _qkv(self, x : torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
         Compute query, key, and value tensors.
@@ -71,7 +71,7 @@ class NystromAttention(torch.nn.Module):
         Returns:
             query: Query tensor of shape `(batch_size, seq_len, att_dim)`.
             key: Key tensor of shape `(batch_size, seq_len, att_dim)`.
-            value: Value tensor of shape `(batch_size, seq_len, att_dim)`.        
+            value: Value tensor of shape `(batch_size, seq_len, att_dim)`.
         """
         if self.learn_weights:
             q, k, v = self.qkv_nn(x).chunk(3, dim=-1) # (batch_size, seq_len, att_dim), (batch_size, seq_len, att_dim), (batch_size, seq_len, att_dim)
@@ -80,7 +80,7 @@ class NystromAttention(torch.nn.Module):
         return q, k, v
 
     def forward(
-        self, 
+        self,
         x : torch.Tensor,
         mask : torch.Tensor = None,
         return_att : bool = False

@@ -16,7 +16,7 @@ class GTP(MILModel):
     Given an input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times P}$ with adjacency matrix $\mathbf{A} \in \mathbb{R}^{N \times N}$,
     the model optionally applies a feature extractor, $\text{FeatExt}(\cdot)$, to transform the instance features: $\mathbf{X} = \text{FeatExt}(\mathbf{X}) \in \mathbb{R}^{N \times D}$.
 
-    The bags are processed using a Graph Convolutional Network (GCN) to extract high-level instance embeddings. 
+    The bags are processed using a Graph Convolutional Network (GCN) to extract high-level instance embeddings.
     This GCN leverages a graph $\mathbf{A}$ constructed from the bag, where nodes correspond to patches, and edges are determined based on spatial adjacency:
 
     $$ \mathbf{H} = \text{GCN}(\mathbf{X}, \mathbf{A}) \in \mathbb{R}^{N \times D}.$$
@@ -82,11 +82,11 @@ class GTP(MILModel):
 
         self.cls_token = torch.nn.Parameter(torch.zeros(1, 1, feat_dim), requires_grad=True)
         self.transformer_encoder = RelPropTransformerEncoder(
-            in_dim=feat_dim, 
-            att_dim=att_dim, 
+            in_dim=feat_dim,
+            att_dim=att_dim,
             out_dim=feat_dim,
-            n_layers=n_layers, 
-            n_heads=n_heads, 
+            n_layers=n_layers,
+            n_heads=n_heads,
             use_mlp=use_mlp,
             dropout=dropout
         )
@@ -152,7 +152,7 @@ class GTP(MILModel):
                 return Y_pred, cam
             else:
                 return Y_pred
-    
+
     def _rollout_attention(self, att_rel_list: list[torch.Tensor]) -> torch.Tensor:
         """
         Rollout attention relevance.
@@ -171,7 +171,7 @@ class GTP(MILModel):
         cam = cam.prod(dim=0) # (batch_size, n_clusters+1, n_clusters+1)
         return cam
 
-    
+
     def compute_loss(
         self,
         Y: torch.Tensor,

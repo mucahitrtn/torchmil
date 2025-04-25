@@ -2,7 +2,7 @@ import torch
 
 class MeanPool(torch.nn.Module):
     r"""
-    Mean pooling aggregation. 
+    Mean pooling aggregation.
 
     Given an input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times D}$,
     this model aggregates the instance features into a bag representation $\mathbf{z} \in \mathbb{R}^{D}$ as,
@@ -17,7 +17,7 @@ class MeanPool(torch.nn.Module):
         super(MeanPool, self).__init__()
 
     def forward(
-        self, 
+        self,
         X : torch.Tensor,
         mask : torch.Tensor = None
     ) -> torch.Tensor:

@@ -12,11 +12,11 @@
 
     See [this notebook](../../examples/data_representation.ipynb) for a detailed explanation of the data representation in <tt><b>torchmil</b></tt>.
 
-In Multiple Instance Learning (MIL), a bag is a collection of instances. 
+In Multiple Instance Learning (MIL), a bag is a collection of instances.
 In <tt><b>torchmil</b></tt>, a bag is represented as a [TensorDict](https://pytorch.org/tensordict/stable/index.html).
 In most cases (e.g., the datasets provided in <tt><b>torchmil</b></tt>), a bag  will contain at least two keys:
 
-- `bag['X']`: a tensor of shape `(bag_size, ...)` containing the instances in the bag. Usually, this tensor is called _bag feature matrix_, since these instances are feature vectors extracted from the raw representation of the instances, and therefore it has shape `(bag_size, feature_dim)`. 
+- `bag['X']`: a tensor of shape `(bag_size, ...)` containing the instances in the bag. Usually, this tensor is called _bag feature matrix_, since these instances are feature vectors extracted from the raw representation of the instances, and therefore it has shape `(bag_size, feature_dim)`.
 - `bag['Y']`: a tensor containing the label of the bag. In the simplest case, this tensor is a scalar, but it can be a tensor of any shape (e.g., in multi-class MIL).
 
 Additionally, a bag may contain other keys. The most common ones in <tt><b>torchmil</b></tt> are:

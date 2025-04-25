@@ -1,7 +1,7 @@
 import torch
 import pytest
 
-from torchmil.nn.utils import LazyLinear, masked_softmax, MaskedSoftmax, get_feat_dim, SinusoidalPositionalEncodingND, log_sum_exp, delta, SmoothTop1SVM 
+from torchmil.nn.utils import LazyLinear, masked_softmax, MaskedSoftmax, get_feat_dim, SinusoidalPositionalEncodingND, log_sum_exp, delta, SmoothTop1SVM
 
 # LazyLinear tests
 def test_lazy_linear_lazy_init():

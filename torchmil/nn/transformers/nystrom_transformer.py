@@ -22,7 +22,7 @@ class NystromTransformerLayer(Layer):
     """
 
     def __init__(
-        self, 
+        self,
         in_dim : int,
         out_dim : int = None,
         att_dim : int = 512,
@@ -40,7 +40,7 @@ class NystromTransformerLayer(Layer):
             n_landmarks: Number of landmarks.
             pinv_iterations: Number of iterations for the pseudo-inverse.
             dropout: Dropout rate.
-            use_mlp: Whether to use a MLP after the attention layer.   
+            use_mlp: Whether to use a MLP after the attention layer.
         """
         att_module = NystromAttention(
             in_dim=in_dim, out_dim=out_dim, att_dim=att_dim, n_heads=n_heads, learn_weights=learn_weights, n_landmarks=n_landmarks, pinv_iterations=pinv_iterations
@@ -51,7 +51,7 @@ class NystromTransformerLayer(Layer):
         )
 
     def forward(
-            self, 
+            self,
             X : torch.Tensor,
             return_att : bool = False
     ) -> tuple[torch.Tensor, torch.Tensor]:
@@ -61,10 +61,10 @@ class NystromTransformerLayer(Layer):
         Arguments:
             X: Input tensor of shape `(batch_size, bag_size, att_dim)`.
             return_att: Whether to return attention weights.
-        
+
         Returns:
             X: Output tensor of shape `(batch_size, bag_size, att_dim)`.
-            att: Only returned when `return_att=True`. Attention weights of shape `(batch_size, n_heads, bag_size, bag_size)`.        
+            att: Only returned when `return_att=True`. Attention weights of shape `(batch_size, n_heads, bag_size, bag_size)`.
         """
 
         return super().forward(X, return_att=return_att)
@@ -83,14 +83,14 @@ class NystromTransformerEncoder(Encoder):
     \mathbf{X}^{l} & = \mathbf{Z}^{l} + \operatorname{MLP}(\operatorname{LayerNorm}(\mathbf{Z}^{l})), \quad l = 1, \ldots, L \\
     \end{align*}
 
-    This module outputs $\operatorname{TransformerEncoder}(\mathbf{X}) = \mathbf{X}^{L}$ if `add_self=False`, 
+    This module outputs $\operatorname{TransformerEncoder}(\mathbf{X}) = \mathbf{X}^{L}$ if `add_self=False`,
     and $\operatorname{TransformerEncoder}(\mathbf{X}) = \mathbf{X}^{L} + \mathbf{X}$ if `add_self=True`.
 
     $\operatorname{NystromSelfAttention}$ is implemented using the NystromAttention module, see [NystromAttention](../attention/nystrom_attention.md).
     """
 
     def __init__(
-        self, 
+        self,
         in_dim : int,
         out_dim : int = None,
         att_dim : int = 512,
@@ -109,7 +109,7 @@ class NystromTransformerEncoder(Encoder):
             n_landmarks: Number of landmarks.
             pinv_iterations: Number of iterations for the pseudo-inverse.
             dropout: Dropout rate.
-            use_mlp: Whether to use a MLP after the attention layer.   
+            use_mlp: Whether to use a MLP after the attention layer.
         """
 
         if out_dim is None:
@@ -122,7 +122,7 @@ class NystromTransformerEncoder(Encoder):
         ])
 
         super(NystromTransformerEncoder, self).__init__(layers, add_self=False)
-        
+
         self.norm = torch.nn.LayerNorm(att_dim)
 
     def forward(
@@ -139,7 +139,7 @@ class NystromTransformerEncoder(Encoder):
 
         Returns:
             Y: Output tensor of shape `(batch_size, bag_size, att_dim)`.
-            att: Only returned when `return_att=True`. Attention weights of shape `(batch_size, n_heads, bag_size, bag_size)`.        
+            att: Only returned when `return_att=True`. Attention weights of shape `(batch_size, n_heads, bag_size, bag_size)`.
         """
 
         if return_att:

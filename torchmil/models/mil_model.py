@@ -30,10 +30,10 @@ class MILModel(torch.nn.Module):
         Initializes the module.
         """
         super(MILModel, self).__init__()
-    
+
     def forward(
-            self, 
-            X : torch.Tensor, 
+            self,
+            X : torch.Tensor,
             *args, **kwargs
         ) -> torch.Tensor:
         """
@@ -46,9 +46,9 @@ class MILModel(torch.nn.Module):
         raise NotImplementedError
 
     def compute_loss(
-            self, 
-            Y: torch.Tensor, 
-            X: torch.Tensor, 
+            self,
+            Y: torch.Tensor,
+            X: torch.Tensor,
             *args, **kwargs
         ) -> tuple[torch.Tensor, dict]:
         """
@@ -65,15 +65,15 @@ class MILModel(torch.nn.Module):
         return out, {}
 
     def predict(
-            self, 
-            X: torch.Tensor, 
+            self,
+            X: torch.Tensor,
             return_inst_pred: bool = False,
             *args, **kwargs
         ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Arguments:
             X: Bag features of shape `(batch_size, bag_size, ...)`.
-        
+
         Returns:
             Y_pred: Bag label prediction of shape `(batch_size,)`.
             y_inst_pred: If `return_inst_pred=True`, returns instance labels predictions of shape `(batch_size, bag_size)`.
@@ -104,7 +104,7 @@ class MILModelWrapper(MILModel):
         self.model = model
     """
     Arguments:
-        model: MILModel instance to wrap.    
+        model: MILModel instance to wrap.
     """
 
     def forward(
@@ -115,7 +115,7 @@ class MILModelWrapper(MILModel):
         """
         Arguments:
             bag: Dictionary containing one key for each argument accepted by the model's `forward` method.
-    
+
         Returns:
             out: Output of the model's `forward` method.
         """
@@ -124,7 +124,7 @@ class MILModelWrapper(MILModel):
         return self.model(**arg_dict, **kwargs)
 
     def compute_loss(
-        self, 
+        self,
         bag : TensorDict,
         **kwargs
     ) -> tuple[Any, dict]:
@@ -140,14 +140,14 @@ class MILModelWrapper(MILModel):
         return self.model.compute_loss(**arg_dict, **kwargs)
 
     def predict(
-        self, 
+        self,
         bag : TensorDict,
         **kwargs
     ) -> Any:
         """
         Arguments:
             bag: Dictionary containing one key for each argument accepted by the model's `forward` method.
-        
+
         Returns:
             out: Output of the model's `predict` method.
         """

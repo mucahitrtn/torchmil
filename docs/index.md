@@ -1,11 +1,11 @@
 # torchmil
 
-**torchmil** is a [PyTorch](https://pytorch.org/)-based library for deep Multiple Instance Learning (MIL). 
-It provides a simple, flexible, and extensible framework for working with MIL models and data. 
+**torchmil** is a [PyTorch](https://pytorch.org/)-based library for deep Multiple Instance Learning (MIL).
+It provides a simple, flexible, and extensible framework for working with MIL models and data.
 
 It includes:
 
-- A collection of popular [MIL models](api/models/index.md). 
+- A collection of popular [MIL models](api/models/index.md).
 - Different [PyTorch modules](api/nn/index.md) frequently used in MIL models.
 - Handy tools to deal with [MIL data](api/data/index.md).
 - A collection of popular [MIL datasets](api/datasets/index.md).
@@ -64,4 +64,3 @@ If you find this library useful, please consider citing it:
   journal = {}
 }
 ```
-

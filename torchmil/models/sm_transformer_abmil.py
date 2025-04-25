@@ -15,7 +15,7 @@ class SmTransformerABMIL(MILModel):
 
     Given an input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times P}$ with adjacency matrix $\mathbf{A} \in \mathbb{R}^{N \times N}$,
     the model optionally applies a feature extractor, $\text{FeatExt}(\cdot)$, to transform the instance features: $\mathbf{X} = \text{FeatExt}(\mathbf{X}) \in \mathbb{R}^{N \times D}$.
-    
+
     Then, it transforms the instance features using a transformer encoder with the $\texttt{Sm}$ operator,
 
     $$ \mathbf{X} = \text{SmTransformerEncoder}(\mathbf{X}) \in \mathbb{R}^{N \times D}. $$
@@ -44,7 +44,7 @@ class SmTransformerABMIL(MILModel):
         pool_sm_post : bool = False,
         pool_sm_spectral_norm : bool = False,
         feat_ext: torch.nn.Module = torch.nn.Identity(),
-        transf_att_dim : int = 512, 
+        transf_att_dim : int = 512,
         transf_n_layers : int = 1,
         transf_n_heads : int = 4,
         transf_use_mlp : bool = True,
@@ -87,27 +87,27 @@ class SmTransformerABMIL(MILModel):
         self.feat_ext = feat_ext
         feat_dim = get_feat_dim(feat_ext, in_shape)
         self.transformer_encoder = SmTransformerEncoder(
-            in_dim=feat_dim, 
-            att_dim=transf_att_dim, 
-            n_layers=transf_n_layers, 
-            n_heads=transf_n_heads, 
+            in_dim=feat_dim,
+            att_dim=transf_att_dim,
+            n_layers=transf_n_layers,
+            n_heads=transf_n_heads,
             use_mlp=transf_use_mlp,
-            add_self=transf_add_self, 
+            add_self=transf_add_self,
             dropout=transf_dropout,
             sm_alpha=transf_sm_alpha,
             sm_mode=transf_sm_mode,
             sm_steps=transf_sm_steps
         )
         self.pool = SmAttentionPool(
-            in_dim=feat_dim, 
-            att_dim=pool_att_dim, 
-            act=pool_act, 
-            sm_mode=pool_sm_mode, 
-            sm_alpha=pool_sm_alpha, 
-            sm_layers=pool_sm_layers, 
-            sm_steps=pool_sm_steps, 
-            sm_pre=pool_sm_pre, 
-            sm_post=pool_sm_post, 
+            in_dim=feat_dim,
+            att_dim=pool_att_dim,
+            act=pool_act,
+            sm_mode=pool_sm_mode,
+            sm_alpha=pool_sm_alpha,
+            sm_layers=pool_sm_layers,
+            sm_steps=pool_sm_steps,
+            sm_pre=pool_sm_pre,
+            sm_post=pool_sm_post,
             sm_spectral_norm=pool_sm_spectral_norm
         )
         self.last_layer = torch.nn.Linear(feat_dim, 1)
@@ -142,7 +142,7 @@ class SmTransformerABMIL(MILModel):
             Z, f = out_pool # Z: (batch_size, emb_dim), f: (batch_size, bag_size)
         else:
             Z = out_pool # (batch_size, emb_dim)
-        
+
         Y_pred = self.last_layer(Z) # (batch_size, n_samples, 1)
         Y_pred = Y_pred.squeeze(-1) # (batch_size,)
 
@@ -150,7 +150,7 @@ class SmTransformerABMIL(MILModel):
             return Y_pred, f
         else:
             return Y_pred
-    
+
     def compute_loss(
         self,
         Y: torch.Tensor,
@@ -200,8 +200,3 @@ class SmTransformerABMIL(MILModel):
             y_inst_pred: If `return_inst_pred=True`, returns instance labels predictions of shape `(batch_size, bag_size)`.
         """
         return self.forward(X, adj, mask, return_att=return_inst_pred)
-        
-
-
-        
-        

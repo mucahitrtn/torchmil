@@ -1,6 +1,6 @@
 import torch
 import pytest
-from torchmil.nn import Sm, ApproxSm, ExactSm 
+from torchmil.nn import Sm, ApproxSm, ExactSm
 
 @pytest.fixture
 def batch_size():
