@@ -1,4 +1,5 @@
 import torch
+from .gnn_identity import GNNIdentity
 
 class DeepGCNLayer(torch.nn.Module):
     """
@@ -11,7 +12,7 @@ class DeepGCNLayer(torch.nn.Module):
         conv : torch.nn.Module = None,
         norm : torch.nn.Module = None,
         act : torch.nn.Module = None,
-        block : str = 'res',
+        block : str = 'plain',
         dropout : float = 0.0
     ):
         """
@@ -23,7 +24,7 @@ class DeepGCNLayer(torch.nn.Module):
             dropout: Dropout rate.
         """
         super(DeepGCNLayer, self).__init__()
-        self.conv = conv if conv is not None else torch.nn.Identity()
+        self.conv = conv if conv is not None else GNNIdentity()
         self.norm = norm if norm is not None else torch.nn.Identity()
         self.act = act if act is not None else torch.nn.Identity()
         self.dropout = torch.nn.Dropout(dropout)
