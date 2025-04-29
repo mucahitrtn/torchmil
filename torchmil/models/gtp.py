@@ -143,7 +143,7 @@ class GTP(MILModel):
         Y_pred = Y_pred.squeeze(-1).squeeze(-1) # (batch_size,)
 
         if return_loss:
-            loss_dict = { 'MinCutLoss' : 0*mc_loss, 'OrthoLoss' : 0*o_loss }
+            loss_dict = { 'MinCutLoss' : mc_loss, 'OrthoLoss' : o_loss }
             if return_cam:
                 return Y_pred, cam, loss_dict
             else:
