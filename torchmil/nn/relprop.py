@@ -2,160 +2,112 @@ from abc import abstractmethod
 import torch
 from einops import rearrange
 
-# from . import (
-#     RelPropClone,
-#     RelPropAdd,
-#     RelPropIdentity,
-#     RelPropLinear,
-#     RelPropLayerNorm,
-#     RelPropSequential,
-#     RelPropGELU,
-#     RelPropMultiheadSelfAttention
-# )
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
 
-def forward_hook(module, input, output):
-    ctx = {}
-
-    X = []
-    for arg in input:
-        if torch.is_tensor(arg):
-            X.append(arg.detach().requires_grad_(True))
-        else:
-            X.append(arg)
-    ctx['X'] = X
-    module.ctx = ctx
+__all__ = ['forward_hook', 'Clone', 'Add', 'Cat', 'ReLU', 'GELU', 'Dropout', 'BatchNorm2d', 'Linear', 'MaxPool2d',
+           'AdaptiveAvgPool2d', 'AvgPool2d', 'Conv2d', 'Sequential', 'safe_divide', 'einsum', 'Softmax', 'IndexSelect',
+           'LayerNorm', 'AddEye']
 
 def safe_divide(a, b):
     den = b.clamp(min=1e-9) + b.clamp(max=1e-9)
     den = den + den.eq(0).type(den.type()) * 1e-9
     return a / den * b.ne(0).type(b.type())
 
-class RelPropModule(torch.nn.Module):
+
+def forward_hook(self, input, output):
+    if type(input[0]) in (list, tuple):
+        self.X = []
+        for i in input[0]:
+            x = i.detach()
+            x.requires_grad = True
+            self.X.append(x)
+    else:
+        self.X = input[0].detach()
+        self.X.requires_grad = True
+
+    self.Y = output
+
+
+def backward_hook(self, grad_input, grad_output):
+    self.grad_input = grad_input
+    self.grad_output = grad_output
+
+
+class RelProp(nn.Module):
     def __init__(self):
-        super().__init__()
-        self.ctx = None
-        # self.register_module_forward_hook(forward_hook)
-        torch.nn.modules.module.register_module_forward_hook(forward_hook, always_call=True)
+        super(RelProp, self).__init__()
+        # if not self.training:
+        self.register_forward_hook(forward_hook)
 
-    # def _register_context(self, X):
-    #     if torch.is_tensor(X):
-    #         self.ctx = {'X': X.detach().requires_grad_(True)}
-    #     elif type(X) in (list, tuple):
-    #         self.ctx = {'X': [x.detach().requires_grad_(True) if torch.is_tensor(x) else x for x in X]}
-    #     else:
-    #         raise ValueError(f"Unsupported input type {type(X)}")
+    def gradprop(self, Z, X, S):
+        C = torch.autograd.grad(Z, X, S, retain_graph=True)
+        return C
 
-    @abstractmethod
-    def forward(self, *args, **kwargs):
-        """
-        Forward method. This method should be overridden by subclasses.
-        """
-        pass
-
-
-    def _jvp(self, Y, X, Z):
-        """
-        Compute the Jacobian-vector product J_{X}(Y) Zs.
-
-        Arguments:
-            Z:
-            X:
-            Y:
-        """
-        return torch.autograd.grad(Y, X, Z, retain_graph=True)
-
-    def _relprop(self, ctx, R, **kwargs):
-        raise NotImplementedError
-
-    def relprop(self, R, **kwargs):
-        return self._relprop(self.ctx, R, **kwargs)
-
-class SimpleRelPropModule(RelPropModule):
-    def _relprop(self, ctx, R, **kwargs):
+    def relprop(self, R, alpha=0.5):
         return R
 
-class RelPropReLU(torch.nn.ReLU, SimpleRelPropModule):
+class RelPropSimple(RelProp):
+    def relprop(self, R, alpha=0.5):
+        Z = self.forward(self.X)
+        S = safe_divide(R, Z)
+        C = self.gradprop(Z, self.X, S)
+
+        if torch.is_tensor(self.X) == False:
+            outputs = []
+            outputs.append(self.X[0] * C[0])
+            outputs.append(self.X[1] * C[1])
+        else:
+            outputs = self.X * (C[0])
+        return outputs
+
+class AddEye(RelPropSimple):
+    # input of shape B, C, seq_len, seq_len
+    def forward(self, input):
+        return input + torch.eye(input.shape[2]).expand_as(input).to(input.device)
+
+class ReLU(nn.ReLU, RelProp):
     pass
 
-class RelPropSoftmax(torch.nn.Softmax, SimpleRelPropModule):
+class GELU(nn.GELU, RelProp):
     pass
 
-class RelPropLayerNorm(torch.nn.LayerNorm, SimpleRelPropModule):
+class Softmax(nn.Softmax, RelProp):
     pass
 
-class RelPropDropout(torch.nn.Dropout, SimpleRelPropModule):
+class LayerNorm(nn.LayerNorm, RelProp):
     pass
 
-class RelPropIdentity(torch.nn.Identity, SimpleRelPropModule):
+class Dropout(nn.Dropout, RelProp):
     pass
 
-class RelPropSequential(torch.nn.Sequential, RelPropModule):
-    def _relprop(self, ctx, R, **kwargs):
-        for module in reversed(self):
-            R = module.relprop(R, **kwargs)
-        return R
 
-class RelPropIndexSelect(RelPropModule):
-    def forward(self, X, dim, index):
-        self.dim = dim
-        self.index = index
-        return torch.index_select(X, dim, index)
+class MaxPool2d(nn.MaxPool2d, RelPropSimple):
+    pass
 
-    def _relprop(self, ctx, R, **kwargs):
-        X = ctx['X'][0]
-        Y = self.forward(X, self.dim, self.index)
-        S = safe_divide(R, Y)
-        C = self._jvp(Y, X, S)
-        return X * C[0]
+class LayerNorm(nn.LayerNorm, RelProp):
+    pass
+
+class AdaptiveAvgPool2d(nn.AdaptiveAvgPool2d, RelPropSimple):
+    pass
 
 
-class RelPropEinsum(RelPropModule):
-    def __init__(self, equation):
-        super().__init__()
-        self.equation = equation
+class AvgPool2d(nn.AvgPool2d, RelPropSimple):
+    pass
 
-    def forward(self, *args):
-        return torch.einsum(self.equation, *args)
 
-    def _relprop(self, ctx, R, **kwargs):
-        X = ctx['X']
-        Y = self.forward(*X)
-        S = safe_divide(R, Y)
-        C = self._jvp(Y, X, S)
+class Add(RelPropSimple):
+    def forward(self, inputs):
+        return torch.add(*inputs)
 
-        return [x * c for x, c in zip(X, C)]
+    def relprop(self, R, alpha=0.5):
+        Z = self.forward(self.X)
+        S = safe_divide(R, Z)
+        C = self.gradprop(Z, self.X, S)
 
-class RelPropClone(RelPropModule):
-    def forward(self, X, n):
-        self.n = n
-        return [X for _ in range(n)]
-
-    def _relprop(self, ctx, R, **kwargs):
-        X = ctx['X'][0]
-        Y = self.forward(X, self.n)
-        S = [safe_divide(r, y) for r, y in zip(R, Y)]
-        C = self._jvp(Y, X, S)
-
-        R = X * C[0]
-
-        return R
-
-class RelPropAdd2(RelPropModule):
-    def forward(self, X1, X2):
-        return torch.add(X1, X2)
-
-    def _relprop(self, ctx, R, **kwargs):
-        X = ctx['X']
-        # Y = ctx['Y']
-        Y = self.forward(*X)
-        S = safe_divide(R, Y)
-        C = self._jvp(Y, X, S)
-
-        X1, X2 = X
-        C1, C2 = C
-
-        a = X1 * C1
-        b = X2 * C2
+        a = self.X[0] * C[0]
+        b = self.X[1] * C[1]
 
         a_sum = a.sum()
         b_sum = b.sum()
@@ -166,35 +118,121 @@ class RelPropAdd2(RelPropModule):
         a = a * safe_divide(a_fact, a.sum())
         b = b * safe_divide(b_fact, b.sum())
 
-        return a, b
+        outputs = [a, b]
 
-class RelPropLinear(torch.nn.Linear, RelPropModule):
+        return outputs
 
-    def _compute_relevances(self, R, w1, w2, x1, x2):
-        Z1 = torch.nn.functional.linear(x1, w1)
-        Z2 = torch.nn.functional.linear(x2, w2)
-        S1 = safe_divide(R, Z1 + Z2)
-        S2 = safe_divide(R, Z1 + Z2)
-        C1 = x1 * torch.autograd.grad(Z1, x1, S1)[0]
-        C2 = x2 * torch.autograd.grad(Z2, x2, S2)[0]
-        return C1 + C2
+class Identity(nn.Identity, RelProp):
+    def relprop(self, R, alpha=0.5):
+        return R
 
+class Einsum(RelPropSimple):
+    def __init__(self, equation):
+        super().__init__()
+        self.equation = equation
+    def forward(self, *operands):
+        return torch.einsum(self.equation, *operands)
 
-    def _relprop(self, ctx, R, alpha=0.5, **kwargs):
-        X = ctx['X'][0]
-        pw = torch.clamp(self.weight, min=0)
-        nw = torch.clamp(self.weight, max=0)
-        px = torch.clamp(X, min=0)
-        nx = torch.clamp(X, max=0)
+class IndexSelect(RelProp):
+    def forward(self, inputs, dim, indices):
+        self.__setattr__('dim', dim)
+        self.__setattr__('indices', indices)
 
-        activator_relevances = self._compute_relevances(R, pw, nw, px, nx)
-        inhibitor_relevances = self._compute_relevances(R, nw, pw, px, nx)
+        return torch.index_select(inputs, dim, indices)
 
-        R = alpha * activator_relevances + (1-alpha) * inhibitor_relevances
+    def relprop(self, R, alpha=0.5):
+        Z = self.forward(self.X, self.dim, self.indices)
+        S = safe_divide(R, Z)
+        C = self.gradprop(Z, self.X, S)
+
+        if torch.is_tensor(self.X) == False:
+            outputs = []
+            outputs.append(self.X[0] * C[0])
+            outputs.append(self.X[1] * C[1])
+        else:
+            outputs = self.X * (C[0])
+        return outputs
+
+class Clone(RelProp):
+    def forward(self, input, num):
+        self.__setattr__('num', num)
+        outputs = []
+        for _ in range(num):
+            outputs.append(input)
+
+        return outputs
+
+    def relprop(self, R, alpha=0.5):
+        Z = []
+        for _ in range(self.num):
+            Z.append(self.X)
+        S = [safe_divide(r, z) for r, z in zip(R, Z)]
+        C = self.gradprop(Z, self.X, S)[0]
+
+        R = self.X * C
 
         return R
 
-class RelPropMultiheadSelfAttention(RelPropModule):
+class Cat(RelProp):
+    def forward(self, inputs, dim):
+        self.__setattr__('dim', dim)
+        return torch.cat(inputs, dim)
+
+    def relprop(self, R, alpha=0.5):
+        Z = self.forward(self.X, self.dim)
+        S = safe_divide(R, Z)
+        C = self.gradprop(Z, self.X, S)
+
+        outputs = []
+        for x, c in zip(self.X, C):
+            outputs.append(x * c)
+
+        return outputs
+
+class Sequential(nn.Sequential):
+    def relprop(self, R, alpha=0.5):
+        for m in reversed(self._modules.values()):
+            R = m.relprop(R, alpha)
+        return R
+
+class BatchNorm2d(nn.BatchNorm2d, RelProp):
+    def relprop(self, R, alpha=0.5):
+        X = self.X
+        beta = 1 - alpha
+        weight = self.weight.unsqueeze(0).unsqueeze(2).unsqueeze(3) / (
+            (self.running_var.unsqueeze(0).unsqueeze(2).unsqueeze(3).pow(2) + self.eps).pow(0.5))
+        Z = X * weight + 1e-9
+        S = R / Z
+        Ca = S * weight
+        R = self.X * (Ca)
+        return R
+
+class Linear(nn.Linear, RelProp):
+    def relprop(self, R, alpha=0.5):
+        beta = alpha - 1
+        pw = torch.clamp(self.weight, min=0)
+        nw = torch.clamp(self.weight, max=0)
+        px = torch.clamp(self.X, min=0)
+        nx = torch.clamp(self.X, max=0)
+
+        def f(w1, w2, x1, x2):
+            Z1 = F.linear(x1, w1)
+            Z2 = F.linear(x2, w2)
+            S1 = safe_divide(R, Z1 + Z2)
+            S2 = safe_divide(R, Z1 + Z2)
+            C1 = x1 * torch.autograd.grad(Z1, x1, S1)[0]
+            C2 = x2 * torch.autograd.grad(Z2, x2, S2)[0]
+
+            return C1 + C2
+
+        activator_relevances = f(pw, nw, px, nx)
+        inhibitor_relevances = f(nw, pw, px, nx)
+
+        R = alpha * activator_relevances - beta * inhibitor_relevances
+
+        return R
+
+class MultiheadSelfAttention(RelProp):
     r"""
     Multihead self-attention module.
     """
@@ -230,20 +268,20 @@ class RelPropMultiheadSelfAttention(RelPropModule):
         self.head_dim = att_dim // n_heads
         self.learn_weights = learn_weights
         if learn_weights:
-            self.qkv_nn = RelPropLinear(in_dim, 3 * att_dim, bias=False)
+            self.qkv_nn = Linear(in_dim, 3 * att_dim, bias=False)
         else:
-            self.qkv_nn = RelPropIdentity()
+            self.qkv_nn = Identity()
 
         if out_dim != att_dim:
-            self.out_proj = RelPropLinear(att_dim, out_dim)
+            self.out_proj = Linear(att_dim, out_dim)
         else:
-            self.out_proj = RelPropIdentity()
+            self.out_proj = Identity()
 
-        self.softmax = RelPropSoftmax(dim=-1)
-        self.dropout = RelPropDropout(dropout)
+        self.softmax = Softmax(dim=-1)
+        self.dropout = Dropout(dropout)
 
-        self.matmul1 = RelPropEinsum("b h i d, b h j d -> b h i j")
-        self.matmul2 = RelPropEinsum("b h i j, b h j d -> b h i d")
+        self.matmul1 = Einsum("b h i d, b h j d -> b h i j")
+        self.matmul2 = Einsum("b h i j, b h j d -> b h i d")
 
     def save_att_grad(self, grad):
         self.att_grad = grad
@@ -256,11 +294,11 @@ class RelPropMultiheadSelfAttention(RelPropModule):
         """
         QKV = self.qkv_nn(X) # (batch_size, seq_len, 3 * att_dim)
         Q, K, V = rearrange(QKV, 'b n (p h d) -> p b h n d', h=self.n_heads, p=3)
-        QK = self.matmul1(Q, K)
+        QK = self.matmul1([Q, K]) # (batch_size, n_heads, seq_len, seq_len)
         QK = QK / (self.head_dim ** 0.5)
         S = self.softmax(QK)
         S = self.dropout(S)
-        Y = self.matmul2(S, V)
+        Y = self.matmul2([S, V])
         Y = rearrange(Y, 'b h n d -> b n (h d)')
         Y = self.out_proj(Y)
         return Y
@@ -286,7 +324,7 @@ class RelPropMultiheadSelfAttention(RelPropModule):
         else:
             return R
 
-class RelPropTransformerLayer(torch.nn.Module):
+class TransformerLayer(torch.nn.Module):
     r"""
     One layer of the Transformer encoder with support for Relevance Propagation.
     """
@@ -304,7 +342,7 @@ class RelPropTransformerLayer(torch.nn.Module):
         """
         super().__init__()
 
-        self.att_module = RelPropMultiheadSelfAttention(
+        self.att_module = MultiheadSelfAttention(
             att_dim=att_dim,
             in_dim=in_dim,
             out_dim=att_dim,
@@ -316,33 +354,33 @@ class RelPropTransformerLayer(torch.nn.Module):
             out_dim = in_dim
 
         if in_dim != att_dim:
-            self.in_proj = RelPropLinear(in_dim, att_dim)
+            self.in_proj = Linear(in_dim, att_dim)
         else:
-            self.in_proj = RelPropIdentity()
+            self.in_proj = Identity()
 
         self.use_mlp = use_mlp
         if use_mlp:
-            self.mlp_module = RelPropSequential(
-                RelPropLinear(att_dim, 4*att_dim),
-                RelPropReLU(),
-                RelPropDropout(dropout),
-                RelPropLinear(4*att_dim, att_dim),
-                RelPropDropout(dropout)
+            self.mlp_module = Sequential(
+                Linear(att_dim, 4*att_dim),
+                ReLU(),
+                Dropout(dropout),
+                Linear(4*att_dim, att_dim),
+                Dropout(dropout)
             )
 
         if out_dim != att_dim:
-            self.out_proj = RelPropLinear(att_dim, out_dim)
+            self.out_proj = Linear(att_dim, out_dim)
         else:
-            self.out_proj = RelPropIdentity()
+            self.out_proj = Identity()
 
-        self.norm1 = RelPropLayerNorm(in_dim)
-        self.norm2 = RelPropLayerNorm(att_dim)
+        self.norm1 = LayerNorm(in_dim)
+        self.norm2 = LayerNorm(att_dim)
 
-        self.add1 = RelPropAdd2()
-        self.add2 = RelPropAdd2()
+        self.add1 = Add()
+        self.add2 = Add()
 
-        self.clone1 = RelPropClone()
-        self.clone2 = RelPropClone()
+        self.clone1 = Clone()
+        self.clone2 = Clone()
 
     def forward(
         self,
@@ -351,10 +389,10 @@ class RelPropTransformerLayer(torch.nn.Module):
         """
         """
         X1, X2 = self.clone1(X, 2)
-        Y = self.add1(self.in_proj(X1), self.att_module(self.norm1(X2)))
+        Y = self.add1([self.in_proj(X1), self.att_module(self.norm1(X2))])
         if self.use_mlp:
             Y1, Y2 = self.clone2(Y, 2)
-            Y = self.add2(Y1, self.mlp_module(self.norm2(Y2)))
+            Y = self.add2([Y1, self.mlp_module(self.norm2(Y2))])
         Y = self.out_proj(Y)
         return Y
 
@@ -386,7 +424,7 @@ class RelPropTransformerLayer(torch.nn.Module):
         else:
             return R
 
-class RelPropTransformerEncoder(torch.nn.Module):
+class TransformerEncoder(torch.nn.Module):
     r"""
     Transformer encoder with support for Relevance Propagation.
     """
@@ -419,14 +457,14 @@ class RelPropTransformerEncoder(torch.nn.Module):
             out_dim = in_dim
 
         self.layers = torch.nn.ModuleList([
-            RelPropTransformerLayer(
+            TransformerLayer(
                 in_dim=in_dim if i == 0 else att_dim,
                 out_dim=out_dim if i == n_layers - 1 else att_dim,
                 att_dim=att_dim,  n_heads=n_heads, use_mlp=use_mlp, dropout=dropout
             )
             for i in range(n_layers)
         ])
-        self.norm = RelPropLayerNorm(out_dim)
+        self.norm = LayerNorm(out_dim)
 
     def forward(
         self,

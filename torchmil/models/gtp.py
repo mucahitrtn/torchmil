@@ -2,7 +2,7 @@ import torch
 
 from .mil_model import MILModel
 
-from torchmil.nn.relprop import RelPropTransformerEncoder, RelPropLinear, RelPropIndexSelect
+from torchmil.nn.relprop import TransformerEncoder, Linear, IndexSelect
 from torchmil.nn.utils import get_feat_dim
 
 from torchmil.nn.gnns.dense_mincut_pool import dense_mincut_pool
@@ -78,10 +78,10 @@ class GTP(MILModel):
 
         self.gcn_conv = GCNConv(feat_dim, feat_dim, add_self_loops=True)
 
-        self.cluster_proj = RelPropLinear(feat_dim, n_clusters)
+        self.cluster_proj = torch.nn.Linear(feat_dim, n_clusters)
 
         self.cls_token = torch.nn.Parameter(torch.zeros(1, 1, feat_dim), requires_grad=True)
-        self.transformer_encoder = RelPropTransformerEncoder(
+        self.transformer_encoder = TransformerEncoder(
             in_dim=feat_dim,
             att_dim=att_dim,
             out_dim=feat_dim,
@@ -90,8 +90,8 @@ class GTP(MILModel):
             use_mlp=use_mlp,
             dropout=dropout
         )
-        self.classifier = RelPropLinear(feat_dim, 1)
-        self.index_select = RelPropIndexSelect()
+        self.classifier = Linear(feat_dim, 1)
+        self.index_select = IndexSelect()
 
 
     def forward(
@@ -128,7 +128,7 @@ class GTP(MILModel):
         X = self.transformer_encoder(X) # (batch_size, n_clusters+1, feat_dim)
 
         # z = X[:, 0] # (batch_size, feat_dim)
-        z = self.index_select(X, dim=1, index=torch.tensor([0], device=X.device)) # (batch_size, 1, feat_dim)
+        z = self.index_select(X, dim=1, indices=torch.tensor(0, device=X.device)) # (batch_size, 1, feat_dim)
 
         Y_pred = self.classifier(z) # (batch_size, 1, 1)
 
@@ -143,7 +143,7 @@ class GTP(MILModel):
         Y_pred = Y_pred.squeeze(-1).squeeze(-1) # (batch_size,)
 
         if return_loss:
-            loss_dict = { 'MinCutLoss' : mc_loss, 'OrthoLoss' : o_loss }
+            loss_dict = { 'MinCutLoss' : 0*mc_loss, 'OrthoLoss' : 0*o_loss }
             if return_cam:
                 return Y_pred, cam, loss_dict
             else:

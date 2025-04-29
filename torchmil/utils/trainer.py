@@ -217,7 +217,7 @@ class Trainer:
                 loop_loss_dict[loss_name].update(loss_value.item())
             loop_loss_dict["loss"].update(loss.item())
 
-            if mode == "train":
+            if mode == "train":                
 
                 loss.backward()
                 self.optimizer.step()

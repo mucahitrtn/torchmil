@@ -59,7 +59,8 @@ def dense_mincut_pool(
     adj = adj.unsqueeze(0) if adj.dim() == 2 else adj
     s = s.unsqueeze(0) if s.dim() == 2 else s
 
-    (batch_size, num_nodes, _), k = x.size(), s.size(-1)
+    (batch_size, num_nodes, _) = x.size()
+    k = s.size(-1)
 
     s = torch.softmax(s / temp if temp != 1.0 else s, dim=-1)
 
