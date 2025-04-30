@@ -65,4 +65,4 @@ exclude = [".ipynb", "build", ".pytest_cache", "upload_datasets"]
 testpaths = ["tests"]
 
 [tool.setuptools.packages.find]
-where = ["torchmil"]
+where = ["."]
