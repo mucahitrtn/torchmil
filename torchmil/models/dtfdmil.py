@@ -124,7 +124,7 @@ class DTFDMIL(MILModel):
 
             z = self.attention_pool(X_chunk, mask_chunk) # (batch_size, feat_dim), [batch_size, chunk_size)
 
-            pseudo_pred = self.classifier(z) # (batch_size, 1]
+            pseudo_pred = self.classifier(z) # (batch_size, 1)
             pseudo_pred_list.append(pseudo_pred)
 
             inst_cam = self._cam_1d(self.classifier, X_chunk) # (batch_size, 1, chunk_size)

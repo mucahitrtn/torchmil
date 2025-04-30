@@ -76,7 +76,7 @@ class GTP(MILModel):
         self.feat_ext = feat_ext
         feat_dim = get_feat_dim(feat_ext, in_shape)
 
-        self.gcn_conv = GCNConv(feat_dim, feat_dim, add_self_loops=True)
+        self.gcn_conv = GCNConv(feat_dim, feat_dim, add_self_loops=True, learn_weights=True, activation=torch.nn.ReLU())
 
         self.cluster_proj = torch.nn.Linear(feat_dim, n_clusters)
 

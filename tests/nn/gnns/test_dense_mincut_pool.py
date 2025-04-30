@@ -1,7 +1,7 @@
 import torch
 import pytest
 
-from torchmil.nn.gnns.dense_mincut_pool import trace, diag, dense_mincut_pool  # Replace your_module
+from torchmil.nn.gnns.dense_mincut_pool import trace, diag, dense_mincut_pool
 
 # Helper Functions
 def create_random_tensor(shape, requires_grad=False):
