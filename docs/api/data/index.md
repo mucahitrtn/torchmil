@@ -1,10 +1,5 @@
 # torchmil.data
 
-!!! note
-    The way data is represented in <tt><b>torchmil</b></tt> is inspired by [PyTorch Geometric](https://pytorch-geometric.readthedocs.io/en/latest/notes/introduction.html#data-handling-of-graphs).
-
-    See [this notebook](../../examples/data_representation.ipynb) for an explanation with examples of the data representation in <tt><b>torchmil</b></tt>.
-
 ## Bags in <tt><b>torchmil</b></tt>
 
 !!! note

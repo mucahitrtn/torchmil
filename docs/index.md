@@ -47,8 +47,7 @@ torch.save(model.state_dict(), 'model.pth')
 
 ## Next steps
 
-Head to the [get started](getting_started.md) guide to learn more about **torchmil**.
-Also, you can take a look at the [examples](examples/index.md) to see how to use **torchmil** in practice.
+You can take a look at the [examples](examples/index.md) to see how to use **torchmil** in practice.
 To see the full list of available models, datasets, and modules, check the [API reference](api/index.md).
 
 ## Citation

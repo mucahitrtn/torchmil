@@ -108,7 +108,6 @@ plugins:
 nav:
   - Introduction:
     - index.md
-    - Getting started: getting_started.md
   - Examples:
     - examples/index.md
     - Representing bags in torchmil: examples/data_representation.ipynb
