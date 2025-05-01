@@ -47,7 +47,13 @@ class NystromTransformerLayer(Layer):
         )
 
         super(NystromTransformerLayer, self).__init__(
-            in_dim=in_dim, out_dim=out_dim, att_dim=att_dim, att_module=att_module, use_mlp=use_mlp, dropout=dropout
+            in_dim=in_dim, 
+            att_in_dim=in_dim,
+            out_dim=out_dim, 
+            att_out_dim=att_dim, 
+            att_module=att_module, 
+            use_mlp=use_mlp, 
+            dropout=dropout
         )
 
     def forward(

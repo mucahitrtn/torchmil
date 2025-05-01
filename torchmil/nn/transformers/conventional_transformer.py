@@ -49,13 +49,20 @@ class TransformerLayer(Layer):
         att_module = MultiheadSelfAttention(att_dim=att_dim, in_dim=in_dim, out_dim=att_dim, n_heads=n_heads, dropout=dropout)
 
         super(TransformerLayer, self).__init__(
-            in_dim=in_dim, out_dim=out_dim, att_dim=att_dim, att_module=att_module, use_mlp=use_mlp, dropout=dropout
+            in_dim=in_dim, 
+            att_in_dim=in_dim,
+            out_dim=out_dim, 
+            att_out_dim=att_dim, 
+            att_module=att_module, 
+            use_mlp=use_mlp, 
+            dropout=dropout
         )
 
     def forward(
         self,
         X: torch.Tensor,
         mask: torch.Tensor = None,
+        return_att: bool = False
     ) -> torch.Tensor:
         """
         Forward method.
@@ -63,12 +70,13 @@ class TransformerLayer(Layer):
         Arguments:
             X: Input tensor of shape `(batch_size, bag_size, in_dim)`.
             mask: Mask tensor of shape `(batch_size, bag_size)`.
+            return_att: If True, returns attention weights, of shape `(batch_size, n_heads, bag_size, bag_size)`.
 
         Returns:
             Y: Output tensor of shape `(batch_size, bag_size, out_dim)`.
         """
 
-        return super().forward(X, mask=mask)
+        return super().forward(X, mask=mask, return_att=return_att)
 
 class TransformerEncoder(Encoder):
     r"""
@@ -132,6 +140,7 @@ class TransformerEncoder(Encoder):
         self,
         X: torch.Tensor,
         mask: torch.Tensor = None,
+        return_att: bool = False
     ) -> torch.Tensor:
         """
         Forward method.
@@ -139,12 +148,17 @@ class TransformerEncoder(Encoder):
         Arguments:
             X: Input tensor of shape `(batch_size, bag_size, in_dim)`.
             mask: Mask tensor of shape `(batch_size, bag_size)`.
+            return_att: If True, returns attention weights, of shape `(n_layers, batch_size, n_heads, bag_size, bag_size)`.
 
         Returns:
             Y: Output tensor of shape `(batch_size, bag_size, in_dim)`.
         """
 
-        Y = super().forward(X, mask=mask) # (batch_size, bag_size, att_dim)
-        Y = self.norm(Y) # (batch_size, bag_size, att_dim)
-
-        return Y
+        if return_att:
+            Y, att = super().forward(X, mask=mask, return_att=return_att)
+            Y = self.norm(Y) # (batch_size, bag_size, att_dim)
+            return Y, att
+        else:
+            Y = super().forward(X, mask=mask, return_att=return_att)
+            Y = self.norm(Y) # (batch_size, bag_size, att_dim)
+            return Y

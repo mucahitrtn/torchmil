@@ -18,20 +18,22 @@ class Layer(torch.nn.Module):
 
     def __init__(
         self,
-        in_dim: int,
-        att_dim : int,
         att_module : torch.nn.Module,
+        in_dim: int,
+        att_in_dim : int,
         out_dim: int = None,
+        att_out_dim : int = None,
         use_mlp: bool = True,
         mlp_module: torch.nn.Module = None,
         dropout: float = 0.0
     ):
         """
         Arguments:
+            att_module: Attention module. Assumes input of shape `(batch_size, seq_len, att_in_dim)` and outputs of shape `(batch_size, seq_len, att_out_dim)`.
             in_dim: Input dimension.
-            att_dim: Attention dimension.
-            att_module: Attention module.
+            att_in_dim: Input dimension for the attention module.
             out_dim: Output dimension. If None, out_dim = in_dim.
+            att_out_dim: Output dimension for the attention module. If None, att_out_dim = in_dim.
             use_mlp: Whether to use a MLP after the attention layer.
             mlp_module: MLP module.
             dropout: Dropout rate.
@@ -42,51 +44,61 @@ class Layer(torch.nn.Module):
 
         if out_dim is None:
             out_dim = in_dim
+        
+        if att_out_dim is None:
+            att_out_dim = att_in_dim
 
-        if in_dim != att_dim:
-            self.in_proj = torch.nn.Linear(in_dim, att_dim)
+        if in_dim != att_in_dim:
+            self.in_proj = torch.nn.Linear(in_dim, att_in_dim)
         else:
             self.in_proj = torch.nn.Identity()
+
+        if att_in_dim != att_out_dim:
+            self.att_proj = torch.nn.Linear(att_in_dim, att_out_dim)
+        else:
+            self.att_proj = torch.nn.Identity()
 
         self.use_mlp = use_mlp
         if use_mlp:
             if mlp_module is None:
                 self.mlp_module = torch.nn.Sequential(
-                    torch.nn.Linear(att_dim, 4*att_dim),
+                    torch.nn.Linear(att_out_dim, 4*att_out_dim),
                     torch.nn.GELU(),
                     torch.nn.Dropout(dropout),
-                    torch.nn.Linear(4*att_dim, att_dim),
+                    torch.nn.Linear(4*att_out_dim, att_out_dim),
                     torch.nn.Dropout(dropout)
                 )
             else:
                 self.mlp_module = mlp_module
 
-        if out_dim != att_dim:
-            self.out_proj = torch.nn.Linear(att_dim, out_dim)
+        if out_dim != att_out_dim:
+            self.out_proj = torch.nn.Linear(att_out_dim, out_dim)
         else:
             self.out_proj = torch.nn.Identity()
 
-        self.norm1 = torch.nn.LayerNorm(in_dim)
-        self.norm2 = torch.nn.LayerNorm(att_dim)
+        self.norm1 = torch.nn.LayerNorm(att_in_dim)
+        self.norm2 = torch.nn.LayerNorm(att_out_dim)
 
     def forward(
         self,
         X: torch.Tensor,
+        return_att: bool = False,
         **kwargs,
     ) -> torch.Tensor:
         """
         Arguments:
             X: Input tensor of shape `(batch_size, seq_len, in_dim)`.
         """
-        out_att = self.att_module(self.norm1(X), **kwargs)
-        if isinstance(out_att, tuple):
-            Y = self.in_proj(X) + out_att[0]
+        X = self.in_proj(X)
+        out_att = self.att_module(self.norm1(X), return_att=return_att, **kwargs)
+        if return_att:
+            Y = self.att_proj(X) + out_att[0]
         else:
-            Y = self.in_proj(X) + out_att
+            Y = self.att_proj(X) + out_att
         if self.use_mlp:
             Y = Y + self.mlp_module(self.norm2(Y))
         Y = self.out_proj(Y)
-        if isinstance(out_att, tuple):
-            return (Y,) + out_att[1:]
+        if return_att:
+            return Y, out_att[1]
         else:
             return Y
