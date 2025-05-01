@@ -30,11 +30,9 @@ def gtp_model():
 # Test the forward pass of the GTP model
 def test_forward_pass(gtp_model, sample_input, sample_adj, sample_mask):
     Y_pred = gtp_model(sample_input, sample_adj, sample_mask)
-    print("Y_pred shape:", Y_pred.shape)
     assert Y_pred.shape == (2,), "Output shape should be (batch_size,)"
 
 def test_forward_pass_with_cam(gtp_model, sample_input, sample_adj, sample_mask):
-    print(sample_input.shape, sample_adj.shape, sample_mask.shape)
     Y_pred, cam = gtp_model(sample_input, sample_adj, sample_mask, return_cam=True)
     assert Y_pred.shape == (2,), "Output shape should be (batch_size,)"
     assert cam.shape == (2, 10), "CAM shape should be (batch_size, bag_size)"

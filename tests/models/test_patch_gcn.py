@@ -9,9 +9,9 @@ from torchmil.models import PatchGCN
 def sample_patch_gcn_data():
     batch_size = 2
     bag_size = 10
-    input_shape = (3, 224, 224)  # Example shape for image data
+    input_shape = (256,)
     in_dim = 256
-    # X: (batch_size, bag_size, C, H, W)
+    # X: (batch_size, bag_size, *input_shape)
     X = torch.randn(batch_size, bag_size, *input_shape)
     # adj: (batch_size, bag_size, bag_size)
     adj = torch.randn(batch_size, bag_size, bag_size)

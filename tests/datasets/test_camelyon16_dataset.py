@@ -1,7 +1,6 @@
 import pytest
 import numpy as np
 import pandas as pd
-from pathlib import Path
 
 from torchmil.datasets import CAMELYON16MILDataset  # Update with actual path
 

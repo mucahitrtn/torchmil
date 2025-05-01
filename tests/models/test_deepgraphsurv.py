@@ -35,7 +35,6 @@ def test_forward_output_shape(deepgraphsurv_model, dummy_inputs):
     Y_pred = deepgraphsurv_model(X, adj, mask)
     assert Y_pred.shape == (X.shape[0],), "Output shape mismatch for DeepGraphSurv forward pass"
 
-
 def test_forward_with_attention_output(deepgraphsurv_model, dummy_inputs):
     X, adj, mask, _ = dummy_inputs
     Y_pred, att = deepgraphsurv_model(X, adj, mask, return_att=True)

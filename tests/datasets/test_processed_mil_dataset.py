@@ -128,8 +128,6 @@ def test_get_bag_labels(mil_data):
     )
     labels = dataset.get_bag_labels()
     expected_labels = [bag_data[name]["labels"] for name in bag_names]
-    print(labels)
-    print(expected_labels)
     for i, bag_name in enumerate(bag_names):
         assert np.array_equal(labels[i], expected_labels[i]), f"Bag label for {bag_name} does not match"
 

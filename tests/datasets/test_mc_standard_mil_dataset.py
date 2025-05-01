@@ -8,7 +8,6 @@ def test_dataset_creation(train_mode):
     assert len(dataset) == 6
     for i in range(len(dataset)):
         bag = dataset[i]
-        print(bag["X"].shape, bag["Y"].shape, bag["y_inst"].shape)
         assert "X" in bag and "Y" in bag and "y_inst" in bag
         assert bag["X"].ndim == 2
         assert bag["y_inst"].ndim == 1

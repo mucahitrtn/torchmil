@@ -75,12 +75,10 @@ def test_iibmil(sample_iibmil_data):
 
     # Test forward pass
     Y_pred = model(X, mask)
-    print(Y_pred)
     assert Y_pred.shape == (X.shape[0],), "Output shape should be (batch_size,)"
 
     # Test compute_loss
     Y_pred, loss_dict = model.compute_loss(Y, X, mask)
-    print(Y_pred)
     assert Y_pred.shape == (X.shape[0],), "Output shape should be (batch_size,)"
     assert isinstance(loss_dict, dict), "Loss should be a dictionary"
     assert "BCEWithLogitsLoss" in loss_dict, "Loss dict should contain the criterion loss"
