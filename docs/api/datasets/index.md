@@ -1,5 +1,9 @@
 # torchmil.datasets
 
+<tt>torchmil.datasets</tt> provides a collection of datasets for Multiple Instance Learning (MIL) tasks.
+These datasets are designed to be used with the models and utilities provided in the library.
+This list is constantly updated with new datasets and examples, feel free to contribute!
+
 ## Available datasets
 - [Processed MIL Dataset](processed_mil_dataset.md)
 - [Toy Dataset](toy_dataset.md)

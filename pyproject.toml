@@ -39,16 +39,20 @@ dependencies = [
     "numpy",
 ]
 
-
 [project.optional-dependencies]
 docs = [
-    "hippogriffe==0.2.0",
-    "mkdocs==1.6.1",
-    "mkdocs-include-exclude-files==0.1.0",
-    "mkdocs-ipynb==0.1.0",
-    "mkdocs-material==9.6.7",
-    "mkdocstrings[python]==0.28.3",
-    "pymdown-extensions==10.14.3",
+    "mkdocs",
+    "mkdocs-material",
+    "mknotebooks",
+    "mkdocstrings",
+    "mkdocstrings-python",
+    "mkdocs-exclude",
+]
+tests = [
+    "torchmil",
+    "pytest",
+    "pytest-cov",
+    "pandas",
 ]
 
 [project.urls]
@@ -59,7 +63,7 @@ issues = "https://github.com/Franblueee/torchmil/issues"
 
 [tool.flake8]
 max-line-length = 100
-exclude = [".ipynb", "build", ".pytest_cache", "upload_datasets"]
+exclude = [".ipynb", "build", ".pytest_cache"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

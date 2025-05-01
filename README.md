@@ -56,10 +56,9 @@ If you find this library useful, please consider citing it:
 
 ```bibtex
 @misc{torchmil,
-  author = {},
+  author = {Castro-Mac{\'\i}as, Francisco M and S{\'a}ez-Maldonado, Francisco Javier and Morales Alvarez, Pablo and Molina, Rafael},
   title = {torchmil: A PyTorch-based library for deep Multiple Instance Learning},
-  year = {},
-  publisher = {},
-  journal = {}
+  year = {2025},
+  howpublished = {\url{https://franblueee.github.io/torchmil/}}
 }
 ```
