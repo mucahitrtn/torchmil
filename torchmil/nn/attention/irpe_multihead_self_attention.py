@@ -17,7 +17,7 @@ class iRPEMultiheadSelfAttention(torch.nn.Module):
         n_heads : int = 4,
         dropout : float = 0.0,
         learn_weights : bool = True,
-        rpe_ratio : float = 1.9,
+        rpe_ratio : float = 2.0,
         rpe_method : str = "product",
         rpe_mode : str = 'ctx',
         rpe_shared_head : bool = True,
@@ -47,6 +47,7 @@ class iRPEMultiheadSelfAttention(torch.nn.Module):
         self.dropout = dropout
         self.head_dim = att_dim // n_heads
         self.learn_weights = learn_weights
+        self.rpe_skip = rpe_skip
         if learn_weights:
             self.qkv_nn = torch.nn.Linear(in_dim, 3 * att_dim, bias = False)
         else:
@@ -160,10 +161,11 @@ class iRPEMultiheadSelfAttention(torch.nn.Module):
             y: Output tensor of shape `(batch_size, seq_len, att_dim)`.
         """
         batch_size, seq_len, _ = x.size()
+
         query, key, value = self._qkv(x) # (batch_size, seq_len, att_dim), (batch_size, seq_len, att_dim), (batch_size, seq_len, att_dim)
-        query = query.view(batch_size, seq_len, self.n_heads, -1).permute(0, 2, 1, 3) # (batch_size, n_heads, seq_len, head_dim)
-        key = key.view(batch_size, seq_len, self.n_heads, -1).permute(0, 2, 1, 3) # (batch_size, n_heads, seq_len, head_dim)
-        value = value.view(batch_size, seq_len, self.n_heads, -1).permute(0, 2, 1, 3) # (batch_size, n_heads, seq_len, head_dim)
+        query = query.reshape(batch_size, self.n_heads, seq_len, -1) # (batch_size, n_heads, seq_len, head_dim)
+        key = key.reshape(batch_size, self.n_heads, seq_len, -1) # (batch_size, n_heads, seq_len, head_dim)
+        value = value.reshape(batch_size, self.n_heads, seq_len, -1) # (batch_size, n_heads, seq_len, head_dim)
         if return_attention:
             y, att = self._scaled_dot_product_attention(query, key, value, mask, height=height, width=width, return_attention=True) # (batch_size, n_heads, seq_len, head_dim)
             y = y.permute(0, 2, 1, 3).contiguous().view(batch_size, seq_len, self.att_dim) # (batch_size, seq_len, att_dim)

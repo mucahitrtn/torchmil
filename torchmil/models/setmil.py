@@ -1,6 +1,6 @@
 import torch
 
-from .mil_model import MILModel
+from torchmil.models.mil_model import MILModel
 
 from torchmil.nn.utils import (
     get_feat_dim,
@@ -243,7 +243,7 @@ class SETMIL(MILModel):
         Forward pass.
 
         Arguments:
-            X: Bag features of shape `(batch_size, bag_size, ...)`.
+            X: Bag features of shape `(batch_size, bag_size, feat_dim)`.
             coords: Coordinates of shape `(batch_size, bag_size, coord_dim)`.
             return_att: If True, returns attention values (before normalization) in addition to `Y_pred`.
 
@@ -253,6 +253,7 @@ class SETMIL(MILModel):
         """
 
         assert coords.shape[2] == 2, "SETMIL only supports 2D coordinates."
+        coords = coords.long()
 
         batch_size = X.size(0)
         orig_bag_size = X.size(1)
@@ -260,16 +261,17 @@ class SETMIL(MILModel):
         X = self.feat_ext(X)  # (batch_size, bag_size, feat_dim)
         X = self.proj(X)  # (batch_size, bag_size, att_dim)
 
-        X = seq_to_spatial(
-            X, coords
-        )  # (batch_size, coord1, coord2, att_dim)
+        if self.use_pmf: 
 
-        X = X.transpose(1, -1)  # (batch_size, att_dim, coord2, coord1)
-        X = X.transpose(-1, -2)  # (batch_size, att_dim, coord1, coord2)
-        X = self._pad_to_square(X)  # (batch_size, att_dim, max_coord, max_coord)
-        max_coord = X.size(-1)
+            X = seq_to_spatial(
+                X, coords
+            )  # (batch_size, coord1, coord2, att_dim)
 
-        if self.use_pmf:
+            X = X.transpose(1, -1)  # (batch_size, att_dim, coord2, coord1)
+            X = X.transpose(-1, -2)  # (batch_size, att_dim, coord1, coord2)
+            X = self._pad_to_square(X)  # (batch_size, att_dim, max_coord, max_coord)
+            max_coord = X.size(-1)
+
             X = self.pmf(X)  # (batch_size, new_seq_len, att_dim)
 
         # Add class token
@@ -305,7 +307,7 @@ class SETMIL(MILModel):
 
         z = X[:, 0]  # (batch_size, att_dim)
 
-        Y_pred = self.classifier(z)  # (batch_size, 1)
+        Y_pred = self.classifier(z).squeeze(-1)  # (batch_size, 1)
 
         if return_att:
             return Y_pred, att

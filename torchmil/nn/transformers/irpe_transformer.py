@@ -1,5 +1,4 @@
-import torch
-
+import math
 import torch
 from torch.nn.attention import SDPBackend
 
@@ -159,6 +158,8 @@ class iRPETransformerEncoder(Encoder):
             rpe_on: Relative position encoding on query, key, or value.
         """
 
+        self.rpe_skip = rpe_skip
+
         if out_dim is None:
             out_dim = in_dim
 
@@ -199,6 +200,21 @@ class iRPETransformerEncoder(Encoder):
         Returns:
             Y: Output tensor of shape `(batch_size, bag_size, in_dim)`.
         """
+
+        seq_len = X.shape[1]
+
+        h = w = int(math.sqrt(seq_len))
+        skip = seq_len - h * w
+        if skip > 1:
+            # if the sequence length is not a perfect square, we need to pad the input tensor
+            # compute the nearest perfect square greater than or equal to seq_len
+            ps = math.ceil(math.sqrt(seq_len))**2
+            new_seq_len = ps + self.rpe_skip
+            padding = new_seq_len - seq_len
+            X = torch.nn.functional.pad(X, (0, 0, 0, padding))
+            # if mask is not None:
+            #     mask = torch.nn.functional.pad(mask, (0, padding), value=0)
+            seq_len = new_seq_len
 
         Y = super().forward(X)  # (batch_size, bag_size, att_dim)
         Y = self.norm(Y)  # (batch_size, bag_size, att_dim)

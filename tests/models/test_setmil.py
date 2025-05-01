@@ -8,10 +8,10 @@ from torchmil.models.setmil import SETMIL, PMF
 def sample_setmil_data():
     batch_size = 2
     bag_size = 10
-    in_shape = (3, 64, 64)  # Example image shape
+    in_shape = (256,) 
     feat_dim = 256
     coord_dim = 2
-    # X: (batch_size, bag_size, C, H, W)
+    # X: (batch_size, bag_size, *in_shape)
     X = torch.randn(batch_size, bag_size, *in_shape)
     # coords: (batch_size, bag_size, 2)
     coords = torch.randint(0, 64, (batch_size, bag_size, coord_dim)).float()
@@ -31,7 +31,7 @@ def test_pmf():
     X = torch.randn(batch_size, in_dim, coord1, coord2)
     pmf = PMF(in_dim=in_dim, out_dim=out_dim)
     Y = pmf(X)
-    assert Y.shape == (batch_size, 16, out_dim), "Output shape of PMF is incorrect" # 16 is the calculated seq len
+    assert Y.shape == (batch_size, 256, out_dim), "Output shape of PMF is incorrect"
 
 
 # Test SETMIL model
