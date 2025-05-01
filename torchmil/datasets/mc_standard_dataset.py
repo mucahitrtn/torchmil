@@ -166,8 +166,3 @@ class MCStandardMILDataset(torch.utils.data.Dataset):
             )
         return self.bags_list[index]
 
-
-if __name__ == "__main__":
-    dataset = MCStandardMILDataset(D=2, num_bags=10, B=3, train=False)
-    print(dataset[0])
-    print(dataset[-1])

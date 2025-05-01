@@ -5,13 +5,7 @@ import os
 from .binary_classification_dataset import BinaryClassificationDataset
 from .ctscan_dataset import CTScanDataset
 
-def keep_only_existing_files(path, names, ext='.npy'):
-    existing_files = []
-    for name in names:
-        file = f'{path}/{name}{ext}'
-        if os.path.isfile(file):
-            existing_files.append(name)
-    return existing_files
+from ..utils.common import read_csv, keep_only_existing_files
 
 class RSNAMILDataset(BinaryClassificationDataset, CTScanDataset):
     r"""
@@ -65,11 +59,8 @@ class RSNAMILDataset(BinaryClassificationDataset, CTScanDataset):
         slice_labels_path = f'{root}/slice_labels/'
 
         splits_file = f'{root}/splits.csv'
-        df = pd.read_csv(splits_file)
-        if partition == 'train':
-            ctscan_names = df[df['split']=='train']['bag_name'].values
-        else:
-            ctscan_names = df[df['split']=='test']['bag_name'].values
+        dict_list = read_csv(splits_file)
+        ctscan_names = [ row['bag_name'] for row in dict_list if row['split'] == partition]
         ctscan_names = list(set(ctscan_names))
         ctscan_names = keep_only_existing_files(features_path, ctscan_names)
 

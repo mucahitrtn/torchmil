@@ -5,6 +5,8 @@ import os
 from .binary_classification_dataset import BinaryClassificationDataset
 from .wsi_dataset import WSIDataset
 
+from ..utils.common import read_csv, keep_only_existing_files
+
 def keep_only_existing_files(path, names, ext='.npy'):
     existing_files = []
     for name in names:
@@ -73,11 +75,8 @@ class PANDAMILDataset(BinaryClassificationDataset, WSIDataset):
         coords_path = f'{root}/patches_{patch_size}/coords/'
 
         splits_file = f'{root}/splits.csv'
-        df = pd.read_csv(splits_file)
-        if partition == 'train':
-            wsi_names = df[df['split']=='train']['bag_name'].values
-        else:
-            wsi_names = df[df['split']=='test']['bag_name'].values
+        dict_list = read_csv(splits_file)
+        wsi_names = [ row['bag_name'] for row in dict_list if row['split'] == partition]
         wsi_names = list(set(wsi_names))
         wsi_names = keep_only_existing_files(features_path, wsi_names)
 
