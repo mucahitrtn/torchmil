@@ -102,8 +102,6 @@ class SinusoidalPositionalEncodingND(torch.nn.Module):
         self.dtype_override = dtype_override
         self.channels = channels
 
-        print("Channels: ", channels)
-
     def _get_embedding(self, sin_inp):
         emb = torch.stack((sin_inp.sin(), sin_inp.cos()), dim=-1)
         return torch.flatten(emb, -2, -1)

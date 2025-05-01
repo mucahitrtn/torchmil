@@ -60,7 +60,5 @@ class DeepGCNLayer(torch.nn.Module):
                 y = y + x
             elif self.block == 'dense':
                 y = torch.cat([x, y], dim=-1)
-            elif self.block == 'plain':
-                pass
             y = self.dropout(y)
         return y

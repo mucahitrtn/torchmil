@@ -34,7 +34,7 @@ class PatchGCN(torch.nn.Module):
 
 
     def __init__(self,
-        in_shape : tuple = None,
+        in_shape : tuple,
         n_gcn_layers : int = 4,
         mlp_depth : int = 1,
         hidden_dim : int = None,
@@ -45,7 +45,7 @@ class PatchGCN(torch.nn.Module):
     ):
         """
         Arguments:
-            in_shape: Shape of input data expected by the feature extractor (excluding batch dimension). If not provided, it will be lazily initialized.
+            in_shape: Shape of input data expected by the feature extractor (excluding batch dimension).
             n_gcn_layers: Number of GCN layers.
             mlp_depth: Number of layers in the MLP (applied after the GCN).
             hidden_dim: Hidden dimension. If not provided, it will be set to the feature dimension.
@@ -58,10 +58,7 @@ class PatchGCN(torch.nn.Module):
         self.criterion = criterion
         self.feat_ext = feat_ext
 
-        if in_shape is not None:
-            feat_dim = get_feat_dim(feat_ext, in_shape)
-        else:
-            feat_dim = None
+        feat_dim = get_feat_dim(feat_ext, in_shape)
 
         if hidden_dim is None:
             hidden_dim = feat_dim
@@ -69,14 +66,14 @@ class PatchGCN(torch.nn.Module):
         self.gcn_layers = torch.nn.ModuleList()
         for i in range(n_gcn_layers):
             # conv_layer = GENConv( feat_dim if i == 0 else hidden_dim, hidden_dim, aggr='softmax')
-            conv_layer = GCNConv( feat_dim if i == 0 else hidden_dim, hidden_dim, add_self_loops=True)
+            conv_layer = GCNConv( feat_dim if i == 0 else hidden_dim, hidden_dim, add_self_loops=True, learn_weights=True)
             norm_layer = torch.nn.LayerNorm(hidden_dim, elementwise_affine=True)
             act_layer = torch.nn.ReLU()
             self.gcn_layers.append(
                 DeepGCNLayer(conv_layer, norm_layer, act_layer, dropout=dropout, block='plain')
             )
 
-        in_mlp_dim = hidden_dim*(n_gcn_layers+1)
+        in_mlp_dim = feat_dim+hidden_dim*(n_gcn_layers)
         self.mlp = torch.nn.ModuleList()
         for i in range(mlp_depth):
 
@@ -115,7 +112,7 @@ class PatchGCN(torch.nn.Module):
             att: Only returned when `return_att=True`. Attention values (before normalization) of shape (batch_size, bag_size).
         """
 
-        X = self.feat_ext(X) # (batch_size, bag_size, hidden_dim)
+        X = self.feat_ext(X) # (batch_size, bag_size, feat_dim)
         X_ = X
         for layer in self.gcn_layers:
             X = layer(X, adj) # (batch_size, bag_size, hidden_dim)

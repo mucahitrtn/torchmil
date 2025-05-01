@@ -66,7 +66,7 @@ class DeepGraphSurv(torch.nn.Module):
 
         self.layers_rep = torch.nn.ModuleList()
         for i in range(n_layers_rep):
-            conv_layer = GCNConv( feat_dim if i == 0 else hidden_dim, hidden_dim, add_self_loops=True)
+            conv_layer = GCNConv( feat_dim if i == 0 else hidden_dim, hidden_dim, add_self_loops=True, learn_weights=True)
             norm_layer = torch.nn.LayerNorm(hidden_dim, elementwise_affine=True)
             act_layer = torch.nn.ReLU()
             self.layers_rep.append(
@@ -75,7 +75,7 @@ class DeepGraphSurv(torch.nn.Module):
 
         self.layers_att = torch.nn.ModuleList()
         for i in range(n_layers_att):
-            conv_layer = GCNConv(hidden_dim if i==0 else att_dim, att_dim, add_self_loops=True)
+            conv_layer = GCNConv(hidden_dim if i==0 else att_dim, att_dim, add_self_loops=True, learn_weights=True)
             norm_layer = torch.nn.LayerNorm(att_dim, elementwise_affine=True)
             act_layer = torch.nn.ReLU()
             self.layers_att.append(
