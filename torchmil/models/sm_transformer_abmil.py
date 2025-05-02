@@ -116,7 +116,7 @@ class SmTransformerABMIL(MILModel):
         self,
         X: torch.Tensor,
         adj: torch.Tensor,
-        mask: torch.Tensor,
+        mask: torch.Tensor = None,
         return_att: bool = False
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """
@@ -156,7 +156,7 @@ class SmTransformerABMIL(MILModel):
         Y: torch.Tensor,
         X: torch.Tensor,
         adj: torch.Tensor,
-        mask: torch.Tensor,
+        mask: torch.Tensor = None,
     ) -> tuple[torch.Tensor, dict]:
         """
         Compute loss given true bag labels.
@@ -183,7 +183,7 @@ class SmTransformerABMIL(MILModel):
         self,
         X: torch.Tensor,
         adj: torch.Tensor,
-        mask: torch.Tensor,
+        mask: torch.Tensor = None,
         return_inst_pred: bool = True
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """

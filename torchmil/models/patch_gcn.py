@@ -95,7 +95,7 @@ class PatchGCN(torch.nn.Module):
         self,
         X : torch.Tensor,
         adj : torch.Tensor,
-        mask : torch.Tensor,
+        mask : torch.Tensor = None,
         return_att : bool = False
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """
@@ -141,7 +141,7 @@ class PatchGCN(torch.nn.Module):
         Y : torch.Tensor,
         X : torch.Tensor,
         adj : torch.Tensor,
-        mask : torch.Tensor
+        mask : torch.Tensor = None
     ) -> tuple[torch.Tensor, dict]:
         """
         Arguments:
@@ -163,7 +163,7 @@ class PatchGCN(torch.nn.Module):
         self,
         X : torch.Tensor,
         adj : torch.Tensor,
-        mask : torch.Tensor,
+        mask : torch.Tensor = None,
         return_inst_pred : bool = False
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """

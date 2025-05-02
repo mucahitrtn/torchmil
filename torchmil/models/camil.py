@@ -275,7 +275,7 @@ class CAMIL(MILModel):
         self,
         X: torch.Tensor,
         adj: torch.Tensor,
-        mask: torch.Tensor,
+        mask: torch.Tensor = None,
         return_inst_pred: bool = True
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """

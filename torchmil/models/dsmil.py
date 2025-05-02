@@ -162,7 +162,7 @@ class DSMIL(MILModel):
         self,
         Y: torch.Tensor,
         X: torch.Tensor,
-        mask: torch.Tensor,
+        mask: torch.Tensor = None,
     ) -> tuple[torch.Tensor, dict]:
         """
         Compute loss given true bag labels.
@@ -188,7 +188,7 @@ class DSMIL(MILModel):
     def predict(
         self,
         X: torch.Tensor,
-        mask: torch.Tensor,
+        mask: torch.Tensor = None,
         return_inst_pred: bool = False
     ) -> torch.Tensor:
         """
