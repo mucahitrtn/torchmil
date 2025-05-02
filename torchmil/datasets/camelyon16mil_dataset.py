@@ -46,6 +46,7 @@ class CAMELYON16MILDataset(BinaryClassificationDataset, WSIDataset):
         root : str,
         features : str = 'UNI',
         partition : str = 'train',
+        bag_keys: list = ["X", "Y", "y_inst", "adj", "coords"],
         patch_size: int = 512,
         adj_with_dist: bool = False,
         norm_adj: bool = True,
@@ -56,6 +57,7 @@ class CAMELYON16MILDataset(BinaryClassificationDataset, WSIDataset):
             root: Path to the root directory of the dataset.
             features: Type of features to use. Must be one of ['UNI', 'resnet50_bt'].
             partition: Partition of the dataset. Must be one of ['train', 'test'].
+            bag_keys: List of keys to use for the bags. Must be in ['X', 'Y', 'y_inst', 'coords'].
             patch_size: Size of the patches. Currently, only 512 is supported.
             adj_with_dist: If True, the adjacency matrix is built using the Euclidean distance between the patches features. If False, the adjacency matrix is binary.
             norm_adj: If True, normalize the adjacency matrix.
@@ -79,6 +81,7 @@ class CAMELYON16MILDataset(BinaryClassificationDataset, WSIDataset):
             patch_labels_path=patch_labels_path,
             coords_path=coords_path,
             wsi_names=wsi_names,
+            bag_keys=bag_keys,
             patch_size=patch_size,
             adj_with_dist=adj_with_dist,
             norm_adj=norm_adj,

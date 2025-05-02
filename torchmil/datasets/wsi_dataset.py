@@ -76,6 +76,7 @@ class WSIDataset(ProcessedMILDataset):
         patch_labels_path: str = None,
         coords_path: str = None,
         wsi_names: list = None,
+        bag_keys: list = ["X", "Y", "y_inst", "adj", "coords"],
         patch_size: int = 512,
         dist_thr: float = None,
         adj_with_dist: bool = False,
@@ -91,6 +92,7 @@ class WSIDataset(ProcessedMILDataset):
             patch_labels_path: Path to the directory containing the labels of the patches.
             coords_path: Path to the directory containing the coordinates of the patches.
             wsi_names: List of the names of the WSIs to load. If None, all the WSIs in the `features_path` directory are loaded.
+            bag_keys: List of keys to use for the bags. Must be in ['X', 'Y', 'y_inst', 'coords'].
             patch_size: Size of the patches.
             dist_thr: Distance threshold for building the adjacency matrix. If None, it is set to `sqrt(2) * patch_size`.
             adj_with_dist: If True, the adjacency matrix is built using the Euclidean distance between the patches features. If False, the adjacency matrix is binary.
@@ -107,6 +109,7 @@ class WSIDataset(ProcessedMILDataset):
             inst_labels_path=patch_labels_path,
             coords_path=coords_path,
             bag_names=wsi_names,
+            bag_keys=bag_keys,
             dist_thr=dist_thr,
             adj_with_dist=adj_with_dist,
             norm_adj=norm_adj,

@@ -65,6 +65,7 @@ class ProcessedMILDataset(torch.utils.data.Dataset):
         inst_labels_path: str = None,
         coords_path: str = None,
         bag_names: list = None,
+        bag_keys: list = ["X", "Y", "y_inst", "adj", "coords"],
         dist_thr: float = 1.5,
         adj_with_dist: bool = False,
         norm_adj: bool = True,
@@ -78,6 +79,7 @@ class ProcessedMILDataset(torch.utils.data.Dataset):
             labels_path: Path to the directory containing the bag labels.
             inst_labels_path: Path to the directory containing the instance labels.
             coords_path: Path to the directory containing the coordinates.
+            bag_keys: List of keys to use for the bag dictionary. See the `__getitem__` method for more details.
             bag_names: List of bag names to load. If None, all bags are loaded.
             dist_thr: Distance threshold for building the adjacency matrix.
             adj_with_dist: If True, the adjacency matrix is built using the Euclidean distance between the instance features. If False, the adjacency matrix is binary.
@@ -91,6 +93,7 @@ class ProcessedMILDataset(torch.utils.data.Dataset):
         self.inst_labels_path = inst_labels_path
         self.coords_path = coords_path
         self.bag_names = bag_names
+        self.bag_keys = bag_keys
         self.dist_thr = dist_thr
         self.adj_with_dist = adj_with_dist
         self.norm_adj = norm_adj
@@ -189,10 +192,17 @@ class ProcessedMILDataset(torch.utils.data.Dataset):
         """
 
         bag_dict = {}
-        bag_dict['X'] = self._load_features(name)
-        bag_dict['Y'] = self._load_labels(name)
-        bag_dict['y_inst'] = self._load_inst_labels(name)
-        bag_dict['coords'] = self._load_coords(name)
+        if "X" in self.bag_keys:
+            bag_dict['X'] = self._load_features(name)
+        
+        if "Y" in self.bag_keys:
+            bag_dict['Y'] = self._load_labels(name)
+        
+        if "y_inst" in self.bag_keys:
+            bag_dict['y_inst'] = self._load_inst_labels(name)
+
+        if "coords" in self.bag_keys or "adj" in self.bag_keys:
+            bag_dict['coords'] = self._load_coords(name)
 
         return bag_dict
 
@@ -208,7 +218,7 @@ class ProcessedMILDataset(torch.utils.data.Dataset):
         """
         bag_dict = self._load_bag(name)
 
-        if bag_dict['coords'] is not None:
+        if "adj" in self.bag_keys and bag_dict["coords"] is not None:
             edge_index, edge_weight, norm_edge_weight = self._build_adj(bag_dict)
             if self.norm_adj:
                 edge_val = norm_edge_weight
@@ -218,10 +228,10 @@ class ProcessedMILDataset(torch.utils.data.Dataset):
             bag_dict['adj'] = torch.sparse_coo_tensor(
                 edge_index, edge_val, (bag_dict['coords'].shape[0], bag_dict['coords'].shape[0])).coalesce()
             bag_dict['coords'] = torch.from_numpy(bag_dict['coords'])
-
-        bag_dict['X'] = torch.from_numpy(bag_dict['X'])
-        bag_dict['Y'] = torch.from_numpy(bag_dict['Y'])
-        bag_dict['y_inst'] = torch.from_numpy(bag_dict['y_inst'])
+        
+        for key in ["X", "Y", "y_inst"]:
+            if key in bag_dict:
+                bag_dict[key] = torch.from_numpy(bag_dict[key])
 
         return bag_dict
 
@@ -265,7 +275,7 @@ class ProcessedMILDataset(torch.utils.data.Dataset):
             index: Index of the bag to retrieve.
 
         Returns:
-            bag_dict: Dictionary containing the following keys:
+            bag_dict: Dictionary containing the keys defined in `bag_keys` and their corresponding values.
 
                 - X: Features of the bag, of shape `(bag_size, ...)`.
                 - Y: Label of the bag.
@@ -281,11 +291,10 @@ class ProcessedMILDataset(torch.utils.data.Dataset):
         else:
             bag_dict = self._build_bag(bag_name)
             self.loaded_bags[bag_name] = bag_dict
+        
+        return_bag_dict = { key: bag_dict[key] for key in self.bag_keys if key in bag_dict }
 
-        if bag_dict['X'].shape[0] != bag_dict['y_inst'].shape[0]:
-            raise ValueError("Bag size and instance labels size must be the same.")
-
-        return TensorDict(bag_dict)
+        return TensorDict(return_bag_dict)
 
     def get_bag_labels(self) -> list:
         """
