@@ -273,7 +273,7 @@ class SETMIL(MILModel):
             max_coord = X.size(-1)
 
             X = self.pmf(X)  # (batch_size, new_seq_len, att_dim)
-
+        
         # Add class token
         cls_token = self.cls_token.expand(
             batch_size, -1, -1
@@ -295,7 +295,6 @@ class SETMIL(MILModel):
                 )  # (batch_size, seq_len + 1, att_dim), (n_layers, batch_size, n_heads, seq_len+1, bag_size+1)
                 att = att.mean(2) # (n_layers, batch_size, seq_len + 1, bag_size + 1)
                 att = att[-1, :, 0, 1:]
-                print(att.shape)
                 if self.use_pmf:
                     att = att.view(
                         batch_size, max_coord, max_coord

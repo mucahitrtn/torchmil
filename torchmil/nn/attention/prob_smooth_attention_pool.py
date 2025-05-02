@@ -19,8 +19,6 @@ class ProbSmoothAttentionPool(torch.nn.Module):
     where $\operatorname{MLP}$ is a multi-layer perceptron, and $\mathbf{w}_{\mu},\mathbf{w}_{\sigma} \in \mathbb{R}^{2\texttt{att_dim} \times 1}$.
     If `covar_mode='zero'`, the variance vector $\mathbf{\sigma}_{\mathbf{f}}^2$ is set to zero, resulting in a deterministic attention distribution.
 
-
-
     Then, $M$ samples from the attention distribution are drawn as $\widehat{\mathbf{f}}^{(m)} \sim q(\mathbf{f} \mid \mathbf{X})$.
     With these samples, the bag representation is computed as:
 

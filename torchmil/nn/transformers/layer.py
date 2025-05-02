@@ -88,6 +88,12 @@ class Layer(torch.nn.Module):
         """
         Arguments:
             X: Input tensor of shape `(batch_size, seq_len, in_dim)`.
+            return_att: If True, returns attention weights, of shape `(batch_size, n_heads, seq_len, seq_len)`.
+            **kwargs: Additional arguments for the attention module.
+        
+        Returns:
+            Y: Output tensor of shape `(batch_size, seq_len, out_dim)`.
+            If `return_att` is True, also returns attention weights, of shape `(batch_size, n_heads, seq_len, seq_len)`.
         """
         X = self.in_proj(X)
         out_att = self.att_module(self.norm1(X), return_att=return_att, **kwargs)

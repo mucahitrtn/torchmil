@@ -111,12 +111,12 @@ class TransformerEncoder(Encoder):
 
         Arguments:
             in_dim: Input dimension.
-            out_dim: Output dimension. If None, out_dim = in_dim.
+            out_dim: Output dimension. If None, `out_dim = in_dim`.
             att_dim: Attention dimension.
             n_heads: Number of heads.
             n_layers: Number of layers.
             use_mlp: Whether to use feedforward layer.
-            add_self: Whether to add input to output.
+            add_self: Whether to add input to output. If True, `att_dim` must be equal to `in_dim`.
             dropout: Dropout rate.
         """
 

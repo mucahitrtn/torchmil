@@ -31,24 +31,29 @@ class MultiheadSelfAttention(torch.nn.Module):
     ):
         """
         Arguments:
-            att_dim: Attention dimension.
             in_dim: Input dimension.
-            out_dim: Output dimension. If None, out_dim = in_dim.
+            att_dim: Attention dimension, must be divisible by `n_heads`.
+            out_dim: Output dimension. If None, `out_dim` = `in_dim`.
             n_heads: Number of heads.
             dropout: Dropout rate.
+            learn_weights: If True, learn the weights for query, key, and value. If False, q, k, and v are the same as the input, and therefore `in_dim` must be divisible by `n_heads`.
         """
         super(MultiheadSelfAttention, self).__init__()
         if out_dim is None:
             out_dim = in_dim
-        self.att_dim = att_dim
         self.n_heads = n_heads
         self.dropout = dropout
-        self.head_dim = att_dim // n_heads
         self.learn_weights = learn_weights
         if learn_weights:
             self.qkv_nn = torch.nn.Linear(in_dim, 3 * att_dim, bias = False)
+            self.head_dim = att_dim // n_heads
+            assert att_dim % n_heads == 0, "att_dim must be divisible by n_heads"
         else:
             self.qkv_nn = None
+            self.head_dim = in_dim // n_heads
+            att_dim = in_dim
+            assert in_dim % n_heads == 0, "in_dim must be divisible by n_heads"
+        self.att_dim = att_dim
 
         if out_dim != att_dim:
             self.out_proj = torch.nn.Linear(att_dim, out_dim)
@@ -84,12 +89,12 @@ class MultiheadSelfAttention(torch.nn.Module):
 
         if return_att:
             query = query / (self.head_dim ** 0.5)
-            qk = torch.einsum("bqhd,bkhd->bhqk", query, key) # (batch_size, n_heads, seq_len, seq_len)
+            qk = torch.einsum("bhqd,bhkd->bhqk", query, key) # (batch_size, n_heads, seq_len, seq_len)
             if mask is not None:
                 qk.masked_fill_(mask, float("-inf"))
             att = torch.nn.functional.softmax(qk, dim=-1)
             att_d = torch.nn.functional.dropout(att, p=self.dropout, training=self.training)
-            out = torch.einsum("bhqk,bkhd->bqhd", att_d, value) # (batch_size, n_heads, seq_len, head_dim)
+            out = torch.einsum("bhqk,bhkd->bhqd", att_d, value) # (batch_size, n_heads, seq_len, head_dim)
             return out, att
         else:
             with torch.nn.attention.sdpa_kernel(SDP_BACKEND):

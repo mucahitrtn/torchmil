@@ -1,4 +1,5 @@
 import torch
+import math
 
 from ..irpe import get_rpe_config, build_rpe
 
@@ -19,39 +20,43 @@ class iRPEMultiheadSelfAttention(torch.nn.Module):
         learn_weights : bool = True,
         rpe_ratio : float = 2.0,
         rpe_method : str = "product",
-        rpe_mode : str = 'ctx',
+        rpe_mode : str = 'contextual',
         rpe_shared_head : bool = True,
         rpe_skip : int = 1,
-        rpe_on : str = 'k',
+        rpe_on : str = "k",
     ):
         """
         Arguments:
             in_dim: Input dimension.
-            att_dim: Attention dimension.
-            out_dim: Output dimension. If None, out_dim = in_dim.
+            att_dim: Attention dimension. Must be divisible by `n_heads`.
+            out_dim: Output dimension. If None, `out_dim` = `in_dim`.
             n_heads: Number of heads.
             dropout: Dropout rate.
-            learn_weights: Whether to learn the query, key, and value weights.
+            learn_weights: If True, learn the weights for query, key, and value. If False, q, k, and v are the same as the input, and therefore `in_dim` must be divisible by `n_heads`.
             rpe_ratio: Relative position encoding ratio.
-            rpe_method: Relative position encoding method.
-            rpe_mode: Relative position encoding mode.
+            rpe_method: Relative position encoding method. One of 'euc', 'quant', 'cross', 'product'.
+            rpe_mode: Relative position encoding mode. One of None, 'bias', 'contextual'.
             rpe_shared_head: Whether to share relative position encoding weights across heads.
-            rpe_skip: Relative position encoding skip.
+            rpe_skip: Relative position encoding skip. Either 0 or 1. 
             rpe_on: Relative position encoding on query, key, or value.
         """
         super(iRPEMultiheadSelfAttention, self).__init__()
         if out_dim is None:
             out_dim = in_dim
-        self.att_dim = att_dim
         self.n_heads = n_heads
         self.dropout = dropout
-        self.head_dim = att_dim // n_heads
         self.learn_weights = learn_weights
         self.rpe_skip = rpe_skip
         if learn_weights:
             self.qkv_nn = torch.nn.Linear(in_dim, 3 * att_dim, bias = False)
+            self.head_dim = att_dim // n_heads
+            assert att_dim % n_heads == 0, "att_dim must be divisible by n_heads"
         else:
             self.qkv_nn = None
+            self.head_dim = in_dim // n_heads
+            att_dim = in_dim
+            assert in_dim % n_heads == 0, "in_dim must be divisible by n_heads"
+        self.att_dim = att_dim
 
         if out_dim != att_dim:
             self.out_proj = torch.nn.Linear(att_dim, out_dim)
@@ -97,8 +102,9 @@ class iRPEMultiheadSelfAttention(torch.nn.Module):
         """
 
         if mask is not None:
-            mask = mask.unsqueeze(1).unsqueeze(1) # (batch_size, 1, 1, seq_len)
-            mask = mask.repeat(1, 1, query.size(2), 1).bool() # (batch_size, n_heads, seq_len, seq_len)
+            # the following is equivalent to mask.unsqueeze(-1) @ mask.unsqueeze(-1).transpose(1, 2)
+            mask = mask[:, None, :, None] * mask[:, None, None, :] # (batch_size, 1, seq_len, seq_len)
+            mask = mask.bool() # (batch_size, 1, seq_len, seq_len)
 
         query = query / (self.head_dim ** 0.5)
         qk = torch.einsum("bhid,bhjd->bhij", query, key) # (batch_size, n_heads, seq_len, seq_len)
@@ -162,17 +168,36 @@ class iRPEMultiheadSelfAttention(torch.nn.Module):
         """
         batch_size, seq_len, _ = x.size()
 
-        query, key, value = self._qkv(x) # (batch_size, seq_len, att_dim), (batch_size, seq_len, att_dim), (batch_size, seq_len, att_dim)
-        query = query.reshape(batch_size, self.n_heads, seq_len, -1) # (batch_size, n_heads, seq_len, head_dim)
-        key = key.reshape(batch_size, self.n_heads, seq_len, -1) # (batch_size, n_heads, seq_len, head_dim)
-        value = value.reshape(batch_size, self.n_heads, seq_len, -1) # (batch_size, n_heads, seq_len, head_dim)
+        h = w = int(math.sqrt(seq_len))
+        skip = seq_len - h * w
+        if skip > 1:
+            # if the sequence length is not a perfect square, we need to pad the input tensor so that rpe can be applied
+            # compute the nearest perfect square greater than or equal to seq_len
+            ps = math.ceil(math.sqrt(seq_len))**2
+            new_seq_len = ps + self.rpe_skip
+            padding = new_seq_len - seq_len
+            X = torch.nn.functional.pad(X, (0, 0, 0, padding))
+            if mask is not None:
+                mask = torch.nn.functional.pad(mask, (0, padding), value=0)
+        else:
+            new_seq_len = seq_len
+
+        query, key, value = self._qkv(x) # (batch_size, new_seq_len, att_dim), (batch_size, new_seq_len, att_dim), (batch_size, new_seq_len, att_dim)
+        query = query.reshape(batch_size, self.n_heads, new_seq_len, -1) # (batch_size, n_heads, new_seq_len, head_dim)
+        key = key.reshape(batch_size, self.n_heads, new_seq_len, -1) # (batch_size, n_heads, new_seq_len, head_dim)
+        value = value.reshape(batch_size, self.n_heads, new_seq_len, -1) # (batch_size, n_heads, new_seq_len, head_dim)
         if return_att:
-            y, att = self._scaled_dot_product_attention(query, key, value, mask, height=height, width=width, return_att=True) # (batch_size, n_heads, seq_len, head_dim)
-            y = y.permute(0, 2, 1, 3).contiguous().view(batch_size, seq_len, self.att_dim) # (batch_size, seq_len, att_dim)
+            y, att = self._scaled_dot_product_attention(query, key, value, mask, height=height, width=width, return_att=True) # (batch_size, n_heads, new_seq_len, head_dim)
+            y = y.permute(0, 2, 1, 3).contiguous().view(batch_size, new_seq_len, self.att_dim) # (batch_size, new_seq_len, att_dim)
             y = self.out_proj(y)
+            if skip > 1:
+                y = y[:, :seq_len, :]
+                att = att[:, :, :seq_len, :seq_len]
             return y, att
         else:
-            y = self._scaled_dot_product_attention(query, key, value, mask) # (batch_size, n_heads, seq_len, head_dim)
-            y = y.permute(0, 2, 1, 3).contiguous().view(batch_size, seq_len, self.att_dim) # (batch_size, seq_len, att_dim)
+            y = self._scaled_dot_product_attention(query, key, value, mask) # (batch_size, n_heads, new_seq_len, head_dim)
+            y = y.permute(0, 2, 1, 3).contiguous().view(batch_size, new_seq_len, self.att_dim) # (batch_size, new_seq_len, att_dim)
             y = self.out_proj(y)
+            if skip > 1:
+                y = y[:, :seq_len, :]
             return y

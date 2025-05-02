@@ -35,15 +35,24 @@ class NystromAttention(torch.nn.Module):
         n_heads : int = 4,
         learn_weights : bool = True,
         n_landmarks : int = 256,
-        pinv_iterations : int = 6,
-        eps : float = 1e-8
+        pinv_iterations : int = 6
     ):
+        """
+        Arguments:
+            in_dim: Input dimension.
+            out_dim: Output dimension. If None, out_dim = in_dim.
+            att_dim: Attention dimension. Must be divisible by `n_heads`.
+            n_heads: Number of heads.
+            learn_weights: If True, learn the weights for query, key, and value. If False, q, k, and v are the same as the input, and therefore `in_dim` must be divisible by `n_heads`.
+            n_landmarks: Number of landmarks.
+            pinv_iterations: Number of iterations for Moore-Penrose pseudo-inverse.
+        """
         super().__init__()
 
         if out_dim is None:
             out_dim = in_dim
 
-        self.eps = eps
+        self.eps = 1e-8
         head_dim = att_dim // n_heads
 
         self.n_landmarks = n_landmarks
@@ -54,8 +63,13 @@ class NystromAttention(torch.nn.Module):
         self.learn_weights = learn_weights
         if learn_weights:
             self.qkv_nn = torch.nn.Linear(in_dim, att_dim * 3, bias = False)
+            self.head_dim = att_dim // n_heads
+            assert att_dim % n_heads == 0, "att_dim must be divisible by n_heads"
         else:
             self.qkv_nn = None
+            self.head_dim = in_dim // n_heads
+            att_dim = in_dim
+            assert in_dim % n_heads == 0, "in_dim must be divisible by n_heads"
 
         if out_dim != att_dim:
             self.out_proj = torch.nn.Linear(att_dim, out_dim)
@@ -120,10 +134,8 @@ class NystromAttention(torch.nn.Module):
         # set masked positions to 0 in queries, keys, values
 
         if mask is not None:
-            mask = mask[:, None, :, None] * mask[:, None, None, :] # (batch_size, 1, new_seq_len, 1) * (batch_size, 1, 1, new_seq_len) -> (batch_size, 1, new_seq_len, new_seq_len)
-            q.masked_fill_(~mask, 0) # (batch_size, n_heads, new_seq_len, head_dim)
-            k.masked_fill_(~mask, 0) # (batch_size, n_heads, new_seq_len, head_dim)
-            v.masked_fill_(~mask, 0) # (batch_size, n_heads, new_seq_len, head_dim)
+            mask = mask[:, None, :]
+            q, k, v = map(lambda t: t * mask[..., None], (q, k, v))
 
         q = q * self.scale_factor
 
@@ -156,9 +168,9 @@ class NystromAttention(torch.nn.Module):
 
         if mask is not None:
             mask_value = -torch.finfo(q.dtype).max
-            sim1.masked_fill_(~(mask[..., None] * mask_landmarks[..., None, :]), mask_value)
-            sim2.masked_fill_(~(mask_landmarks[..., None] * mask_landmarks[..., None, :]), mask_value)
-            sim3.masked_fill_(~(mask_landmarks[..., None] * mask[..., None, :]), mask_value)
+            sim1= sim1.masked_fill(~(mask[..., None] * mask_landmarks[..., None, :]), mask_value)
+            sim2 = sim2.masked_fill(~(mask_landmarks[..., None] * mask_landmarks[..., None, :]), mask_value)
+            sim3 = sim3.masked_fill(~(mask_landmarks[..., None] * mask[..., None, :]), mask_value)
 
         # eq (15) in the paper and aggregate values
 
@@ -180,6 +192,8 @@ class NystromAttention(torch.nn.Module):
 
         if return_att:
             attn = attn1 @ attn2_inv @ attn3
+            # remove padding
+            attn = attn[:, :, -seq_len:, -seq_len:]
             return out, attn
         else:
             return out

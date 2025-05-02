@@ -33,26 +33,30 @@ class MultiheadCrossAttention(torch.nn.Module):
         """
         Arguments:
             in_dim: Input dimension.
-            out_dim: Output dimension. If None, out_dim = in_dim.
-            att_dim: Attention dimension.
+            out_dim: Output dimension. If None, `out_dim` = `in_dim`.
+            att_dim: Attention dimension, must be divisible by `n_heads`.
             n_heads: Number of heads.
             dropout: Dropout rate.
-            learn_weights: Whether to learn the weights.
+            learn_weights: If True, learn the weights for query, key, and value. If False, q, k, and v are the same as the input, and therefore `in_dim` must be divisible by `n_heads`.
         """
         super(MultiheadCrossAttention, self).__init__()
         if out_dim is None:
             out_dim = in_dim
-        self.att_dim = att_dim
         self.in_dim = in_dim
         self.n_heads = n_heads
         self.dropout = dropout
-        self.head_dim = self.att_dim // n_heads
         self.learn_weights = learn_weights
         if learn_weights:
-            self.q_nn = torch.nn.Linear(self.in_dim, self.att_dim, bias = False)
-            self.kv_nn = torch.nn.Linear(self.in_dim, 2 * self.att_dim, bias = False)
+            self.q_nn = torch.nn.Linear(self.in_dim, att_dim, bias = False)
+            self.kv_nn = torch.nn.Linear(self.in_dim, 2 * att_dim, bias = False)
+            self.head_dim = att_dim // n_heads
+            assert att_dim % n_heads == 0, "att_dim must be divisible by n_heads"
         else:
             self.qkv_nn = None
+            self.head_dim = in_dim // n_heads
+            att_dim = in_dim
+            assert in_dim % n_heads == 0, "in_dim must be divisible by n_heads"
+        self.att_dim = att_dim
 
         if out_dim != att_dim:
             self.out_proj = torch.nn.Linear(att_dim, out_dim)
@@ -64,7 +68,6 @@ class MultiheadCrossAttention(torch.nn.Module):
             query : torch.Tensor,
             key : torch.Tensor,
             value : torch.Tensor,
-            mask : torch.Tensor = None
         ) -> torch.Tensor:
         """
 
@@ -74,17 +77,12 @@ class MultiheadCrossAttention(torch.nn.Module):
             query: Query tensor of shape `(batch_size, n_heads, seq_len_q, head_dim)`.
             key: Key tensor of shape `(batch_size, n_heads, seq_len_k, head_dim)`.
             value: Value tensor of shape `(batch_size, n_heads, seq_len_v, head_dim)`.
-            mask: Mask tensor of shape `(batch_size, seq_len)`.
         Returns:
             out: Output tensor of shape `(batch_size, n_heads, seq_len, head_dim)`.
         """
 
-        if mask is not None:
-            mask = mask.unsqueeze(1).unsqueeze(1) # (batch_size, 1, 1, seq_len)
-            mask = mask.repeat(1, 1, query.size(2), 1).bool() # (batch_size, n_heads, seq_len, seq_len)
-
         with torch.nn.attention.sdpa_kernel(SDP_BACKEND):
-            out = torch.nn.functional.scaled_dot_product_attention(query, key, value, mask, self.dropout) # (batch_size, n_heads, seq_len, head_dim)
+            out = torch.nn.functional.scaled_dot_product_attention(query, key, value,dropout_p=self.dropout) # (batch_size, n_heads, seq_len, head_dim)
 
         return out
 
@@ -112,7 +110,6 @@ class MultiheadCrossAttention(torch.nn.Module):
             self,
             x : torch.Tensor,
             y : torch.Tensor,
-            mask : torch.Tensor = None
         ) -> torch.Tensor:
         """
         Forward pass.
@@ -130,7 +127,7 @@ class MultiheadCrossAttention(torch.nn.Module):
         query = query.view(batch_size, seq_len_x, self.n_heads, self.head_dim).permute(0, 2, 1, 3) # (batch_size, n_heads, seq_len_x, head_dim)
         key = key.view(batch_size, seq_len_y, self.n_heads, self.head_dim).permute(0, 2, 1, 3) # (batch_size, n_heads, seq_len_y, head_dim)
         value = value.view(batch_size, seq_len_y, self.n_heads, self.head_dim).permute(0, 2, 1, 3) # (batch_size, n_heads, seq_len_y, head_dim)
-        y = self._scaled_dot_product_attention(query, key, value, mask) # (batch_size, n_heads, seq_len_y, head_dim)
+        y = self._scaled_dot_product_attention(query, key, value) # (batch_size, n_heads, seq_len_y, head_dim)
         y = y.permute(0, 2, 1, 3).contiguous().view(batch_size, seq_len_x, self.att_dim) # (batch_size, seq_len_y, att_dim)
         y = self.out_proj(y)
         return y
