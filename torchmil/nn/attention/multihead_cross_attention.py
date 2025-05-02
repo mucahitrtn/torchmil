@@ -68,6 +68,7 @@ class MultiheadCrossAttention(torch.nn.Module):
             query : torch.Tensor,
             key : torch.Tensor,
             value : torch.Tensor,
+            mask_query : torch.Tensor = None,
         ) -> torch.Tensor:
         """
 
@@ -77,12 +78,21 @@ class MultiheadCrossAttention(torch.nn.Module):
             query: Query tensor of shape `(batch_size, n_heads, seq_len_q, head_dim)`.
             key: Key tensor of shape `(batch_size, n_heads, seq_len_k, head_dim)`.
             value: Value tensor of shape `(batch_size, n_heads, seq_len_v, head_dim)`.
+            mask_query: Mask tensor of shape `(batch_size, seq_len_q)`.
         Returns:
             out: Output tensor of shape `(batch_size, n_heads, seq_len, head_dim)`.
         """
 
+        if mask_query is not None:
+            mask_key = torch.ones(query.size(0), query.size(2), device=query.device) # (batch_size, seq_len_k)
+            # the following is equivalent to mask.unsqueeze(-1) @ mask.unsqueeze(-1).transpose(1, 2)
+            mask = mask_key.unsqueeze(-1).int() @ mask_query.unsqueeze(-1).transpose(1, 2).int() # (batch_size, seq_len_q, seq_len_k)
+            mask = mask.unsqueeze(1).bool() # (batch_size, 1, seq_len_q, seq_len_k)
+        else:
+            mask = None
+
         with torch.nn.attention.sdpa_kernel(SDP_BACKEND):
-            out = torch.nn.functional.scaled_dot_product_attention(query, key, value,dropout_p=self.dropout) # (batch_size, n_heads, seq_len, head_dim)
+            out = torch.nn.functional.scaled_dot_product_attention(query, key, value, mask, self.dropout) # (batch_size, n_heads, seq_len, head_dim)
 
         return out
 
@@ -110,6 +120,7 @@ class MultiheadCrossAttention(torch.nn.Module):
             self,
             x : torch.Tensor,
             y : torch.Tensor,
+            mask : torch.Tensor = None,
         ) -> torch.Tensor:
         """
         Forward pass.
@@ -117,7 +128,7 @@ class MultiheadCrossAttention(torch.nn.Module):
         Arguments:
             x: Input tensor of shape `(batch_size, seq_len_x, in_dim)`.
             y: Input tensor of shape `(batch_size, seq_len_y, in_dim)`.
-            mask: Mask tensor of shape `(batch_size, seq_len)`.
+            mask: Mask tensor of shape `(batch_size, seq_len_x)`.
         Returns:
             y: Output tensor of shape `(batch_size, seq_len_y, att_dim)`.
         """
@@ -127,7 +138,7 @@ class MultiheadCrossAttention(torch.nn.Module):
         query = query.view(batch_size, seq_len_x, self.n_heads, self.head_dim).permute(0, 2, 1, 3) # (batch_size, n_heads, seq_len_x, head_dim)
         key = key.view(batch_size, seq_len_y, self.n_heads, self.head_dim).permute(0, 2, 1, 3) # (batch_size, n_heads, seq_len_y, head_dim)
         value = value.view(batch_size, seq_len_y, self.n_heads, self.head_dim).permute(0, 2, 1, 3) # (batch_size, n_heads, seq_len_y, head_dim)
-        y = self._scaled_dot_product_attention(query, key, value) # (batch_size, n_heads, seq_len_y, head_dim)
+        y = self._scaled_dot_product_attention(query, key, value, mask) # (batch_size, n_heads, seq_len_y, head_dim)
         y = y.permute(0, 2, 1, 3).contiguous().view(batch_size, seq_len_x, self.att_dim) # (batch_size, seq_len_y, att_dim)
         y = self.out_proj(y)
         return y
