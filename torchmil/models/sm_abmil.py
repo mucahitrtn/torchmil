@@ -28,7 +28,7 @@ class SmABMIL(MILModel):
 
     def __init__(
         self,
-        in_shape: tuple = None,
+        in_shape: tuple,
         att_dim: int = 128,
         att_act: str = 'tanh',
         sm_mode: str = 'approx',
@@ -43,7 +43,7 @@ class SmABMIL(MILModel):
     ) -> None:
         """
         Arguments:
-            in_shape: Shape of input data expected by the feature extractor (excluding batch dimension). If not provided, it will be lazily initialized.
+            in_shape: Shape of input data expected by the feature extractor (excluding batch dimension).
             att_dim (int): Attention dimension.
             att_act (str): Activation function for attention. Possible values: 'tanh', 'relu', 'gelu'.
             sm_mode (str): Mode for the Sm operator. Possible values: 'approx', 'exact'.
@@ -59,10 +59,8 @@ class SmABMIL(MILModel):
         super().__init__()
 
         self.feat_ext = feat_ext
-        if in_shape is not None:
-            feat_dim = get_feat_dim(feat_ext, in_shape)
-        else:
-            feat_dim = None
+        feat_dim = get_feat_dim(feat_ext, in_shape)
+
         self.pool = SmAttentionPool(
             in_dim=feat_dim,
             att_dim=att_dim,
@@ -75,7 +73,7 @@ class SmABMIL(MILModel):
             sm_post=sm_post,
             sm_spectral_norm=sm_spectral_norm
         )
-        self.last_layer = LazyLinear(feat_dim, 1)
+        self.last_layer = torch.nn.Linear(feat_dim, 1)
 
         self.criterion = criterion
 

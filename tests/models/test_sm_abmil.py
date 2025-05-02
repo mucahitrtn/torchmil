@@ -26,22 +26,6 @@ def smabmil_model():
     return SmABMIL(in_shape=(3, 5))
 
 
-# Tests for SmABMIL class
-def test_smabmil_initialization():
-    # Tests that the model can be initialized with different parameters
-    SmABMIL(in_shape=(3, 5))
-    SmABMIL(in_shape=(3, 5), att_dim=64)
-    SmABMIL(in_shape=(3, 5), att_act="relu")
-    SmABMIL(in_shape=(3, 5), sm_mode="exact")
-    SmABMIL(in_shape=(3, 5), sm_alpha=0.5)
-    SmABMIL(in_shape=(3, 5), sm_layers=1)
-    SmABMIL(in_shape=(3, 5), sm_pre=True)
-    SmABMIL(in_shape=(3, 5), sm_post=True)
-    SmABMIL(in_shape=(3, 5), sm_spectral_norm=True)
-    SmABMIL(in_shape=(3, 5), feat_ext=nn.Linear(5, 10))
-    SmABMIL(in_shape=(3, 5), criterion=nn.MSELoss())
-
-
 def test_smabmil_forward_pass(sample_data, smabmil_model):
     # Tests the forward pass of the model with and without mask and return_att
     X, adj, _, mask = sample_data
@@ -94,20 +78,6 @@ def test_smabmil_with_feature_extractor(sample_data):
     assert Y_pred.shape == (2,)
     assert "BCEWithLogitsLoss" in loss_dict
     assert loss_dict["BCEWithLogitsLoss"].shape == ()
-
-
-def test_smabmil_no_in_shape(sample_data):
-    # Test case where in_shape is not provided during initialization.
-    X, adj, Y, mask = sample_data
-    model = SmABMIL()  # Initialize without in_shape
-    # The model should be able to infer the input shape during the forward pass.
-    Y_pred = model(X, adj, mask)
-    assert Y_pred.shape == (2,)
-    Y_pred, loss_dict = model.compute_loss(Y, X, adj, mask)
-    assert Y_pred.shape == (2,)
-    assert "BCEWithLogitsLoss" in loss_dict
-    assert loss_dict["BCEWithLogitsLoss"].shape == ()
-
 
 def test_smabmil_different_pooling_params(sample_data):
     # Test different attention and Sm pooling parameters

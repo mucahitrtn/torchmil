@@ -74,7 +74,7 @@ class SmAttentionPool(torch.nn.Module):
         self.sm_post = sm_post
         self.sm_spectral_norm = sm_spectral_norm
 
-        self.proj1 = LazyLinear(in_dim, att_dim)
+        self.proj1 = torch.nn.Linear(in_dim, att_dim)
         self.proj2 = torch.nn.Linear(att_dim, 1, bias=False)
 
         if self.act == 'tanh':
