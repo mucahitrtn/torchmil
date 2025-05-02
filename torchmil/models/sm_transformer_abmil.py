@@ -50,8 +50,8 @@ class SmTransformerABMIL(MILModel):
         transf_use_mlp : bool = True,
         transf_add_self : bool = True,
         transf_dropout : float = 0.0,
-        transf_sm_alpha: float = None,
-        transf_sm_mode: str = None,
+        transf_sm_alpha: float = "trainable",
+        transf_sm_mode: str = "approx",
         transf_sm_steps: int = 10,
         criterion: torch.nn.Module = torch.nn.BCEWithLogitsLoss(),
         ) -> None:

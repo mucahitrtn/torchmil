@@ -94,8 +94,9 @@ def test_binary_classification_dataset(temp_binary_data):
     )
     assert len(dataset) == len(bag_names), "Dataset size is incorrect"
 
-    for i, bag_name in enumerate(bag_names):
+    for i in range(len(dataset)):
         bag = dataset[i]
+        bag_name = dataset.bag_names[i]
         expected_data = bag_data[bag_name]
 
         # Test data loading
