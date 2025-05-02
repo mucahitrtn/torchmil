@@ -22,8 +22,8 @@ class SmMultiheadSelfAttention(MultiheadSelfAttention):
         att_dim: int = 512,
         n_heads: int = 4,
         dropout: float = 0.0,
-        sm_alpha: float = None,
-        sm_mode: str = None,
+        sm_alpha: float = "trainable",
+        sm_mode: str = "approx",
         sm_steps: int = 10
     ):
         """
@@ -48,7 +48,8 @@ class SmMultiheadSelfAttention(MultiheadSelfAttention):
         self,
         X : torch.Tensor,
         adj : torch.Tensor,
-        mask : torch.Tensor = None
+        mask : torch.Tensor = None,
+        return_att : bool = False
     ) -> torch.Tensor:
         """
         Forward method.
@@ -57,9 +58,18 @@ class SmMultiheadSelfAttention(MultiheadSelfAttention):
             X: Input tensor of shape `(batch_size, bag_size, in_dim)`.
             adj: Adjacency matrix of shape `(batch_size, bag_size, bag_size)`.
             mask: Mask tensor of shape `(batch_size, bag_size)`.
+            return_att: If True, returns attention weights, of shape `(batch_size, n_heads, bag_size, bag_size)`.
         """
-        return self.sm(super().forward(X, mask=mask), adj)
-
+        out = super().forward(X, mask=mask, return_att=return_att)
+        if return_att:
+            Y, att = out
+        else:
+            Y = out
+        Y = self.sm(Y, adj)
+        if return_att:
+            return Y, att
+        else:
+            return Y
 
 class SmTransformerLayer(Layer):
     r"""
@@ -86,8 +96,8 @@ class SmTransformerLayer(Layer):
         n_heads: int = 4,
         use_mlp: bool = True,
         dropout: float = 0.0,
-        sm_alpha: float = None,
-        sm_mode: str = None,
+        sm_alpha: float = "trainable",
+        sm_mode: str = "approx",
         sm_steps: int = 10
     ):
         """
@@ -125,6 +135,7 @@ class SmTransformerLayer(Layer):
         X: torch.Tensor,
         adj: torch.Tensor,
         mask: torch.Tensor = None,
+        return_att: bool = False
     ) -> torch.Tensor:
         """
         Forward method.
@@ -133,12 +144,13 @@ class SmTransformerLayer(Layer):
             X: Input tensor of shape `(batch_size, bag_size, in_dim)`.
             adj: Adjacency matrix of shape `(batch_size, bag_size, bag_size)`.
             mask: Mask tensor of shape `(batch_size, bag_size)`.
+            return_att: If True, returns attention weights, of shape `(batch_size, n_heads, bag_size, bag_size)`.
 
         Returns:
             Y: Output tensor of shape `(batch_size, bag_size, in_dim)`.
         """
 
-        return super().forward(X, mask=mask, adj=adj)
+        return super().forward(X, mask=mask, adj=adj, return_att=return_att)
 
 class SmTransformerEncoder(Encoder):
     r"""
@@ -169,8 +181,8 @@ class SmTransformerEncoder(Encoder):
         use_mlp: bool = True,
         add_self: bool = False,
         dropout: float = 0.0,
-        sm_alpha: float = None,
-        sm_mode: str = None,
+        sm_alpha: float = "trainable",
+        sm_mode: str = "approx",
         sm_steps: int = 10
     ):
         """
@@ -183,7 +195,7 @@ class SmTransformerEncoder(Encoder):
             n_heads: Number of heads.
             n_layers: Number of layers.
             use_mlp: Whether to use feedforward layer.
-            add_self: Whether to add input to output.
+            add_self: Whether to add input to output. If True, `att_dim` must be equal to `in_dim`.
             dropout: Dropout rate.
         """
 
@@ -209,6 +221,7 @@ class SmTransformerEncoder(Encoder):
         X: torch.Tensor,
         adj: torch.Tensor,
         mask: torch.Tensor = None,
+        return_att: bool = False
     ) -> torch.Tensor:
         """
         Forward method.
@@ -222,7 +235,13 @@ class SmTransformerEncoder(Encoder):
             Y: Output tensor of shape `(batch_size, bag_size, in_dim)`.
         """
 
-        Y = super().forward(X, mask=mask, adj=adj) # (batch_size, bag_size, att_dim)
-        Y = self.norm(Y) # (batch_size, bag_size, att_dim)
+        out = super().forward(X, mask=mask, adj=adj, return_att=return_att)
 
-        return Y
+        if return_att:
+            Y, att = out
+            Y = self.norm(Y) # (batch_size, bag_size, att_dim)
+            return Y, att
+        else:
+            Y = out
+            Y = self.norm(Y) # (batch_size, bag_size, att_dim)
+            return Y

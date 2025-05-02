@@ -13,7 +13,13 @@ class IIBMILDecoderLayer(torch.nn.Module):
     IIB-MIL decoder layer as described in the paper [IIB-MIL: Integrated Instance-Level and Bag-Level Multiple Instances Learning with Label Disambiguation for Pathological Image Analysis](https://link.springer.com/chapter/10.1007/978-3-031-43987-2_54).
     """
 
-    def __init__(self, dim: int = 256, n_heads: int = 4, dropout: float = 0.0) -> None:
+    def __init__(
+            self, 
+            dim: int = 256, 
+            n_heads: int = 4, 
+            dropout: float = 0.0,
+            use_mlp: bool = True
+    ): 
         """
         Arguments:
             dim: Embedding dimension.
@@ -28,13 +34,16 @@ class IIBMILDecoderLayer(torch.nn.Module):
         self.self_att = MultiheadSelfAttention(dim, dim, n_heads)
         self.norm2 = torch.nn.LayerNorm(dim)
 
-        self.mlp_layer = torch.nn.Sequential(
-            torch.nn.Linear(dim, 4 * dim),
-            torch.nn.GELU(),
-            torch.nn.Dropout(dropout),
-            torch.nn.Linear(4 * dim, dim),
-            torch.nn.Dropout(dropout),
-        )
+        if use_mlp:
+            self.mlp_layer = torch.nn.Sequential(
+                torch.nn.Linear(dim, 4 * dim),
+                torch.nn.GELU(),
+                torch.nn.Dropout(dropout),
+                torch.nn.Linear(4 * dim, dim),
+                torch.nn.Dropout(dropout),
+            )
+        else:
+            self.mlp_layer = torch.nn.Identity()
 
     def forward(
         self,
@@ -75,11 +84,12 @@ class IIBMILDecoder(torch.nn.Module):
         dim: int = 256,
         n_layers: int = 1,
         n_heads: int = 4,
+        use_mlp: bool = True,
     ):
         super().__init__()
 
         self.layers = torch.nn.ModuleList(
-            [IIBMILDecoderLayer(dim, n_heads) for _ in range(n_layers)]
+            [IIBMILDecoderLayer(dim, n_heads, use_mlp) for _ in range(n_layers)]
         )
 
     def forward(
@@ -129,6 +139,8 @@ class IIBMIL(torch.nn.Module):
         att_dim: int = 256,
         n_layers_encoder: int = 1,
         n_layers_decoder: int = 1,
+        use_mlp_encoder: bool = True,
+        use_mlp_decoder: bool = True,
         n_heads: int = 4,
         n_queries: int = 5,
         feat_ext: torch.nn.Module = torch.nn.Identity(),
@@ -140,6 +152,8 @@ class IIBMIL(torch.nn.Module):
             att_dim: Attention dimension.
             n_layers_encoder: Number of layers in the transformer encoder.
             n_layers_decoder: Number of layers in the transformer decoder.
+            use_mlp_encoder: If True, uses a multi-layer perceptron (MLP) in the encoder.
+            use_mlp_decoder: If True, uses a multi-layer perceptron (MLP) in the decoder.
             n_heads: Number of attention heads.
             n_queries: Number of queries.
             feat_ext: Feature extractor.
@@ -159,9 +173,9 @@ class IIBMIL(torch.nn.Module):
             self.feat_proj = torch.nn.Identity()
 
         self.encoder = TransformerEncoder(
-            att_dim, att_dim, n_heads, n_layers_encoder, use_mlp=True, add_self=False
+            att_dim, att_dim, n_heads, n_layers_encoder, use_mlp=use_mlp_encoder, add_self=False
         )
-        self.decoder = IIBMILDecoder(att_dim, n_layers_decoder, n_heads)
+        self.decoder = IIBMILDecoder(att_dim, n_layers_decoder, n_heads, use_mlp_decoder)
 
         self.inst_classifier = torch.nn.Linear(att_dim, 1)
         self.bag_classifier = torch.nn.Linear(n_queries * att_dim, 1)
@@ -196,9 +210,7 @@ class IIBMIL(torch.nn.Module):
         X_enc = X_enc.view(batch_size * bag_size, -1)  # (batch_size * bag_size, dim)
         y_pred = y_pred.view(batch_size * bag_size)  # (batch_size * bag_size)
         prototypes = self.prototypes.clone().detach()  # (2, dim)
-        logits_prot = torch.mm(X_enc.detach(), prototypes.t()).squeeze(
-            1
-        )  # (batch_size * bag_size, 2)
+        logits_prot = torch.mm(X_enc.detach(), prototypes.t()).squeeze(1)  # (batch_size * bag_size, 2)
         score_prot = torch.softmax(logits_prot, dim=1)  # (batch_size * bag_size, 2)
 
         # compute pseudo labels
@@ -238,21 +250,21 @@ class IIBMIL(torch.nn.Module):
             mask = mask.view(batch_size * bag_size)  # (batch_size * bag_size)
             mask = mask.bool()
 
-        y_pred_select = torch.masked_select(
-            y_pred,
-            mask,
-        )  # (batch_size * bag_size,)
+            y_pred = torch.masked_select(
+                y_pred,
+                mask,
+            )  # (batch_size * bag_size,)
 
-        X_enc_select = torch.masked_select(
-            X_enc,
-            mask.unsqueeze(-1).repeat(1, feat_dim),
-        ).reshape(
-            -1, feat_dim
-        )  # (batch_size * bag_size, dim)
+            X_enc = torch.masked_select(
+                X_enc,
+                mask.unsqueeze(-1).repeat(1, feat_dim),
+            ).reshape(
+                -1, feat_dim
+            )  # (batch_size * bag_size, dim)
 
-        k = y_pred_select.shape[0] // 10
+        k = y_pred.shape[0] // 10
         _, indice_0 = torch.topk(
-            y_pred_select,
+            y_pred,
             k,
             dim=-1,
             largest=True,
@@ -261,7 +273,7 @@ class IIBMIL(torch.nn.Module):
         )  # (batch_size * bag_size, k)
 
         _, indice_1 = torch.topk(
-            y_pred_select,
+            y_pred,
             k,
             dim=-1,
             largest=False,
@@ -269,17 +281,17 @@ class IIBMIL(torch.nn.Module):
             out=None,
         )  # (batch_size * bag_size, k)
 
-        X_enc_select_0 = X_enc_select[indice_0, :]  # (batch_size * bag_size, k, dim)
-        X_enc_select_1 = X_enc_select[indice_1, :]  # (batch_size * bag_size, k, dim)
+        X_enc_0 = X_enc[indice_0, :]  # (batch_size * bag_size, k, dim)
+        X_enc_1 = X_enc[indice_1, :]  # (batch_size * bag_size, k, dim)
 
         for i in range(len(indice_0)):
             self.prototypes[0, :] = (
-                self.prototypes[0, :] * proto_m + (1 - proto_m) * X_enc_select_0[i]
+                self.prototypes[0, :] * proto_m + (1 - proto_m) * X_enc_0[i]
             )
 
         for i in range(len(indice_1)):
             self.prototypes[1, :] = (
-                self.prototypes[1, :] * proto_m + (1 - proto_m) * X_enc_select_1[i]
+                self.prototypes[1, :] * proto_m + (1 - proto_m) * X_enc_1[i]
             )
 
     def forward(
