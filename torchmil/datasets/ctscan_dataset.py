@@ -56,6 +56,7 @@ class CTScanDataset(ProcessedMILDataset):
         labels_path: str,
         slice_labels_path: str = None,
         ctscan_names: list = None,
+        bag_keys: list = ["X", "Y", "y_inst", "adj", "coords"],
         adj_with_dist: bool = False,
         norm_adj: bool = True,
         load_at_init: bool = True
@@ -68,6 +69,7 @@ class CTScanDataset(ProcessedMILDataset):
             labels_path: Path to the directory containing the labels of the CT scans.
             slice_labels_path: Path to the directory containing the labels of the slices.
             ctscan_names: List of the names of the CT scans to load. If None, all CT scans in the `features_path` directory are loaded.
+            bag_keys: List of keys to use for the bags. Must be in ['X', 'Y', 'y_inst', 'coords'].
             adj_with_dist: If True, the adjacency matrix is built using the Euclidean distance between the slices features. If False, the adjacency matrix is binary.
             norm_adj: If True, normalize the adjacency matrix.
             load_at_init: If True, load the bags at initialization. If False, load the bags on demand.
@@ -79,6 +81,7 @@ class CTScanDataset(ProcessedMILDataset):
             labels_path=labels_path,
             inst_labels_path=slice_labels_path,
             bag_names=ctscan_names,
+            bag_keys=bag_keys,
             adj_with_dist=adj_with_dist,
             dist_thr=dist_thr,
             norm_adj=norm_adj,

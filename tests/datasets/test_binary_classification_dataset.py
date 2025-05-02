@@ -3,6 +3,19 @@ import pytest
 import numpy as np
 from torchmil.datasets import BinaryClassificationDataset
 
+def clean_temp_dir():
+    """
+    Helper function to clean up temporary directories.
+    """
+    temp_dir = "temp_binary_data"
+    if os.path.exists(temp_dir):
+        for root, dirs, files in os.walk(temp_dir, topdown=False):
+            for name in files:
+                os.remove(os.path.join(root, name))
+            for name in dirs:
+                os.rmdir(os.path.join(root, name))
+        os.rmdir(temp_dir)
+
 @pytest.fixture
 def temp_binary_data():
     """
@@ -56,21 +69,7 @@ def temp_binary_data():
             np.save(os.path.join(inst_labels_dir, name + ".npy"), data["inst_labels"])  # Corrected path
         np.save(os.path.join(coords_dir, name + ".npy"), data["coords"])
 
-    yield temp_dir, features_dir, labels_dir, inst_labels_dir, coords_dir, bag_names, bag_data
-
-    # Cleanup
-    for name in bag_names:
-        os.remove(os.path.join(features_dir, name + ".npy"))
-        os.remove(os.path.join(labels_dir, name + ".npy"))
-        if os.path.exists(os.path.join(inst_labels_dir, name + ".npy")): #check if file exists before removing
-            os.remove(os.path.join(inst_labels_dir, name + ".npy"))
-        os.remove(os.path.join(coords_dir, name + ".npy"))
-
-    os.rmdir(features_dir)
-    os.rmdir(labels_dir)
-    os.rmdir(inst_labels_dir)  # Corrected variable name
-    os.rmdir(coords_dir)
-    os.rmdir(temp_dir)
+    return temp_dir, features_dir, labels_dir, inst_labels_dir, coords_dir, bag_names, bag_data
 
 def test_binary_classification_dataset(temp_binary_data):
     """
@@ -112,3 +111,5 @@ def test_binary_classification_dataset(temp_binary_data):
             assert np.all(bag["y_inst"].numpy() == -1), f"Instance labels for {bag_name} should be -1"
         else:
             assert np.array_equal(bag["y_inst"].numpy(), expected_data["inst_labels"].squeeze()), f"Instance labels for {bag_name} are incorrect"
+    
+    clean_temp_dir()

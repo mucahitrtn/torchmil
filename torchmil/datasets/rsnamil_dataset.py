@@ -39,6 +39,7 @@ class RSNAMILDataset(BinaryClassificationDataset, CTScanDataset):
         root : str,
         features : str = 'resnet50',
         partition : str = 'train',
+        bag_keys: list = ["X", "Y", "y_inst", "adj", "coords"],
         adj_with_dist: bool = False,
         norm_adj: bool = True,
         load_at_init: bool = True
@@ -48,6 +49,7 @@ class RSNAMILDataset(BinaryClassificationDataset, CTScanDataset):
             root: Path to the root directory of the dataset.
             features: Type of features to use. Must be one of ['resnet18', 'resnet50', 'vit_b_32']
             partition: Partition of the dataset. Must be one of ['train', 'test'].
+            bag_keys: List of keys to use for the bags. Must be in ['X', 'Y', 'y_inst', 'coords'].
             adj_with_dist: If True, the adjacency matrix is built using the Euclidean distance between the patches features. If False, the adjacency matrix is binary.
             norm_adj: If True, normalize the adjacency matrix.
             load_at_init: If True, load the bags at initialization. If False, load the bags on demand.
@@ -67,6 +69,7 @@ class RSNAMILDataset(BinaryClassificationDataset, CTScanDataset):
             features_path=features_path,
             labels_path=labels_path,
             slice_labels_path=slice_labels_path,
+            bag_keys=bag_keys,
             ctscan_names=ctscan_names,
             adj_with_dist=adj_with_dist,
             norm_adj=norm_adj,
