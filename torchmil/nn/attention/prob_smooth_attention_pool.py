@@ -158,31 +158,36 @@ class ProbSmoothAttentionPool(torch.nn.Module):
         X : Tensor,
         adj : Tensor = None,
         mask : Tensor = None,
-        return_att : bool = False,
-        return_attdist : bool = False,
-        return_kl_div : bool = False
+        return_att_samples : bool = False,
+        return_att_dist : bool = False,
+        return_kl_div : bool = False,
+        n_samples : int = None
     ) -> tuple[Tensor, Tensor, Tensor, Tensor, Tensor]:
         """
+        In the following, if `covar_mode='zero'` then `n_samples` is automatically set to 1 and `diag_Sigma_f` is set to None.
+
         Arguments:
-            X: Bag features of shape `(batch_size, bag_size, D)`.
+            X: Bag features of shape `(batch_size, bag_size, dim)`.
             mask: Mask of shape `(batch_size, bag_size)`.
             adj: Adjacency matrix of shape `(batch_size, bag_size, bag_size)`. Only required when `return_kl_div=True`.
             return_att: If True, returns a sample from the attention distribution `f` in addition to `z`.
             return_attdist: If True, returns the attention distribution (`mu_f`, `diag_Sigma_f`) in addition to `z`.
             return_kl_div: If True, returns the KL divergence between the attention distribution and the prior distribution.
+            n_samples: Number of samples to draw. If not provided, it will use `n_samples_train` during training and `n_samples_test` during testing.
 
         Returns:
-            z: Bag representation of shape `(batch_size, D)`.
-            f: Sample from the attention distribution of shape `(batch_size, bag_size, n_samples)`. Only returned when `return_att=True`.
-            mu_f: Mean of the attention distribution of shape `(batch_size, bag_size, 1)`. Only returned when `return_attdist=True`.
-            diag_Sigma_f: Covariance of the attention distribution of shape `(batch_size, bag_size, 1)`. Only returned when `return_attdist=True`.
+            z: Bag representation of shape `(batch_size, dim, n_samples)`.
+            f: Sample from the attention distribution of shape `(batch_size, bag_size, n_samples)`. Only returned when `return_att_samples=True`.
+            mu_f: Mean of the attention distribution of shape `(batch_size, bag_size, 1)`. Only returned when `return_att_dist=True`.
+            diag_Sigma_f: Covariance of the attention distribution of shape `(batch_size, bag_size, 1)`. Only returned when `return_att_dist=True`.
             kl_div: KL divergence between the attention distribution and the prior distribution, of shape `()`. Only returned when `return_kl_div=True`.
         """
 
-        if self.training:
-            n_samples = self.n_samples_train
-        else:
-            n_samples = self.n_samples_test
+        if n_samples is None:
+            if self.training:
+                n_samples = self.n_samples_train
+            else:
+                n_samples = self.n_samples_test
 
         batch_size = X.shape[0]
         bag_size = X.shape[1]
@@ -193,27 +198,38 @@ class ProbSmoothAttentionPool(torch.nn.Module):
 
         H = self.in_mlp(X) # (batch_size, bag_size, 2*att_dim)
         mu_f = self.mu_f_nn(H) # (batch_size, bag_size, 1)
-        log_diag_Sigma_f = self.log_diag_Sigma_nn(H) # (batch_size, bag_size, 1)
-
+        if self.covar_mode == 'diag':
+            log_diag_Sigma_f = self.log_diag_Sigma_nn(H) # (batch_size, bag_size, 1)
+        else:
+            log_diag_Sigma_f = None
         # sample from q(f)
         f = self._sample_f(mu_f, log_diag_Sigma_f, n_samples) # (batch_size, bag_size, n_samples)
 
+        print(f.shape, n_samples)
+
         s = masked_softmax(f, mask) # (batch_size, bag_size, n_samples)
+        print(s.shape)
 
         z = torch.bmm(X.transpose(1,2), s) # (batch_size, d, n_samples)
 
         if return_kl_div:
             kl_div = self._kl_div(mu_f, log_diag_Sigma_f, adj) # ()
-            if return_att:
-                return z, f, kl_div
-            elif return_attdist:
+            if return_att_samples:
+                if return_att_dist:
+                    return z, f, mu_f, log_diag_Sigma_f, kl_div
+                else:
+                    return z, f, kl_div
+            elif return_att_dist:
                 return z, mu_f, log_diag_Sigma_f, kl_div
             else:
                 return z, kl_div
         else:
-            if return_att:
-                return z, f
-            elif return_attdist:
+            if return_att_samples:
+                if return_att_dist:
+                    return z, f, mu_f, log_diag_Sigma_f
+                else:
+                    return z, f
+            elif return_att_dist:
                 return z, mu_f, log_diag_Sigma_f
             else:
                 return z

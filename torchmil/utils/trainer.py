@@ -251,7 +251,7 @@ class Trainer:
                 }
                 pbar.set_postfix(metrics)
 
-            del Y, Y_pred, loss
+            del batch, Y, Y_pred, loss
         pbar.close()
         return metrics
 

@@ -76,7 +76,7 @@ class TransMIL(MILModel):
         r"""
         Arguments:
             in_shape: Shape of input data expected by the feature extractor (excluding batch dimension).
-            att_dim: Embedding dimension.
+            att_dim: Embedding dimension. Should be divisible by `n_heads`.
             n_layers: Number of Nyströmformer layers.
             n_heads: Number of heads in the Nyströmformer layer.
             n_landmarks: Number of landmarks in the Nyströmformer layer.
@@ -172,13 +172,11 @@ class TransMIL(MILModel):
 
         # last transformer layer
         if return_att:
-            current_len = padded_size*padded_size+1
-            pad_len = self.n_landmarks - (current_len % self.n_landmarks) if current_len % self.n_landmarks > 0 else 0
-            # X, attn = self.transf_layer_2(X, return_att=True) # (batch_size, padded_size*padded_size+1, att_dim), (batch_size, n_heads, padded_size*padded_size+1, padded_size*padded_size+1)
+
             X, attn = self.layers[-1](X, return_att=True) # (batch_size, padded_size*padded_size+1, att_dim), (batch_size, n_heads, padded_size*padded_size+1, padded_size*padded_size+1)
-            attn_mat = attn[:, :, pad_len:pad_len+bag_size+1, pad_len:pad_len+bag_size+1] # (batch_size, n_heads, bag_size+1, bag_size+1)
-            attn_mat = attn_mat.mean(dim=1) # (batch_size, bag_size+1, bag_size+1)
-            att = attn_mat[:, 0, 1:] # (batch_size, bag_size)
+            # remove padding
+            attn = attn.mean(dim=1) # (batch_size, padded_size*padded_size+1, padded_size*padded_size+1)
+            attn = attn[:, 0, 1:bag_size+1] # (batch_size, padded_size*padded_size)
         else:
             X = self.layers[-1](X) # (batch_size, padded_size*padded_size+1, att_dim)
 
@@ -192,7 +190,7 @@ class TransMIL(MILModel):
         bag_pred = self.classifier(cls_token).squeeze(-1) # (batch_size,)
 
         if return_att:
-            return bag_pred, att
+            return bag_pred, attn
         else:
             return bag_pred
 

@@ -78,7 +78,7 @@ class TransformerABMIL(MILModel):
     def forward(
         self,
         X: torch.Tensor,
-        mask: torch.Tensor,
+        mask: torch.Tensor = None,
         return_att: bool = False
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """
@@ -116,7 +116,7 @@ class TransformerABMIL(MILModel):
         self,
         Y: torch.Tensor,
         X: torch.Tensor,
-        mask: torch.Tensor
+        mask: torch.Tensor = None,
     ) -> tuple[torch.Tensor, dict]:
         """
         Compute loss given true bag labels.

@@ -91,14 +91,14 @@ class SmAttentionPool(torch.nn.Module):
 
         self.mlp = torch.nn.ModuleList()
         for _ in range(sm_layers):
-            self.mlp.append(torch.nn.Linear(att_dim, att_dim))
+            linear = torch.nn.utils.parametrizations.spectral_norm(
+                torch.nn.Linear(att_dim, att_dim)
+            )
+            self.mlp.append(linear)
 
-        if self.sm_spectral_norm:
-            self.apply(self._init_spectral_norm)
-
-    def _init_spectral_norm(self, m) -> None:
-        if isinstance(m, torch.nn.Linear):
-            torch.nn.utils.spectral_norm(m)
+        if self.sm_pre:
+            self.proj1 = torch.nn.utils.parametrizations.spectral_norm(self.proj1)
+            self.proj2 = torch.nn.utils.parametrizations.spectral_norm(self.proj2)
 
     def forward(
             self,
@@ -135,8 +135,8 @@ class SmAttentionPool(torch.nn.Module):
         H = self.act_layer(H) # (batch_size, bag_size, att_dim)
 
         for layer in self.mlp:
-            H = layer(H)
             H = self.sm(H, adj)
+            H = layer(H)
             H = self.act_layer(H)
 
         f = self.proj2(H) # (batch_size, bag_size, 1)
