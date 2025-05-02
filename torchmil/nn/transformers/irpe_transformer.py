@@ -91,6 +91,7 @@ class iRPETransformerLayer(Layer):
     def forward(
         self,
         X: torch.Tensor,
+        return_att: bool = False
     ) -> torch.Tensor:
         """
         Forward method.
@@ -102,7 +103,7 @@ class iRPETransformerLayer(Layer):
             Y: Output tensor of shape `(batch_size, bag_size, out_dim)`.
         """
 
-        return super().forward(X)
+        return super().forward(X, return_att=return_att)
 
 
 class iRPETransformerEncoder(Encoder):
@@ -191,12 +192,14 @@ class iRPETransformerEncoder(Encoder):
     def forward(
         self,
         X: torch.Tensor,
+        return_att : bool = False,
     ) -> torch.Tensor:
         """
         Forward method.
 
         Arguments:
             X: Input tensor of shape `(batch_size, bag_size, in_dim)`.
+            return_att: If True, returns attention weights, of shape `(n_layers, batch_size, n_heads, bag_size, bag_size)`.
 
         Returns:
             Y: Output tensor of shape `(batch_size, bag_size, in_dim)`.
@@ -207,7 +210,7 @@ class iRPETransformerEncoder(Encoder):
         h = w = int(math.sqrt(seq_len))
         skip = seq_len - h * w
         if skip > 1:
-            # if the sequence length is not a perfect square, we need to pad the input tensor
+            # if the sequence length is not a perfect square, we need to pad the input tensor so that rpe can be applied
             # compute the nearest perfect square greater than or equal to seq_len
             ps = math.ceil(math.sqrt(seq_len))**2
             new_seq_len = ps + self.rpe_skip
@@ -215,9 +218,23 @@ class iRPETransformerEncoder(Encoder):
             X = torch.nn.functional.pad(X, (0, 0, 0, padding))
             # if mask is not None:
             #     mask = torch.nn.functional.pad(mask, (0, padding), value=0)
-            seq_len = new_seq_len
 
-        Y = super().forward(X)  # (batch_size, bag_size, att_dim)
+        out = super().forward(X, return_att=return_att)
+        if return_att:
+            Y = out[0] # (batch_size, new_seq_len, out_dim)
+            att = out[1] # (n_layers, batch_size, n_heads, new_seq_len, new_seq_len)
+        else:
+            Y = out # (batch_size, new_seq_len, out_dim)
+
+        # remove padding if skip > 1        
+        if skip > 1:
+            Y = Y[:, :seq_len, :]
+            if return_att:
+                att = att[:, :, :, :seq_len, :seq_len]
+
         Y = self.norm(Y)  # (batch_size, bag_size, att_dim)
-
+        
+        if return_att:
+            return Y, att
         return Y
+

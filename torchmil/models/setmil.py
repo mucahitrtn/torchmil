@@ -292,16 +292,19 @@ class SETMIL(MILModel):
             else:
                 X, att = self.se_transf(
                     X, return_att=True
-                )  # (batch_size, seq_len + 1, att_dim), (batch_size, seq_len+1, bag_size+1)
-                att = att[:, 0, 1:]  # (batch_size, seq_len)
-                att = att.view(
-                    batch_size, max_coord, max_coord
-                )  # (batch_size, max_coord, max_coord)
-                att = att.unsqueeze(-1)  # (batch_size, max_coord, max_coord, 1)
-                att = spatial_to_seq(
-                    att, coords
-                )  # (batch_size, bag_size, 1)
-                att = att.squeeze(-1)  # (batch_size, bag_size)
+                )  # (batch_size, seq_len + 1, att_dim), (n_layers, batch_size, n_heads, seq_len+1, bag_size+1)
+                att = att.mean(2) # (n_layers, batch_size, seq_len + 1, bag_size + 1)
+                att = att[-1, :, 0, 1:]
+                print(att.shape)
+                if self.use_pmf:
+                    att = att.view(
+                        batch_size, max_coord, max_coord
+                    )  # (batch_size, max_coord, max_coord)
+                    att = att.unsqueeze(-1)  # (batch_size, max_coord, max_coord, 1)
+                    att = spatial_to_seq(
+                        att, coords
+                    )  # (batch_size, bag_size, 1)
+                    att = att.squeeze(-1)  # (batch_size, bag_size)
         else:
             X = self.se_transf(X)  # (batch_size, bag_size' + 1, att_dim)
 

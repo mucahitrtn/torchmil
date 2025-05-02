@@ -77,7 +77,7 @@ class iRPEMultiheadSelfAttention(torch.nn.Module):
             mask : torch.Tensor = None,
             height : int = None,
             width : int = None,
-            return_attention : bool = False
+            return_att : bool = False
         ) -> tuple[torch.Tensor, torch.Tensor]:
         """
 
@@ -90,7 +90,7 @@ class iRPEMultiheadSelfAttention(torch.nn.Module):
             mask: Mask tensor of shape `(batch_size, seq_len)`.
             height: Height of the input sequence. If None, `height = floor(sqrt(seq_len))`.
             width: Width of the input sequence. If None, `width = floor(sqrt(seq_len)`).
-            return_attention: Whether to return the attention matrices.
+            return_att: Whether to return the attention matrices.
 
         Returns:
             out: Output tensor of shape `(batch_size, n_heads, seq_len, head_dim)`.
@@ -117,7 +117,7 @@ class iRPEMultiheadSelfAttention(torch.nn.Module):
         if self.rpe_v is not None:
             out += self.rpe_v(att_d, height=height, width=width)
 
-        if return_attention:
+        if return_att:
             return out, att
         else:
             return out
@@ -144,7 +144,7 @@ class iRPEMultiheadSelfAttention(torch.nn.Module):
             self,
             x : torch.Tensor,
             mask : torch.Tensor = None,
-            return_attention : bool = False,
+            return_att : bool = False,
             height : int = None,
             width : int = None
         ) -> torch.Tensor:
@@ -166,8 +166,8 @@ class iRPEMultiheadSelfAttention(torch.nn.Module):
         query = query.reshape(batch_size, self.n_heads, seq_len, -1) # (batch_size, n_heads, seq_len, head_dim)
         key = key.reshape(batch_size, self.n_heads, seq_len, -1) # (batch_size, n_heads, seq_len, head_dim)
         value = value.reshape(batch_size, self.n_heads, seq_len, -1) # (batch_size, n_heads, seq_len, head_dim)
-        if return_attention:
-            y, att = self._scaled_dot_product_attention(query, key, value, mask, height=height, width=width, return_attention=True) # (batch_size, n_heads, seq_len, head_dim)
+        if return_att:
+            y, att = self._scaled_dot_product_attention(query, key, value, mask, height=height, width=width, return_att=True) # (batch_size, n_heads, seq_len, head_dim)
             y = y.permute(0, 2, 1, 3).contiguous().view(batch_size, seq_len, self.att_dim) # (batch_size, seq_len, att_dim)
             y = self.out_proj(y)
             return y, att

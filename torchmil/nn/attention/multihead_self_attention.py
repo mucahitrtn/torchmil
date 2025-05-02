@@ -61,7 +61,7 @@ class MultiheadSelfAttention(torch.nn.Module):
             key : torch.Tensor,
             value : torch.Tensor,
             mask : torch.Tensor = None,
-            return_attention : bool = False
+            return_att : bool = False
         ) -> tuple[torch.Tensor, torch.Tensor]:
         """
 
@@ -72,7 +72,7 @@ class MultiheadSelfAttention(torch.nn.Module):
             key: Key tensor of shape `(batch_size, n_heads, seq_len, head_dim)`.
             value: Value tensor of shape `(batch_size, n_heads, seq_len, head_dim)`.
             mask: Mask tensor of shape `(batch_size, seq_len)`.
-            return_attention: Whether to return the attention matrices.
+            return_att: Whether to return the attention matrices.
         Returns:
             out: Output tensor of shape `(batch_size, n_heads, seq_len, head_dim)`.
         """
@@ -82,7 +82,7 @@ class MultiheadSelfAttention(torch.nn.Module):
             mask = mask[:, None, :, None] * mask[:, None, None, :] # (batch_size, 1, seq_len, seq_len)
             mask = mask.bool() # (batch_size, 1, seq_len, seq_len)
 
-        if return_attention:
+        if return_att:
             query = query / (self.head_dim ** 0.5)
             qk = torch.einsum("bqhd,bkhd->bhqk", query, key) # (batch_size, n_heads, seq_len, seq_len)
             if mask is not None:
@@ -117,7 +117,7 @@ class MultiheadSelfAttention(torch.nn.Module):
             self,
             x : torch.Tensor,
             mask : torch.Tensor = None,
-            return_attention : bool = False
+            return_att : bool = False
         ) -> torch.Tensor:
         """
         Forward pass.
@@ -127,15 +127,15 @@ class MultiheadSelfAttention(torch.nn.Module):
             mask: Mask tensor of shape `(batch_size, seq_len)`.
         Returns:
             y: Output tensor of shape `(batch_size, seq_len, att_dim)`.
-            att: Only returned when `return_attention=True`. Attention weights of shape `(batch_size, n_heads, seq_len, seq_len)`.
+            att: Only returned when `return_att=True`. Attention weights of shape `(batch_size, n_heads, seq_len, seq_len)`.
         """
         batch_size, seq_len, _ = x.size()
         query, key, value = self._qkv(x) # (batch_size, seq_len, att_dim), (batch_size, seq_len, att_dim), (batch_size, seq_len, att_dim)
         query = query.view(batch_size, seq_len, self.n_heads, self.head_dim).permute(0, 2, 1, 3) # (batch_size, n_heads, seq_len, head_dim)
         key = key.view(batch_size, seq_len, self.n_heads, self.head_dim).permute(0, 2, 1, 3) # (batch_size, n_heads, seq_len, head_dim)
         value = value.view(batch_size, seq_len, self.n_heads, self.head_dim).permute(0, 2, 1, 3) # (batch_size, n_heads, seq_len, head_dim)
-        if return_attention:
-            y, att = self._scaled_dot_product_attention(query, key, value, mask, return_attention)
+        if return_att:
+            y, att = self._scaled_dot_product_attention(query, key, value, mask, return_att)
             y = y.permute(0, 2, 1, 3).contiguous().view(batch_size, seq_len, self.att_dim) # (batch_size, seq_len, att_dim)
             y = self.out_proj(y)
             return y, att
