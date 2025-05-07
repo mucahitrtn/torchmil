@@ -145,7 +145,7 @@ class TransformerProbSmoothABMIL(MILModel):
         X = self.transformer_encoder(X, mask)  # (batch_size, bag_size, feat_dim)
 
         out_pool = self.pool(
-            X, adj, mask, return_att=return_att, return_kl_div=return_kl_div)
+            X, adj, mask, return_att_samples=return_att, return_kl_div=return_kl_div)
 
         if return_kl_div:
             if return_att:
@@ -228,5 +228,4 @@ class TransformerProbSmoothABMIL(MILModel):
             Y_pred: Bag label logits of shape `(batch_size,)`.
             y_inst_pred: Only returned when `return_inst_pred=True`. Attention values (before normalization) of shape `(batch_size, bag_size)` if `return_samples=False`, else `(batch_size, bag_size, n_samples)`.
         """
-        Y_pred, att_val = self.forward(X, adj, mask, return_att=return_inst_pred, return_samples=return_samples)
-        return Y_pred, att_val
+        return self.forward(X, adj, mask, return_att=return_inst_pred, return_samples=return_samples)
