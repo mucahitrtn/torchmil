@@ -8,6 +8,7 @@ class FalseFrequencyMILDataset(torch.utils.data.Dataset):
     False Frequency MIL Dataset.
     Implementation from Algorithm 3 in [Reproducibility in Multiple Instance Learning: A Case For Algorithmic Unit Tests](https://proceedings.neurips.cc/paper_files/paper/2023/hash/2bab8865fa4511e445767e3750b2b5ac-Abstract-Conference.html).
     """
+
     def __init__(
         self,
         D: int,
@@ -80,7 +81,7 @@ class FalseFrequencyMILDataset(torch.utils.data.Dataset):
 
         # Stack data
         data = torch.stack(data).view(-1, data[0].shape[-1])
-        inst_labels = torch.cat(inst_labels)
+        inst_labels = torch.cat([t.flatten() for t in inst_labels])
 
         return {"X": data, "Y": torch.tensor(1), "y_inst": inst_labels}
 
@@ -116,7 +117,7 @@ class FalseFrequencyMILDataset(torch.utils.data.Dataset):
 
         # Stack data
         data = torch.stack(data).view(-1, data[0].shape[-1])
-        inst_labels = torch.cat(inst_labels)
+        inst_labels = torch.cat([t.flatten() for t in inst_labels])
 
         return {"X": data, "Y": torch.tensor(0), "y_inst": inst_labels}
 
@@ -160,9 +161,3 @@ class FalseFrequencyMILDataset(torch.utils.data.Dataset):
                 f"Index {index} out of range (max: {len(self.bags_list) - 1})"
             )
         return self.bags_list[index]
-
-
-if __name__ == "__main__":
-    dataset = FalseFrequencyMILDataset(D=2, num_bags=10, B=3, train=False)
-    print(dataset[0])
-    print(dataset[-1])

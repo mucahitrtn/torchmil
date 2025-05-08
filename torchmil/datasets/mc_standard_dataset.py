@@ -2,6 +2,7 @@ import torch
 import numpy as np
 from tensordict import TensorDict
 
+
 class MCStandardMILDataset(torch.utils.data.Dataset):
     """
     Multi-Concept Standard MIL Dataset.
@@ -12,7 +13,6 @@ class MCStandardMILDataset(torch.utils.data.Dataset):
         self,
         D: int,
         num_bags: int,
-        B: int,
         pos_class_prob: float = 0.5,
         train: bool = True,
         seed: int = 0,
@@ -29,7 +29,6 @@ class MCStandardMILDataset(torch.utils.data.Dataset):
         super().__init__()
 
         self.num_bags = num_bags
-        self.B = B
         self.pos_class_prob = pos_class_prob
         self.train = train
 
@@ -40,10 +39,9 @@ class MCStandardMILDataset(torch.utils.data.Dataset):
         ]
         self.neg_distr = torch.distributions.Normal(torch.zeros(D), torch.ones(D))
         self.poisoning = torch.distributions.Normal(
-            -10 * torch.ones(D), 0.1 * torch.ones(D)
+            -10.0 * torch.ones(D), 0.1 * torch.ones(D)
         )
 
-        # TODO: Check what would happen with the validation set in this cases
         np.random.seed(seed)
         self.bags_list = self._create_bags()
 
@@ -84,7 +82,7 @@ class MCStandardMILDataset(torch.utils.data.Dataset):
 
         # Stack data
         data = torch.stack(data).view(-1, data[0].shape[-1])
-        inst_labels = torch.cat(inst_labels)
+        inst_labels = torch.cat([t.flatten() for t in inst_labels])
 
         return {"X": data, "Y": torch.tensor(1), "y_inst": inst_labels}
 
@@ -121,7 +119,7 @@ class MCStandardMILDataset(torch.utils.data.Dataset):
 
         # Stack data
         data = torch.stack(data).view(-1, data[0].shape[-1])
-        inst_labels = torch.cat(inst_labels)
+        inst_labels = torch.cat([t.flatten() for t in inst_labels])
 
         return {"X": data, "Y": torch.tensor(0), "y_inst": inst_labels}
 
@@ -166,3 +164,34 @@ class MCStandardMILDataset(torch.utils.data.Dataset):
             )
         return self.bags_list[index]
 
+
+if __name__ == "__main__":
+    dataset = MCStandardMILDataset(D=2, num_bags=100, pos_class_prob=0.5)
+    print(f"Number of bags: {len(dataset)}")
+    for i in range(2):
+        bag = dataset[i]
+        print(f"Bag {i}:")
+        print(f"  X: {bag['X']}")
+        print(f"  Y: {bag['Y']}")
+        print(f"  y_inst: {bag['y_inst']}")
+        bag = dataset[-i]
+        print(f"Bag {100-i}:")
+        print(f"  X: {bag['X']}")
+        print(f"  Y: {bag['Y']}")
+        print(f"  y_inst: {bag['y_inst']}")
+
+    print("Testing")
+    dataset_test = MCStandardMILDataset(
+        D=2, num_bags=100, pos_class_prob=0.5, train=False
+    )
+    for i in range(2):
+        bag = dataset_test[i]
+        print(f"Bag {i}:")
+        print(f"  X: {bag['X']}")
+        print(f"  Y: {bag['Y']}")
+        print(f"  y_inst: {bag['y_inst']}")
+        bag = dataset_test[-i]
+        print(f"Bag {100-i}:")
+        print(f"  X: {bag['X']}")
+        print(f"  Y: {bag['Y']}")
+        print(f"  y_inst: {bag['y_inst']}")
