@@ -21,8 +21,8 @@ class MCStandardMILDataset(torch.utils.data.Dataset):
         Arguments:
             D: Dimensionality of the data.
             num_bags: Number of bags in the dataset.
-            B: Number of negative instances in each bag.
             pos_class_prob: Probability of a bag being positive.
+            train: Whether to create the training or test dataset.
             seed: Seed for the random number generator.
         """
 

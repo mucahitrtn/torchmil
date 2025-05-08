@@ -13,7 +13,6 @@ class FalseFrequencyMILDataset(torch.utils.data.Dataset):
         self,
         D: int,
         num_bags: int,
-        B: int,
         pos_class_prob: float = 0.5,
         train: bool = True,
         seed: int = 0,
@@ -22,15 +21,14 @@ class FalseFrequencyMILDataset(torch.utils.data.Dataset):
         Arguments:
             D: Dimensionality of the data.
             num_bags: Number of bags in the dataset.
-            B: Number of negative instances in each bag.
             pos_class_prob: Probability of a bag being positive.
+            train: Whether to create the training or test dataset.
             seed: Seed for the random number generator.
         """
 
         super().__init__()
 
         self.num_bags = num_bags
-        self.B = B
         self.pos_class_prob = pos_class_prob
         self.train = train
         self.seed = seed
