@@ -2,9 +2,10 @@ import pytest
 import torch
 from torchmil.datasets import MCStandardMILDataset  # Update this import
 
+
 @pytest.mark.parametrize("train_mode", [True, False])
 def test_dataset_creation(train_mode):
-    dataset = MCStandardMILDataset(D=3, num_bags=6, B=2, seed=123, train=train_mode)
+    dataset = MCStandardMILDataset(D=3, num_bags=6, seed=123, train=train_mode)
     assert len(dataset) == 6
     for i in range(len(dataset)):
         bag = dataset[i]
@@ -16,7 +17,7 @@ def test_dataset_creation(train_mode):
 
 
 def test_label_type_and_value():
-    dataset = MCStandardMILDataset(D=2, num_bags=4, B=1, train=True)
+    dataset = MCStandardMILDataset(D=2, num_bags=4, train=True)
     for i in range(len(dataset)):
         Y = dataset[i]["Y"]
         assert isinstance(Y, torch.Tensor)
@@ -24,14 +25,14 @@ def test_label_type_and_value():
 
 
 def test_index_out_of_range():
-    dataset = MCStandardMILDataset(D=2, num_bags=3, B=2)
+    dataset = MCStandardMILDataset(D=2, num_bags=3)
     with pytest.raises(IndexError):
         _ = dataset[999]
 
 
 @pytest.mark.parametrize("train", [True, False])
 def test_poisoning_present(train):
-    dataset = MCStandardMILDataset(D=2, num_bags=10, B=2, train=train, seed=42)
+    dataset = MCStandardMILDataset(D=2, num_bags=10, train=train, seed=42)
     poisoned_found = False
     poison_value = -10  # Poisoning distribution mean
 
@@ -41,11 +42,13 @@ def test_poisoning_present(train):
             poisoned_found = True
             break
 
-    assert poisoned_found, f"No poisoned instance found in {'train' if train else 'test'} mode."
+    assert (
+        poisoned_found
+    ), f"No poisoned instance found in {'train' if train else 'test'} mode."
 
 
 def test_positive_bag_has_both_concepts():
-    dataset = MCStandardMILDataset(D=2, num_bags=10, B=2, train=True, seed=42)
+    dataset = MCStandardMILDataset(D=2, num_bags=10, train=True, seed=42)
     found = False
     for bag in dataset:
         if bag["Y"].item() == 1:  # Positive bag

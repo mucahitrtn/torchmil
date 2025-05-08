@@ -5,7 +5,7 @@ from torchmil.datasets import FalseFrequencyMILDataset  # Update with actual mod
 
 @pytest.fixture
 def mock_dataset():
-    return FalseFrequencyMILDataset(D=4, num_bags=5, B=3, train=True, seed=42)
+    return FalseFrequencyMILDataset(D=4, num_bags=5, train=True, seed=42)
 
 
 def test_dataset_length(mock_dataset):
@@ -14,7 +14,7 @@ def test_dataset_length(mock_dataset):
 
 def test_getitem_returns_tensordict(mock_dataset):
     bag = mock_dataset[0]
-    assert isinstance(bag, dict) or hasattr(bag, 'get')  # Works for TensorDict too
+    assert isinstance(bag, dict) or hasattr(bag, "get")  # Works for TensorDict too
     assert "X" in bag and "Y" in bag and "y_inst" in bag
 
 
