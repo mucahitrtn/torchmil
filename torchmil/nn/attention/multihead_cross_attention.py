@@ -130,7 +130,7 @@ class MultiheadCrossAttention(torch.nn.Module):
             y: Input tensor of shape `(batch_size, seq_len_y, in_dim)`.
             mask: Mask tensor of shape `(batch_size, seq_len_x)`.
         Returns:
-            y: Output tensor of shape `(batch_size, seq_len_y, att_dim)`.
+            y: Output tensor of shape `(batch_size, seq_len_x, att_dim)`.
         """
         batch_size, seq_len_x, _ = x.size()
         seq_len_y = y.size(1)

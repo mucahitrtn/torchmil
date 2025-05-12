@@ -53,7 +53,7 @@ def test_iibmil_decoder(sample_input_iibmil):
     n_heads = 4
     decoder = IIBMILDecoder(dim, n_layers, n_heads)
     out = decoder(U, X, mask)
-    assert out.shape == X.shape, "Output shape should match X shape"
+    assert out.shape == U.shape, "Output shape should match U shape"
 
 # Test IIBMIL
 def test_iibmil(sample_iibmil_data):

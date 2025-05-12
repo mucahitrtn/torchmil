@@ -63,8 +63,8 @@ class IIBMILDecoderLayer(torch.nn.Module):
             Z: Output embeddings of shape `(batch_size, n_queries, dim)`.
         """
 
-        X = X + self.self_att(X, mask)  # (batch_size, n_instances, dim)
-        X = self.norm1(X)  # (batch_size, n_instances, dim)
+        # X = X + self.self_att(X, mask)  # (batch_size, n_instances, dim)
+        # X = self.norm1(X)  # (batch_size, n_instances, dim)
 
         U = U + self.cross_att(U, X, mask)  # (batch_size, n_queries, dim)
         U = self.norm2(U)  # (batch_size, n_queries, dim)
@@ -111,7 +111,7 @@ class IIBMILDecoder(torch.nn.Module):
         """
         for layer in self.layers:
             U = layer(U, X, mask)
-        return X
+        return U
 
 
 class IIBMIL(torch.nn.Module):
@@ -165,7 +165,9 @@ class IIBMIL(torch.nn.Module):
 
         feat_dim = get_feat_dim(feat_ext, in_shape)
 
-        self.query_embed = torch.nn.Embedding(n_queries, att_dim)
+        self.query_embed = torch.nn.Parameter(
+            torch.randn(n_queries, att_dim)
+        )
 
         if feat_dim != att_dim:
             self.feat_proj = torch.nn.Linear(feat_dim, att_dim)
@@ -203,9 +205,6 @@ class IIBMIL(torch.nn.Module):
         """
         batch_size, bag_size, _ = X_enc.shape
 
-        if self.training:
-            self._update_prototypes(y_pred, X_enc, mask)
-
         # Compute protoypical logits
         X_enc = X_enc.view(batch_size * bag_size, -1)  # (batch_size * bag_size, dim)
         y_pred = y_pred.view(batch_size * bag_size)  # (batch_size * bag_size)
@@ -222,25 +221,27 @@ class IIBMIL(torch.nn.Module):
 
         return loss_instance
 
-    def _update_prototypes(
+    def update_prototypes(
         self,
-        y_pred: torch.Tensor,
-        X_enc: torch.Tensor,
+        X: torch.Tensor,
         mask: torch.Tensor = None,
-        proto_m: float = 0.99,
+        proto_m: float = 0.9,
     ) -> None:
         """
         Update prototypes.
 
         Arguments:
-            y_pred: Instance label logits of shape `(batch_size, bag_size)`.
-            X_enc: Instance embeddings of shape `(batch_size, bag_size, att_dim)`.
+            X: Bag features of shape `(batch_size, bag_size, ...)`.
             mask: Mask of shape `(batch_size, bag_size)`.
             proto_m: Momentum for updating prototypes
 
         Returns:
             None
         """
+        _, y_pred, X_enc = self.forward(
+            X, mask, return_inst_pred=True, return_X_enc=True
+        )
+
         batch_size, bag_size, feat_dim = X_enc.shape
 
         X_enc = X_enc.view(batch_size * bag_size, -1)  # (batch_size * bag_size, dim)
@@ -324,11 +325,11 @@ class IIBMIL(torch.nn.Module):
 
         y_pred = self.inst_classifier(X_enc).squeeze(-1)  # (batch_size, bag_size)
 
-        U = self.query_embed.weight.unsqueeze(0).expand(
+        U = self.query_embed.unsqueeze(0).expand(
             batch_size, -1, -1
         )  # (batch_size, n_queries, att_dim)
 
-        z = self.decoder(X_enc, U)  # (batch_size, n_queries, att_dim)
+        z = self.decoder(U, X_enc)  # (batch_size, n_queries, att_dim)
         z = z.view(batch_size, -1)  # (batch_size, n_queries * att_dim)
 
         Y_pred = self.bag_classifier(z).squeeze(-1)  # (batch_size,)
@@ -348,7 +349,8 @@ class IIBMIL(torch.nn.Module):
         self,
         Y: torch.Tensor,
         X: torch.Tensor,
-        mask: torch.Tensor = None
+        mask: torch.Tensor = None,
+        update_prototypes: bool = False,
     ) -> tuple[torch.Tensor, dict]:
         """
         Compute loss given true bag labels.
@@ -357,6 +359,7 @@ class IIBMIL(torch.nn.Module):
             Y: Bag labels of shape `(batch_size,)`.
             X: Bag features of shape `(batch_size, bag_size, ...)`.
             mask: Mask of shape `(batch_size, bag_size)`.
+            update_prototypes: If `True`, updates the prototypes.
 
         Returns:
             Y_pred: Bag label logits of shape `(batch_size,)`.
@@ -368,6 +371,10 @@ class IIBMIL(torch.nn.Module):
         inst_loss = self._inst_loss(X_enc, y_pred, mask)
         crit_loss = self.criterion(Y_pred.float(), Y.float())
         crit_name = self.criterion.__class__.__name__
+
+        if update_prototypes:
+            self.update_prototypes(y_pred, X_enc, mask)
+
         return Y_pred, {crit_name: crit_loss, "InstLoss": inst_loss}
 
     def predict(
