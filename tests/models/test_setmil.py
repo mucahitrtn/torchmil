@@ -31,7 +31,7 @@ def test_pmf():
     X = torch.randn(batch_size, in_dim, coord1, coord2)
     pmf = PMF(in_dim=in_dim, out_dim=out_dim)
     Y = pmf(X)
-    assert Y.shape == (batch_size, 256, out_dim), "Output shape of PMF is incorrect"
+    assert Y.shape == (batch_size, 4096, out_dim), "Output shape of PMF is incorrect"
 
 
 # Test SETMIL model

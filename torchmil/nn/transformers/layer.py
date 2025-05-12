@@ -98,13 +98,14 @@ class Layer(torch.nn.Module):
         X = self.in_proj(X)
         out_att = self.att_module(self.norm1(X), return_att=return_att, **kwargs)
         if return_att:
-            Y = self.att_proj(X) + out_att[0]
+            Y, att = out_att
         else:
-            Y = self.att_proj(X) + out_att
+            Y = out_att
+        Y = self.att_proj(X) + Y
         if self.use_mlp:
             Y = Y + self.mlp_module(self.norm2(Y))
         Y = self.out_proj(Y)
         if return_att:
-            return Y, out_att[1]
+            return Y, att
         else:
             return Y

@@ -18,7 +18,7 @@ class iRPEMultiheadSelfAttention(torch.nn.Module):
         n_heads : int = 4,
         dropout : float = 0.0,
         learn_weights : bool = True,
-        rpe_ratio : float = 2.0,
+        rpe_ratio : float = 1.9,
         rpe_method : str = "product",
         rpe_mode : str = 'contextual',
         rpe_shared_head : bool = True,
@@ -116,7 +116,8 @@ class iRPEMultiheadSelfAttention(torch.nn.Module):
 
         if mask is not None:
             qk.masked_fill_(mask, float("-inf"))
-        att = torch.nn.functional.softmax(qk, dim=-1)
+            
+        att = qk.softmax(dim=-1) # (batch_size, n_heads, seq_len, seq_len)
         att_d = torch.nn.functional.dropout(att, p=self.dropout, training=self.training)
         out = torch.einsum("bhij,bhjd->bhid", att_d, value) # (batch_size, n_heads, seq_len, head_dim)
 
@@ -176,7 +177,7 @@ class iRPEMultiheadSelfAttention(torch.nn.Module):
             ps = math.ceil(math.sqrt(seq_len))**2
             new_seq_len = ps + self.rpe_skip
             padding = new_seq_len - seq_len
-            X = torch.nn.functional.pad(X, (0, 0, 0, padding))
+            x = torch.nn.functional.pad(x, (0, 0, 0, padding))
             if mask is not None:
                 mask = torch.nn.functional.pad(mask, (0, padding), value=0)
         else:
@@ -186,18 +187,23 @@ class iRPEMultiheadSelfAttention(torch.nn.Module):
         query = query.reshape(batch_size, self.n_heads, new_seq_len, -1) # (batch_size, n_heads, new_seq_len, head_dim)
         key = key.reshape(batch_size, self.n_heads, new_seq_len, -1) # (batch_size, n_heads, new_seq_len, head_dim)
         value = value.reshape(batch_size, self.n_heads, new_seq_len, -1) # (batch_size, n_heads, new_seq_len, head_dim)
+        
+        out = self._scaled_dot_product_attention(query, key, value, mask, height=height, width=width, return_att=return_att) # (batch_size, n_heads, new_seq_len, head_dim)
+
         if return_att:
-            y, att = self._scaled_dot_product_attention(query, key, value, mask, height=height, width=width, return_att=True) # (batch_size, n_heads, new_seq_len, head_dim)
-            y = y.permute(0, 2, 1, 3).contiguous().view(batch_size, new_seq_len, self.att_dim) # (batch_size, new_seq_len, att_dim)
-            y = self.out_proj(y)
-            if skip > 1:
-                y = y[:, :seq_len, :]
+            y = out[0]
+            att = out[1]
+        else:
+            y = out
+
+        y = y.permute(0, 2, 1, 3).contiguous().view(batch_size, new_seq_len, self.att_dim) # (batch_size, new_seq_len, att_dim)
+        y = self.out_proj(y)
+        if skip > 1:
+            y = y[:, :seq_len, :]
+            if return_att:
                 att = att[:, :, :seq_len, :seq_len]
+        
+        if return_att:
             return y, att
         else:
-            y = self._scaled_dot_product_attention(query, key, value, mask) # (batch_size, n_heads, new_seq_len, head_dim)
-            y = y.permute(0, 2, 1, 3).contiguous().view(batch_size, new_seq_len, self.att_dim) # (batch_size, new_seq_len, att_dim)
-            y = self.out_proj(y)
-            if skip > 1:
-                y = y[:, :seq_len, :]
             return y

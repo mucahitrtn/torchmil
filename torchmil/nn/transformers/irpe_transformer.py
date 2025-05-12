@@ -205,33 +205,12 @@ class iRPETransformerEncoder(Encoder):
             Y: Output tensor of shape `(batch_size, bag_size, in_dim)`.
         """
 
-        seq_len = X.shape[1]
-
-        h = w = int(math.sqrt(seq_len))
-        skip = seq_len - h * w
-        if skip > 1:
-            # if the sequence length is not a perfect square, we need to pad the input tensor so that rpe can be applied
-            # compute the nearest perfect square greater than or equal to seq_len
-            ps = math.ceil(math.sqrt(seq_len))**2
-            new_seq_len = ps + self.rpe_skip
-            padding = new_seq_len - seq_len
-            X = torch.nn.functional.pad(X, (0, 0, 0, padding))
-            # if mask is not None:
-            #     mask = torch.nn.functional.pad(mask, (0, padding), value=0)
-
         out = super().forward(X, return_att=return_att)
         if return_att:
-            Y = out[0] # (batch_size, new_seq_len, out_dim)
-            att = out[1] # (n_layers, batch_size, n_heads, new_seq_len, new_seq_len)
+            Y = out[0] # (batch_size, bag_size, out_dim)
+            att = out[1] # (n_layers, batch_size, n_heads, bag_size, new_seq_len)
         else:
-            Y = out # (batch_size, new_seq_len, out_dim)
-
-        # remove padding if skip > 1        
-        if skip > 1:
-            Y = Y[:, :seq_len, :]
-            if return_att:
-                att = att[:, :, :, :seq_len, :seq_len]
-
+            Y = out # (batch_size, bag_size, out_dim)
         Y = self.norm(Y)  # (batch_size, bag_size, att_dim)
         
         if return_att:

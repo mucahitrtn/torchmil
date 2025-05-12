@@ -7,13 +7,84 @@ from torchmil.nn.utils import (
     SinusoidalPositionalEncodingND
 )
 
-from torchmil.nn.transformers import iRPETransformerEncoder, T2TLayer
-
+from torchmil.nn.transformers import iRPETransformerEncoder, TransformerLayer
 
 from torchmil.data import (
     seq_to_spatial,
     spatial_to_seq,
 )
+
+class T2TLayer(torch.nn.Module):
+    r"""
+    Tokens-to-Token (T2T) Transformer layer from [Tokens-to-Token ViT: Training Vision Transformers from Scratch on ImageNet](https://arxiv.org/abs/2101.11986)
+    """
+
+    def __init__(
+        self,
+        in_dim: int,
+        out_dim: int = None,
+        att_dim: int = 512,
+        kernel_size: tuple[int, int] = (3, 3),
+        stride: tuple[int, int] = (1, 1),
+        padding: tuple[int, int] = (2, 2),
+        dilation: tuple[int, int] = (1, 1),
+        n_heads: int = 4,
+        use_mlp: bool = True,
+        dropout: float = 0.0
+    ):
+        """
+        Arguments:
+            in_dim: Input dimension.
+            out_dim: Output dimension. If None, output dimension will be `kernel_size[0] * kernel_size[1] * att_dim`.
+            att_dim: Attention dimension.
+            kernel_size: Kernel size.
+            stride: Stride.
+            padding: Padding.
+            dilation: Dilation.
+            n_heads: Number of heads.
+            use_mlp: Whether to use feedforward layer.
+            dropout: Dropout rate.
+        """
+        super().__init__()
+
+        self.unfold = torch.nn.Unfold(kernel_size=kernel_size, stride=stride, padding=padding, dilation=dilation)
+
+        self.transf_layer = TransformerLayer(
+            in_dim=in_dim*kernel_size[0]*kernel_size[1],
+            att_dim=att_dim,
+            out_dim=att_dim,
+            n_heads=n_heads,
+            use_mlp=use_mlp,
+            dropout=dropout
+        )
+
+        if out_dim != att_dim:
+            self.out_proj = torch.nn.Linear(att_dim, out_dim)
+        else:
+            self.out_proj = torch.nn.Identity()
+
+    def forward(
+        self,
+        X: torch.Tensor
+    ) -> torch.Tensor:
+        """
+        Arguments:
+            X: Input tensor of shape `(batch_size, in_dim, h, w)`.
+        Returns:
+            Y: Output tensor of shape `(batch_size, new_seq_len, out_dim)`. If `out_dim` is None, `out_dim` will be `att_dim * kernel_size[0] * kernel_size[1]`.
+        """
+
+        # unfold
+        X = self.unfold(X) # (batch_size, in_dim * kernel_size[0] * kernel_size[1], new_seq_len)
+        X = X.transpose(1, 2) # (batch_size, new_seq_len, in_dim * kernel_size[0] * kernel_size[1])
+
+        # transformer layer
+        X = self.transf_layer(X) # (batch_size, new_seq_len, att_dim)
+
+        # output projection
+        X = self.out_proj(X) # (batch_size, new_seq_len, out_dim)
+
+        return X
 
 
 class PMF(torch.nn.Module):
@@ -50,12 +121,10 @@ class PMF(torch.nn.Module):
 
         super().__init__()
 
-        self.unfold0 = torch.nn.Unfold(kernel_size=7, stride=4, padding=2)
-
         self.layers = torch.nn.ModuleList(
             [
                 T2TLayer(
-                    in_dim=in_dim * 7 * 7,
+                    in_dim=in_dim,
                     att_dim=att_dim,
                     out_dim=att_dim,
                     kernel_size=kernel_list[i],
@@ -81,14 +150,10 @@ class PMF(torch.nn.Module):
     ) -> torch.Tensor:
         """
         Arguments:
-            X: Input tensor of shape `(batch_size, in_dim, coord1, coord2)`.
+            X: Input tensor of shape `(batch_size, in_dim, h, w)`.
         Returns:
-            Y: Output tensor of shape `(batch_size, seq_len, out_dim)`.
+            Y: Output tensor of shape `(batch_size, new_seq_len, out_dim)`.
         """
-        X = self.unfold0(X)  # (batch_size, in_dim * kernel_size[0] * kernel_size[1], L)
-        X = X.transpose(
-            1, 2
-        )  # (batch_size, L, in_dim * kernel_size[0] * kernel_size[1])
         X_ = []
         for layer in self.layers:
             U = layer(X)  # (batch_size, L, att_dim)
@@ -117,6 +182,10 @@ class SETMIL(MILModel):
     See [iRPETransformer](../nn/transformers/irpe_transformer.md) for further information.
 
     Finally, using the class token computed by the SET module, the model predicts the bag label $\hat{Y}$ using a linear layer.
+
+    **Note.** When `use_pmf=True`, the input bag is reshaped to a square shape, and the PMF module is applied.
+    This modifies the bag structure unreversibly, and thus attention values cannot be computed. 
+    If `return_att=True`, the attention values will be set to zeros.
     """
 
     def __init__(
@@ -261,19 +330,20 @@ class SETMIL(MILModel):
         X = self.feat_ext(X)  # (batch_size, bag_size, feat_dim)
         X = self.proj(X)  # (batch_size, bag_size, att_dim)
 
-        if self.use_pmf: 
+        X = seq_to_spatial(
+            X, coords
+        )  # (batch_size, coord1, coord2, att_dim)
 
-            X = seq_to_spatial(
-                X, coords
-            )  # (batch_size, coord1, coord2, att_dim)
+        X = X.transpose(1, -1)  # (batch_size, att_dim, coord2, coord1)
+        X = X.transpose(-1, -2)  # (batch_size, att_dim, coord1, coord2)
+        X = self._pad_to_square(X)  # (batch_size, att_dim, max_coord, max_coord)
+        max_coord = X.size(-1)
 
-            X = X.transpose(1, -1)  # (batch_size, att_dim, coord2, coord1)
-            X = X.transpose(-1, -2)  # (batch_size, att_dim, coord1, coord2)
-            X = self._pad_to_square(X)  # (batch_size, att_dim, max_coord, max_coord)
-            max_coord = X.size(-1)
-
+        if self.use_pmf:
             X = self.pmf(X)  # (batch_size, new_seq_len, att_dim)
-        
+        else:
+            X = X.reshape(batch_size, -1, self.att_dim)  # (batch_size, bag_size, att_dim)
+                        
         # Add class token
         cls_token = self.cls_token.expand(
             batch_size, -1, -1
@@ -285,25 +355,21 @@ class SETMIL(MILModel):
 
         if return_att:
             if self.use_pmf:
-                print(
-                    "Warning: bag size has changed after PMF Transformer, cannot return attention values. Returning zeros instead."
-                )
+                X = self.se_transf(X)  # (batch_size, new_seq_len + 1, att_dim)
                 att = torch.zeros(batch_size, orig_bag_size, device=X.device)
             else:
-                X, att = self.se_transf(
-                    X, return_att=True
-                )  # (batch_size, seq_len + 1, att_dim), (n_layers, batch_size, n_heads, seq_len+1, bag_size+1)
-                att = att.mean(2) # (n_layers, batch_size, seq_len + 1, bag_size + 1)
-                att = att[-1, :, 0, 1:]
-                if self.use_pmf:
-                    att = att.view(
-                        batch_size, max_coord, max_coord
-                    )  # (batch_size, max_coord, max_coord)
-                    att = att.unsqueeze(-1)  # (batch_size, max_coord, max_coord, 1)
-                    att = spatial_to_seq(
-                        att, coords
-                    )  # (batch_size, bag_size, 1)
-                    att = att.squeeze(-1)  # (batch_size, bag_size)
+                X, att = self.se_transf(X, return_att=True)  # (batch_size, seq_len + 1, att_dim), (n_layers, batch_size, n_heads, seq_len+1, seq_len+1)
+                
+                att = att.mean(2) # (n_layers, batch_size, seq_len + 1, seq_len + 1)
+                att = att[-1, :, 0, 1:] # (batch_size, seq_len)
+                att = att.view(
+                    batch_size, max_coord, max_coord
+                )  # (batch_size, max_coord, max_coord)
+                att = att.unsqueeze(-1)  # (batch_size, max_coord, max_coord, 1)
+                att = spatial_to_seq(
+                    att, coords
+                )  # (batch_size, bag_size, 1)
+                att = att.squeeze(-1)  # (batch_size, bag_size)
         else:
             X = self.se_transf(X)  # (batch_size, bag_size' + 1, att_dim)
 

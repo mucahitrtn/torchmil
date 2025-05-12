@@ -134,7 +134,6 @@ class MultiheadSelfAttention(torch.nn.Module):
             y: Output tensor of shape `(batch_size, seq_len, att_dim)`.
             att: Only returned when `return_att=True`. Attention weights of shape `(batch_size, n_heads, seq_len, seq_len)`.
         """
-        print(x.size())
         batch_size, seq_len, _ = x.size()
         query, key, value = self._qkv(x) # (batch_size, seq_len, att_dim), (batch_size, seq_len, att_dim), (batch_size, seq_len, att_dim)
         query = query.view(batch_size, seq_len, self.n_heads, self.head_dim).permute(0, 2, 1, 3) # (batch_size, n_heads, seq_len, head_dim)
