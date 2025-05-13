@@ -127,8 +127,8 @@ def test_get_bag_labels(mil_data):
         coords_path=coords_dir,
     )
     labels = dataset.get_bag_labels()
-    expected_labels = [bag_data[name]["labels"] for name in bag_names]
-    for i, bag_name in enumerate(bag_names):
+    expected_labels = [bag_data[name]["labels"] for name in dataset.bag_names]
+    for i, bag_name in enumerate(dataset.bag_names):
         assert np.array_equal(labels[i], expected_labels[i]), f"Bag label for {bag_name} does not match"
 
 
@@ -153,15 +153,13 @@ def test_subset(mil_data):
         inst_labels_path=inst_labels_dir,
         coords_path=coords_dir,
     )
-    subset_indices = [0, 2]
+    subset_indices = [dataset.bag_names.index("bag1"), dataset.bag_names.index("bag3")]
     subset_dataset = dataset.subset(subset_indices)
 
     assert len(subset_dataset) == len(
         subset_indices
     ), "Subset size is incorrect"  # Check subset size
-    assert subset_dataset.bag_names == [
-        bag_names[i] for i in subset_indices
-    ], "Subset bag names are incorrect"  # Check bag names
+    assert subset_dataset.bag_names == ["bag1", "bag3"], "Subset bag names are incorrect"  # Check bag names
 
     for name in dataset.bag_names:
         bag = dataset[dataset.bag_names.index(name)]

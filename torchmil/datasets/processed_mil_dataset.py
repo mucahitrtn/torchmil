@@ -102,6 +102,7 @@ class ProcessedMILDataset(torch.utils.data.Dataset):
         if self.bag_names is None:
             self.bag_names = [ file for file in os.listdir(self.features_path) if file.endswith('.npy') ]
             self.bag_names = [ os.path.splitext(file)[0] for file in self.bag_names ]
+        self.bag_names = sorted(self.bag_names)
 
         self.loaded_bags = {}
         if self.load_at_init:
