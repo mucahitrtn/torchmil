@@ -163,9 +163,8 @@ def test_subset(mil_data):
         bag_names[i] for i in subset_indices
     ], "Subset bag names are incorrect"  # Check bag names
 
-    for i, index in enumerate(subset_indices):
-        bag = subset_dataset[i]
-        name = bag_names[index]
+    for name in dataset.bag_names:
+        bag = dataset[dataset.bag_names.index(name)]
         expected_data = bag_data[name]
         assert torch.equal(bag["X"], torch.from_numpy(expected_data["features"])), f"Features for bag {name} in subset do not match"
         assert torch.equal(bag["Y"], torch.from_numpy(expected_data["labels"])), f"Labels for bag {name} in subset do not match"
