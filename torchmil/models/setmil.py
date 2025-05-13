@@ -206,7 +206,7 @@ class SETMIL(MILModel):
         set_dropout: float = 0.0,
         rpe_ratio: float = 1.9,
         rpe_method: str = "product",
-        rpe_mode: str = "ctx",
+        rpe_mode: str = "contextual",
         rpe_shared_head: bool = True,
         rpe_skip: int = 1,
         rpe_on: str = "k",
