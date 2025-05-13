@@ -127,7 +127,8 @@ class TransformerEncoder(Encoder):
             TransformerLayer(
                 in_dim=in_dim if i == 0 else att_dim,
                 out_dim=out_dim if i == n_layers - 1 else att_dim,
-                att_dim=att_dim,  n_heads=n_heads, use_mlp=use_mlp, dropout=dropout
+                att_dim=att_dim,
+                n_heads=n_heads, use_mlp=use_mlp, dropout=dropout
             )
             for i in range(n_layers)
         ])
@@ -155,10 +156,10 @@ class TransformerEncoder(Encoder):
         """
 
         if return_att:
-            Y, att = super().forward(X, mask=mask, return_att=return_att)
+            Y, att = super().forward(X, mask=mask, return_att=True)
             Y = self.norm(Y) # (batch_size, bag_size, att_dim)
             return Y, att
         else:
-            Y = super().forward(X, mask=mask, return_att=return_att)
+            Y = super().forward(X, mask=mask, return_att=False)
             Y = self.norm(Y) # (batch_size, bag_size, att_dim)
             return Y

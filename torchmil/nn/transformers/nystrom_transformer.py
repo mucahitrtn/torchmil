@@ -35,6 +35,8 @@ class NystromTransformerLayer(Layer):
     ) -> None:
         """
         Arguments:
+            in_dim: Input dimension.
+            out_dim : Output dimension. If None, out_dim = in_dim.
             att_dim: Attention dimension.
             n_heads: Number of heads.
             n_landmarks: Number of landmarks.
@@ -43,7 +45,7 @@ class NystromTransformerLayer(Layer):
             use_mlp: Whether to use a MLP after the attention layer.
         """
         att_module = NystromAttention(
-            in_dim=in_dim, out_dim=out_dim, att_dim=att_dim, n_heads=n_heads, learn_weights=learn_weights, n_landmarks=n_landmarks, pinv_iterations=pinv_iterations
+            in_dim=in_dim, out_dim=att_dim, att_dim=att_dim, n_heads=n_heads, learn_weights=learn_weights, n_landmarks=n_landmarks, pinv_iterations=pinv_iterations
         )
 
         super(NystromTransformerLayer, self).__init__(
@@ -59,6 +61,7 @@ class NystromTransformerLayer(Layer):
     def forward(
             self,
             X : torch.Tensor,
+            mask : torch.Tensor = None,
             return_att : bool = False
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """
@@ -66,6 +69,7 @@ class NystromTransformerLayer(Layer):
 
         Arguments:
             X: Input tensor of shape `(batch_size, bag_size, att_dim)`.
+            mask: Mask tensor of shape `(batch_size, bag_size)`.
             return_att: Whether to return attention weights.
 
         Returns:
@@ -73,7 +77,7 @@ class NystromTransformerLayer(Layer):
             att: Only returned when `return_att=True`. Attention weights of shape `(batch_size, n_heads, bag_size, bag_size)`.
         """
 
-        return super().forward(X, return_att=return_att)
+        return super().forward(X, mask=mask, return_att=return_att)
 
 
 class NystromTransformerEncoder(Encoder):
@@ -105,10 +109,13 @@ class NystromTransformerEncoder(Encoder):
         n_landmarks : int = 256,
         pinv_iterations : int = 6,
         dropout : float = 0.0,
-        use_mlp : bool = False
+        use_mlp : bool = False,
+        add_self : bool = False
     ) -> None:
         """
         Arguments:
+            in_dim: Input dimension.
+            out_dim: Output dimension. If None, `out_dim = in_dim`.
             att_dim: Attention dimension.
             n_heads: Number of heads.
             n_layers: Number of layers.
@@ -116,6 +123,7 @@ class NystromTransformerEncoder(Encoder):
             pinv_iterations: Number of iterations for the pseudo-inverse.
             dropout: Dropout rate.
             use_mlp: Whether to use a MLP after the attention layer.
+            add_self: Whether to add the input to the output. If True, `att_dim` must be equal to `in_dim`.
         """
 
         if out_dim is None:
@@ -123,17 +131,21 @@ class NystromTransformerEncoder(Encoder):
 
         layers = torch.nn.ModuleList([
             NystromTransformerLayer(
-                att_dim=att_dim, in_dim=att_dim, out_dim=att_dim, n_heads=n_heads, n_landmarks=n_landmarks, pinv_iterations=pinv_iterations, dropout=dropout, use_mlp=use_mlp
-            ) for _ in range(n_layers)
+                in_dim=in_dim if i == 0 else att_dim,
+                out_dim=out_dim if i == n_layers - 1 else att_dim,
+                att_dim=att_dim, 
+                n_heads=n_heads, n_landmarks=n_landmarks, pinv_iterations=pinv_iterations, dropout=dropout, use_mlp=use_mlp
+            ) for i in range(n_layers)
         ])
 
-        super(NystromTransformerEncoder, self).__init__(layers, add_self=False)
+        super(NystromTransformerEncoder, self).__init__(layers, add_self=add_self)
 
-        self.norm = torch.nn.LayerNorm(att_dim)
+        self.norm = torch.nn.LayerNorm(out_dim)
 
     def forward(
         self,
         X: torch.Tensor,
+        mask: torch.Tensor = None,
         return_att: bool = False
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """
@@ -141,6 +153,7 @@ class NystromTransformerEncoder(Encoder):
 
         Arguments:
             X: Input tensor of shape `(batch_size, bag_size, att_dim)`.
+            mask: Mask tensor of shape `(batch_size, bag_size)`.
             return_att: Whether to return attention weights.
 
         Returns:
@@ -148,10 +161,12 @@ class NystromTransformerEncoder(Encoder):
             att: Only returned when `return_att=True`. Attention weights of shape `(batch_size, n_heads, bag_size, bag_size)`.
         """
 
+        out = super().forward(X, mask=mask, return_att=return_att)
+
         if return_att:
-            Y, att = super().forward(X, return_att=True)
+            Y, att = out
         else:
-            Y = super().forward(X)
+            Y = out
         Y = self.norm(Y)
 
         if return_att:
