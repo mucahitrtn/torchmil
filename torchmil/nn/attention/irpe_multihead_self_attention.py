@@ -19,11 +19,11 @@ class iRPEMultiheadSelfAttention(torch.nn.Module):
         dropout : float = 0.0,
         learn_weights : bool = True,
         rpe_ratio : float = 1.9,
-        rpe_method : str = "product",
-        rpe_mode : str = 'contextual',
+        rpe_method : str = 'product',
+        rpe_mode : str ='contextual',
         rpe_shared_head : bool = True,
         rpe_skip : int = 1,
-        rpe_on : str = "k",
+        rpe_on : str = 'k',
     ):
         """
         Arguments:
@@ -34,13 +34,34 @@ class iRPEMultiheadSelfAttention(torch.nn.Module):
             dropout: Dropout rate.
             learn_weights: If True, learn the weights for query, key, and value. If False, q, k, and v are the same as the input, and therefore `in_dim` must be divisible by `n_heads`.
             rpe_ratio: Relative position encoding ratio.
-            rpe_method: Relative position encoding method. One of 'euc', 'quant', 'cross', 'product'.
-            rpe_mode: Relative position encoding mode. One of None, 'bias', 'contextual'.
-            rpe_shared_head: Whether to share relative position encoding weights across heads.
-            rpe_skip: Relative position encoding skip. Either 0 or 1. 
-            rpe_on: Relative position encoding on query, key, or value.
+            rpe_method: Relative position encoding method. Possible values: ['euc', 'quant', 'cross', 'product']
+            rpe_mode: Relative position encoding mode. Possible values: [None, 'bias', 'contextual']
+            rpe_shared_head: Whether to share weights across heads.
+            rpe_skip: Relative position encoding skip. Possible values: [0, 1]. 
+            rpe_on: Where to apply relative positional encoding. Possible values: ['q', 'k', 'v', 'qk', 'kv', 'qkv'].
+
+        **Note.** When 'v' is in `rpe_on`, `rpe_mode` must be 'contextual'.
         """
         super(iRPEMultiheadSelfAttention, self).__init__()
+
+        if rpe_method not in ['euc', 'quant', 'cross', 'product']:
+            raise ValueError("rpe_method must be one of ['euc', 'quant', 'cross', 'product']")
+
+        if rpe_mode not in [None, 'bias', 'contextual']:
+            raise ValueError("rpe_mode must be one of [None, 'bias', 'contextual']")
+        
+        if rpe_on not in ['q', 'k', 'v', 'qk', 'kv', 'qkv']:
+            raise ValueError("rpe_on must be one of ['q', 'k', 'v', 'qk', 'kv', 'qkv']")
+        
+        if rpe_skip not in [0, 1]:
+            raise ValueError("rpe_skip must be one of [0, 1]")
+        
+        if rpe_on not in ['q', 'k', 'v', 'qk', 'kv', 'qkv']:
+            raise ValueError("rpe_on must be one of ['q', 'k', 'v', 'qk', 'kv', 'qkv']")
+
+        if 'v' in rpe_on and rpe_mode != 'contextual':
+            raise ValueError("When 'v' is in rpe_on, rpe_mode must be 'contextual'")
+
         if out_dim is None:
             out_dim = in_dim
         self.n_heads = n_heads
@@ -169,14 +190,16 @@ class iRPEMultiheadSelfAttention(torch.nn.Module):
         """
         batch_size, seq_len, _ = x.size()
 
-        h = w = int(math.sqrt(seq_len))
-        skip = seq_len - h * w
-        if skip > 1:
+        act_seq_len = seq_len - self.rpe_skip
+
+        h = w = int(math.sqrt(act_seq_len))
+        diff = act_seq_len - h * w
+        if diff > 0:
             # if the sequence length is not a perfect square, we need to pad the input tensor so that rpe can be applied
             # compute the nearest perfect square greater than or equal to seq_len
-            ps = math.ceil(math.sqrt(seq_len))**2
+            ps = math.ceil(math.sqrt(act_seq_len))**2
             new_seq_len = ps + self.rpe_skip
-            padding = new_seq_len - seq_len
+            padding = new_seq_len - act_seq_len
             x = torch.nn.functional.pad(x, (0, 0, 0, padding))
             if mask is not None:
                 mask = torch.nn.functional.pad(mask, (0, padding), value=0)
@@ -198,7 +221,7 @@ class iRPEMultiheadSelfAttention(torch.nn.Module):
 
         y = y.permute(0, 2, 1, 3).contiguous().view(batch_size, new_seq_len, self.att_dim) # (batch_size, new_seq_len, att_dim)
         y = self.out_proj(y)
-        if skip > 1:
+        if diff > 0:
             y = y[:, :seq_len, :]
             if return_att:
                 att = att[:, :, :seq_len, :seq_len]

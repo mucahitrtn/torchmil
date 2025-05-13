@@ -9,10 +9,10 @@ class TestiRPEMultiheadSelfAttention:
         "in_dim, out_dim, att_dim, n_heads, dropout, learn_weights, rpe_ratio, rpe_method, rpe_mode, rpe_shared_head, rpe_skip, rpe_on",
         [
             (10, 20, 32, 2, 0.1, True, 2.0, "product", "contextual", True, 1, "k"),
-            (16, 16, 64, 4, 0.0, False, 1.5, "cross", "bias", False, 1, "q"),
+            (16, 16, 64, 4, 0.0, False, 1.5, "cross", "bias", False, 0, "q"),
             (8, None, 128, 8, 0.2, True, 1.0, "product", "contextual", True, 1, "v"),
             (10, 5, 32, 2, 0.1, True, 2.0, "cross", "bias", False, 1, "k"),  # out_dim < att_dim
-            (10, 20, 32, 2, 0.1, False, 1.5, "product", "contextual", True, 1, "q"), # learn_weights = False
+            (10, 20, 32, 2, 0.1, False, 1.5, "product", "contextual", True, 0, "q"), # learn_weights = False
         ],
     )
     def test_forward_pass(

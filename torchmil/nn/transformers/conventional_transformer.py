@@ -46,7 +46,13 @@ class TransformerLayer(Layer):
             dropout: Dropout rate
         """
 
-        att_module = MultiheadSelfAttention(att_dim=att_dim, in_dim=in_dim, out_dim=att_dim, n_heads=n_heads, dropout=dropout)
+        att_module = MultiheadSelfAttention(
+            att_dim=att_dim, 
+            in_dim=in_dim, 
+            out_dim=att_dim, 
+            n_heads=n_heads, 
+            dropout=dropout
+        )
 
         super(TransformerLayer, self).__init__(
             in_dim=in_dim, 

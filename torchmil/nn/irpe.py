@@ -661,8 +661,7 @@ class iRPE(nn.Module):
 
         B = len(x)  # batch_size
         L_query, L_key = rp_bucket.shape
-        assert self.mode == 'contextual', "Only support contextual \
-version in non-transposed version"
+        assert self.mode == 'contextual', "Non-transposed version (used on values) only supports contextual mode"
         weight = self.lookup_table_weight[:, rp_bucket.flatten()].\
             view(self.num_heads, L_query, L_key, self.head_dim)
         # (H, L_query, B, L_key) @ (H, L_query, L_key, D) = (H, L_query, B, D)

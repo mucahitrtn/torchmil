@@ -230,11 +230,11 @@ class SETMIL(MILModel):
             set_use_mlp: If True, use MLP in the SET module.
             set_dropout: Dropout rate in the SET module.
             rpe_ratio: Ratio for relative positional encoding.
-            rpe_method: Method for relative positional encoding. Possible values: 'product', 'concat'.
-            rpe_mode: Mode for relative positional encoding. Possible values: 'ctx', 'ctx+pos'.
-            rpe_shared_head: If True, share the attention head in the relative positional encoding.
-            rpe_skip: Number of layers to skip for relative positional encoding.
-            rpe_on: Apply relative positional encoding on 'q', 'k', or 'v'.
+            rpe_method: Method for relative positional encoding. Possible values: ['euc', 'quant', 'cross', 'product']
+            rpe_mode: Mode for relative positional encoding. Possible values: [None, 'bias', 'contextual']
+            rpe_shared_head: If True, share weights across different heads.
+            rpe_skip: Number of tokens to skip in the relative positional encoding. Possible values: [0, 1].
+            rpe_on: Where to apply relative positional encoding. Possible values: ['q', 'k', 'v', 'qk', 'kv', 'qkv'].
             feat_ext: Feature extractor.
             criterion: Loss function. By default, Binary Cross-Entropy loss from logits.
         """

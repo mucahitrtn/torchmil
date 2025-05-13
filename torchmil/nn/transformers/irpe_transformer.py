@@ -41,7 +41,7 @@ class iRPETransformerLayer(Layer):
         dropout: float = 0.0,
         rpe_ratio: float = 1.9,
         rpe_method: str = "product",
-        rpe_mode: str = "ctx",
+        rpe_mode: str = "contextual",
         rpe_shared_head: bool = True,
         rpe_skip: int = 1,
         rpe_on: str = "k",
@@ -57,11 +57,11 @@ class iRPETransformerLayer(Layer):
             use_mlp: Whether to use feedforward layer.
             dropout: Dropout rate.
             rpe_ratio: Relative position encoding ratio.
-            rpe_method: Relative position encoding method.
-            rpe_mode: Relative position encoding mode.
-            rpe_shared_head: Whether to share relative position encoding weights across heads.
-            rpe_skip: Relative position encoding skip.
-            rpe_on: Relative position encoding on query, key, or value.
+            rpe_method: Relative position encoding method. Possible values: ['euc', 'quant', 'cross', 'product']
+            rpe_mode: Relative position encoding mode. Possible values: [None, 'bias', 'contextual']
+            rpe_shared_head: Whether to share weights across heads.
+            rpe_skip: Relative position encoding skip. Possible values: [0, 1]. 
+            rpe_on: Where to apply relative positional encoding. Possible values: ['q', 'k', 'v', 'qk', 'kv', 'qkv'].
         """
 
         att_module = iRPEMultiheadSelfAttention(
@@ -135,7 +135,7 @@ class iRPETransformerEncoder(Encoder):
         dropout: float = 0.0,
         rpe_ratio: float = 1.9,
         rpe_method: str = "product",
-        rpe_mode: str = "ctx",
+        rpe_mode: str = "contextual",
         rpe_shared_head: bool = True,
         rpe_skip: int = 1,
         rpe_on: str = "k",
@@ -153,11 +153,11 @@ class iRPETransformerEncoder(Encoder):
             add_self: Whether to add input to output.
             dropout: Dropout rate.
             rpe_ratio: Relative position encoding ratio.
-            rpe_method: Relative position encoding method.
-            rpe_mode: Relative position encoding mode.
-            rpe_shared_head: Whether to share relative position encoding weights across heads.
-            rpe_skip: Relative position encoding skip.
-            rpe_on: Relative position encoding on query, key, or value.
+            rpe_method: Relative position encoding method. Possible values: ['euc', 'quant', 'cross', 'product']
+            rpe_mode: Relative position encoding mode. Possible values: [None, 'bias', 'contextual']
+            rpe_shared_head: Whether to share weights across heads.
+            rpe_skip: Relative position encoding skip. Possible values: [0, 1]. 
+            rpe_on: Where to apply relative positional encoding. Possible values: ['q', 'k', 'v', 'qk', 'kv', 'qkv'].
         """
 
         self.rpe_skip = rpe_skip
