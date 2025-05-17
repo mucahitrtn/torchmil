@@ -266,7 +266,6 @@ class IIBMIL(torch.nn.Module):
         Y: torch.Tensor,
         X: torch.Tensor,
         mask: torch.Tensor = None,
-        update_prototypes: bool = False,
     ) -> tuple[torch.Tensor, dict]:
         """
         Compute loss given true bag labels.
@@ -275,7 +274,6 @@ class IIBMIL(torch.nn.Module):
             Y: Bag labels of shape `(batch_size,)`.
             X: Bag features of shape `(batch_size, bag_size, ...)`.
             mask: Mask of shape `(batch_size, bag_size)`.
-            update_prototypes: If `True`, updates the prototypes.
 
         Returns:
             Y_pred: Bag label logits of shape `(batch_size,)`.
@@ -287,9 +285,6 @@ class IIBMIL(torch.nn.Module):
         inst_loss = self._inst_loss(X_enc, y_pred, mask)
         crit_loss = self.criterion(Y_pred.float(), Y.float())
         crit_name = self.criterion.__class__.__name__
-
-        if update_prototypes:
-            self.update_prototypes(y_pred, X_enc, mask)
 
         return Y_pred, {crit_name: crit_loss, "InstLoss": inst_loss}
 

@@ -7,3 +7,4 @@
             - forward
             - compute_loss
             - predict
+            - update_prototypes
