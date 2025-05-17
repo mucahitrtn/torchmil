@@ -1,117 +1,9 @@
 import torch
 
 from torchmil.nn import (
-    MultiheadSelfAttention,
-    MultiheadCrossAttention,
     TransformerEncoder,
 )
 from torchmil.nn.utils import get_feat_dim
-
-
-class IIBMILDecoderLayer(torch.nn.Module):
-    """
-    IIB-MIL decoder layer as described in the paper [IIB-MIL: Integrated Instance-Level and Bag-Level Multiple Instances Learning with Label Disambiguation for Pathological Image Analysis](https://link.springer.com/chapter/10.1007/978-3-031-43987-2_54).
-    """
-
-    def __init__(
-            self, 
-            dim: int = 256, 
-            n_heads: int = 4, 
-            dropout: float = 0.0,
-            use_mlp: bool = True
-    ): 
-        """
-        Arguments:
-            dim: Embedding dimension.
-            n_heads: Number of attention heads.
-            dropout: Dropout rate.
-        """
-        super().__init__()
-
-        self.cross_att = MultiheadCrossAttention(dim, dim, n_heads)
-        self.norm1 = torch.nn.LayerNorm(dim)
-
-        self.self_att = MultiheadSelfAttention(dim, dim, n_heads)
-        self.norm2 = torch.nn.LayerNorm(dim)
-
-        if use_mlp:
-            self.mlp_layer = torch.nn.Sequential(
-                torch.nn.Linear(dim, 4 * dim),
-                torch.nn.GELU(),
-                torch.nn.Dropout(dropout),
-                torch.nn.Linear(4 * dim, dim),
-                torch.nn.Dropout(dropout),
-            )
-        else:
-            self.mlp_layer = torch.nn.Identity()
-
-    def forward(
-        self,
-        U: torch.Tensor,
-        X: torch.Tensor,
-        mask: torch.Tensor = None
-    ) -> torch.Tensor:
-        """
-        Forward pass.
-
-        Arguments:
-            U: Input embeddings of shape `(batch_size, n_queries, dim)`.
-            X: Input embeddings of shape `(batch_size, n_instances, dim)`.
-            mask: Mask tensor of shape `(batch_size, n_instances)`.
-
-        Returns:
-            Z: Output embeddings of shape `(batch_size, n_queries, dim)`.
-        """
-
-        # X = X + self.self_att(X, mask)  # (batch_size, n_instances, dim)
-        # X = self.norm1(X)  # (batch_size, n_instances, dim)
-
-        U = U + self.cross_att(U, X, mask)  # (batch_size, n_queries, dim)
-        U = self.norm2(U)  # (batch_size, n_queries, dim)
-
-        U = self.mlp_layer(U)  # (batch_size, n_queries, dim)
-
-        return U
-
-
-class IIBMILDecoder(torch.nn.Module):
-    """
-    IIB-MIL decoder as described in the paper [IIB-MIL: Integrated Instance-Level and Bag-Level Multiple Instances Learning with Label Disambiguation for Pathological Image Analysis](https://link.springer.com/chapter/10.1007/978-3-031-43987-2_54).
-    """
-
-    def __init__(
-        self,
-        dim: int = 256,
-        n_layers: int = 1,
-        n_heads: int = 4,
-        use_mlp: bool = True,
-    ):
-        super().__init__()
-
-        self.layers = torch.nn.ModuleList(
-            [IIBMILDecoderLayer(dim, n_heads, use_mlp) for _ in range(n_layers)]
-        )
-
-    def forward(
-        self,
-        U: torch.Tensor,
-        X: torch.Tensor,
-        mask: torch.Tensor = None
-    ) -> torch.Tensor:
-        """
-        Forward pass.
-
-        Arguments:
-            U: Input embeddings of shape `(batch_size, n_queries, dim)`.
-            X: Input embeddings of shape `(batch_size, n_instances, dim)`.
-            mask: Mask tensor of shape `(batch_size, n_instances)`.
-
-        Returns:
-            Z: Output embeddings of shape `(batch_size, n_queries, dim)`.
-        """
-        for layer in self.layers:
-            U = layer(U, X, mask)
-        return U
 
 
 class IIBMIL(torch.nn.Module):
@@ -123,7 +15,7 @@ class IIBMIL(torch.nn.Module):
     Then, a [TransformerEncoder](../nn/transformers/conventional_transformer.md) is applied to transform the instance features using context information.
     Subsequently, the model uses **bag-level** and **instance-level** supervision:
 
-    **Bag-level supervision**: The instances are aggregated into a class token using $\texttt{n_queries}$ queries embeddings and the [IIBMILDecoder](./#torchmil.models.iibmil.IIBMILDecoder). A linear layer is then applied to predict the bag label.
+    **Bag-level supervision**: The instances are aggregated into a class token using a transformer decoder. A linear layer is then applied to predict the bag label.
 
     **Instance-level supervision**: Consists of four steps.
 
@@ -140,11 +32,10 @@ class IIBMIL(torch.nn.Module):
         n_layers_encoder: int = 1,
         n_layers_decoder: int = 1,
         use_mlp_encoder: bool = True,
-        use_mlp_decoder: bool = True,
+        use_mlp_decoder: bool = False,
         n_heads: int = 4,
-        n_queries: int = 5,
         feat_ext: torch.nn.Module = torch.nn.Identity(),
-        criterion : torch.nn.Module = torch.nn.BCEWithLogitsLoss(),
+        criterion: torch.nn.Module = torch.nn.BCEWithLogitsLoss(),
     ) -> None:
         """
         Arguments:
@@ -155,7 +46,6 @@ class IIBMIL(torch.nn.Module):
             use_mlp_encoder: If True, uses a multi-layer perceptron (MLP) in the encoder.
             use_mlp_decoder: If True, uses a multi-layer perceptron (MLP) in the decoder.
             n_heads: Number of attention heads.
-            n_queries: Number of queries.
             feat_ext: Feature extractor.
             criterion: Loss function. By default, Binary Cross-Entropy loss from logits.
         """
@@ -165,8 +55,9 @@ class IIBMIL(torch.nn.Module):
 
         feat_dim = get_feat_dim(feat_ext, in_shape)
 
-        self.query_embed = torch.nn.Parameter(
-            torch.randn(n_queries, att_dim)
+        self.register_buffer(
+            "prototypes",
+            torch.zeros(2, att_dim),
         )
 
         if feat_dim != att_dim:
@@ -175,16 +66,24 @@ class IIBMIL(torch.nn.Module):
             self.feat_proj = torch.nn.Identity()
 
         self.encoder = TransformerEncoder(
-            att_dim, att_dim, n_heads, n_layers_encoder, use_mlp=use_mlp_encoder, add_self=False
+            in_dim=feat_dim, att_dim=att_dim, out_dim=att_dim,
+            n_heads=n_heads, n_layers=n_layers_encoder, use_mlp=use_mlp_encoder
         )
-        self.decoder = IIBMILDecoder(att_dim, n_layers_decoder, n_heads, use_mlp_decoder)
 
+        self.decoder = TransformerEncoder(
+            in_dim=att_dim, att_dim=att_dim, out_dim=att_dim,
+            n_heads=n_heads, n_layers=n_layers_decoder, use_mlp=use_mlp_decoder, add_self=False
+        )
+
+        self.cls_token = torch.nn.Parameter(
+            torch.zeros(1, 1, att_dim), requires_grad=True)
+
+        # self.decoder = IIBMILDecoder(att_dim, n_layers_decoder, n_heads, use_mlp_decoder)
+
+        # self.inst_classifier = torch.nn.Linear(att_dim, 1)
         self.inst_classifier = torch.nn.Linear(att_dim, 1)
-        self.bag_classifier = torch.nn.Linear(n_queries * att_dim, 1)
-
-        self.register_buffer("prototypes", torch.zeros(2, att_dim))
-
-        self.criterion = criterion
+        # self.bag_classifier = torch.nn.Linear(n_queries * att_dim, 1)
+        self.bag_classifier = torch.nn.Linear(att_dim, 1)
 
     def _inst_loss(
         self,
@@ -205,16 +104,37 @@ class IIBMIL(torch.nn.Module):
         """
         batch_size, bag_size, _ = X_enc.shape
 
-        # Compute protoypical logits
-        X_enc = X_enc.view(batch_size * bag_size, -1)  # (batch_size * bag_size, dim)
+        # (batch_size * bag_size, dim)
+        X_enc = X_enc.view(batch_size * bag_size, -1)
         y_pred = y_pred.view(batch_size * bag_size)  # (batch_size * bag_size)
+
+        if mask is not None:
+            # (batch_size * bag_size)
+            mask = mask.view(batch_size * bag_size).bool()
+            y_pred = torch.masked_select(
+                y_pred,
+                mask,
+            )
+            X_enc = torch.masked_select(
+                X_enc,
+                mask.unsqueeze(-1).repeat(1, X_enc.shape[-1]),
+            ).reshape(
+                -1, X_enc.shape[-1]
+            )
+
         prototypes = self.prototypes.clone().detach()  # (2, dim)
-        logits_prot = torch.mm(X_enc.detach(), prototypes.t()).squeeze(1)  # (batch_size * bag_size, 2)
-        score_prot = torch.softmax(logits_prot, dim=1)  # (batch_size * bag_size, 2)
+
+        # Compute prototypical logits
+        logits_prot = torch.mm(X_enc.detach(), prototypes.t()).squeeze(
+            1)  # (batch_size * bag_size, 2)
+        # (batch_size * bag_size, 2)
+        score_prot = torch.softmax(logits_prot, dim=1)
 
         # compute pseudo labels
-        pseudo_labels = torch.argmax(score_prot, dim=1)  # (batch_size * bag_size)
-        pseudo_labels = pseudo_labels.type(torch.float32)  # (batch_size * bag_size)
+        pseudo_labels = torch.argmax(
+            score_prot, dim=1)  # (batch_size * bag_size)
+        pseudo_labels = pseudo_labels.type(
+            torch.float32)  # (batch_size * bag_size)
 
         # compute instance loss
         loss_instance = self.criterion(y_pred, pseudo_labels)  # (1,)
@@ -242,9 +162,10 @@ class IIBMIL(torch.nn.Module):
             X, mask, return_inst_pred=True, return_X_enc=True
         )
 
-        batch_size, bag_size, feat_dim = X_enc.shape
+        batch_size, bag_size, emb_dim = X_enc.shape
 
-        X_enc = X_enc.view(batch_size * bag_size, -1)  # (batch_size * bag_size, dim)
+        # (batch_size * bag_size, dim)
+        X_enc = X_enc.view(batch_size * bag_size, -1)
         y_pred = y_pred.view(batch_size * bag_size)  # (batch_size * bag_size)
 
         if mask is not None:
@@ -258,42 +179,38 @@ class IIBMIL(torch.nn.Module):
 
             X_enc = torch.masked_select(
                 X_enc,
-                mask.unsqueeze(-1).repeat(1, feat_dim),
+                mask.unsqueeze(-1).repeat(1, emb_dim),
             ).reshape(
-                -1, feat_dim
+                -1, emb_dim
             )  # (batch_size * bag_size, dim)
 
         k = y_pred.shape[0] // 10
-        _, indice_0 = torch.topk(
+        _, index_0 = torch.topk(
             y_pred,
             k,
             dim=-1,
             largest=True,
             sorted=True,
             out=None,
-        )  # (batch_size * bag_size, k)
+        )  # (k,)
 
-        _, indice_1 = torch.topk(
+        _, index_1 = torch.topk(
             y_pred,
             k,
             dim=-1,
             largest=False,
             sorted=True,
             out=None,
-        )  # (batch_size * bag_size, k)
+        )  # (k,)
 
-        X_enc_0 = X_enc[indice_0, :]  # (batch_size * bag_size, k, dim)
-        X_enc_1 = X_enc[indice_1, :]  # (batch_size * bag_size, k, dim)
+        X_enc_0 = X_enc[index_0, :]  # (batch_size * bag_size, k, dim)
+        X_enc_1 = X_enc[index_1, :]  # (batch_size * bag_size, k, dim)
 
-        for i in range(len(indice_0)):
-            self.prototypes[0, :] = (
-                self.prototypes[0, :] * proto_m + (1 - proto_m) * X_enc_0[i]
-            )
-
-        for i in range(len(indice_1)):
-            self.prototypes[1, :] = (
-                self.prototypes[1, :] * proto_m + (1 - proto_m) * X_enc_1[i]
-            )
+        for i in range(k):
+            self.prototypes[0, :] = self.prototypes[0, :] * \
+                proto_m + (1 - proto_m) * X_enc_0[i]
+            self.prototypes[1, :] = self.prototypes[1, :] * \
+                proto_m + (1 - proto_m) * X_enc_1[i]
 
     def forward(
         self,
@@ -317,22 +234,21 @@ class IIBMIL(torch.nn.Module):
             X_enc: Only returned when `return_X_enc=True`. Instance embeddings of shape `(batch_size, bag_size, att_dim)`.
         """
 
-        batch_size = X.shape[0]
-
         X = self.feat_ext(X)  # (batch_size, bag_size, feat_dim)
-        X = self.feat_proj(X)  # (batch_size, bag_size, att_dim)
-        X_enc = self.encoder(X, mask)  # (batch_size, bag_size, att_dim)
+        X_enc = self.encoder(X, mask) # (batch_size, bag_size, att_dim)
 
-        y_pred = self.inst_classifier(X_enc).squeeze(-1)  # (batch_size, bag_size)
+        y_pred = self.inst_classifier(X_enc)  # (batch_size, bag_size, 1)
 
-        U = self.query_embed.unsqueeze(0).expand(
-            batch_size, -1, -1
-        )  # (batch_size, n_queries, att_dim)
+        cls_token = self.cls_token.repeat(X.size(0), 1, 1) # (batch_size, 1, att_dim)
+        Z = torch.cat([cls_token, X_enc], dim=1) # (batch_size, bag_size + 1, att_dim)
+        if mask is not None:
+            mask = torch.cat(
+                [torch.ones(X.size(0), 1, device=X.device), mask], dim=1
+            )
+        Z = self.decoder(Z, mask)  # (batch_size, bag_size + 1, att_dim)
+        z = Z[:, 0]  # (batch_size, att_dim)
 
-        z = self.decoder(U, X_enc)  # (batch_size, n_queries, att_dim)
-        z = z.view(batch_size, -1)  # (batch_size, n_queries * att_dim)
-
-        Y_pred = self.bag_classifier(z).squeeze(-1)  # (batch_size,)
+        Y_pred = self.bag_classifier(z).squeeze(-1)  # (batch_size, 1)
 
         if return_inst_pred:
             if return_X_enc:

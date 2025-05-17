@@ -25,28 +25,28 @@ class PANDAMILDataset(BinaryClassificationDataset, WSIDataset):
 
     The following directory structure is expected:
 
-        ```
-        root
-        ├── patches_{patch_size}
-        │   ├── features
-        │   │   ├── features_{features}
-        │   │   │   ├── wsi1.npy
-        │   │   │   ├── wsi2.npy
-        │   │   │   └── ...
-        │   ├── labels
-        │   │   ├── wsi1.npy
-        │   │   ├── wsi2.npy
-        │   │   └── ...
-        │   ├── patch_labels
-        │   │   ├── wsi1.npy
-        │   │   ├── wsi2.npy
-        │   │   └── ...
-        │   ├── coords
-        │   │   ├── wsi1.npy
-        │   │   ├── wsi2.npy
-        │   │   └── ...
-        └── splits.csv
-        ```
+    ```
+    root
+    ├── patches_{patch_size}
+    │   ├── features
+    │   │   ├── features_{features}
+    │   │   │   ├── wsi1.npy
+    │   │   │   ├── wsi2.npy
+    │   │   │   └── ...
+    │   ├── labels
+    │   │   ├── wsi1.npy
+    │   │   ├── wsi2.npy
+    │   │   └── ...
+    │   ├── patch_labels
+    │   │   ├── wsi1.npy
+    │   │   ├── wsi2.npy
+    │   │   └── ...
+    │   ├── coords
+    │   │   ├── wsi1.npy
+    │   │   ├── wsi2.npy
+    │   │   └── ...
+    └── splits.csv
+    ```
     """
     def __init__(
         self,
