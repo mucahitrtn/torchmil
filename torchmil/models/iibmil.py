@@ -237,7 +237,7 @@ class IIBMIL(torch.nn.Module):
         X = self.feat_ext(X)  # (batch_size, bag_size, feat_dim)
         X_enc = self.encoder(X, mask) # (batch_size, bag_size, att_dim)
 
-        y_pred = self.inst_classifier(X_enc)  # (batch_size, bag_size, 1)
+        y_pred = self.inst_classifier(X_enc).squeeze(-1)  # (batch_size, bag_size,)
 
         cls_token = self.cls_token.repeat(X.size(0), 1, 1) # (batch_size, 1, att_dim)
         Z = torch.cat([cls_token, X_enc], dim=1) # (batch_size, bag_size + 1, att_dim)
@@ -248,7 +248,7 @@ class IIBMIL(torch.nn.Module):
         Z = self.decoder(Z, mask)  # (batch_size, bag_size + 1, att_dim)
         z = Z[:, 0]  # (batch_size, att_dim)
 
-        Y_pred = self.bag_classifier(z).squeeze(-1)  # (batch_size, 1)
+        Y_pred = self.bag_classifier(z).squeeze(-1)  # (batch_size,)
 
         if return_inst_pred:
             if return_X_enc:

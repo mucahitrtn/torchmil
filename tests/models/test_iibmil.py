@@ -3,8 +3,6 @@ import pytest
 
 # Import the modules to be tested
 from torchmil.models.iibmil import ( 
-    IIBMILDecoderLayer,
-    IIBMILDecoder,
     IIBMIL
 )
 
@@ -36,25 +34,6 @@ def sample_iibmil_data():
     mask = torch.randint(0, 2, (batch_size, bag_size)).bool()
     return X, Y, mask, input_shape
 
-# Test IIBMILDecoderLayer
-def test_iibmil_decoder_layer(sample_input_iibmil):
-    X, U, mask = sample_input_iibmil
-    dim = X.shape[-1]
-    n_heads = 4
-    layer = IIBMILDecoderLayer(dim, n_heads)
-    out = layer(U, X, mask)
-    assert out.shape == U.shape, "Output shape should match U shape"
-
-# Test IIBMILDecoder
-def test_iibmil_decoder(sample_input_iibmil):
-    X, U, mask = sample_input_iibmil
-    dim = X.shape[-1]
-    n_layers = 2
-    n_heads = 4
-    decoder = IIBMILDecoder(dim, n_layers, n_heads)
-    out = decoder(U, X, mask)
-    assert out.shape == U.shape, "Output shape should match U shape"
-
 # Test IIBMIL
 def test_iibmil(sample_iibmil_data):
     X, Y, mask, input_shape = sample_iibmil_data
@@ -62,7 +41,6 @@ def test_iibmil(sample_iibmil_data):
     n_layers_encoder = 1
     n_layers_decoder = 1
     n_heads = 4
-    n_queries = 5
 
     model = IIBMIL(
         in_shape=input_shape,
@@ -70,7 +48,6 @@ def test_iibmil(sample_iibmil_data):
         n_layers_encoder=n_layers_encoder,
         n_layers_decoder=n_layers_decoder,
         n_heads=n_heads,
-        n_queries=n_queries,
     )
 
     # Test forward pass
