@@ -51,7 +51,7 @@ def temp_binary_data():
         "bag3": {
             "features": np.array([[11, 12], [10, 9]]),
             "labels": np.array(1),  # Changed to scalar
-            "inst_labels": None,
+            "inst_labels": np.array([[1], [0]]),
             "coords": np.array([[4, 4], [1, 1]]),
         },
         "bag4": {  # Added a bag with inconsistent instance labels

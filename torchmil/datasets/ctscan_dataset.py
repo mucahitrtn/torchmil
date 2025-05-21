@@ -80,6 +80,7 @@ class CTScanDataset(ProcessedMILDataset):
             features_path=features_path,
             labels_path=labels_path,
             inst_labels_path=slice_labels_path,
+            coords_path="",
             bag_names=ctscan_names,
             bag_keys=bag_keys,
             adj_with_dist=adj_with_dist,
@@ -113,6 +114,16 @@ class CTScanDataset(ProcessedMILDataset):
         Returns:
             bag_dict: Dictionary containing the features, label, instance labels and coordinates of the bag.
         """
-        bag_dict = super()._load_bag(name)
-        bag_dict = self._add_coords(bag_dict)
+        bag_dict = {}
+        if "X" in self.bag_keys:
+            bag_dict['X'] = self._load_features(name)
+        
+        if "Y" in self.bag_keys:
+            bag_dict['Y'] = self._load_labels(name)
+        
+        if "y_inst" in self.bag_keys:
+            bag_dict['y_inst'] = self._load_inst_labels(name)
+        
+        if "coords" in self.bag_keys or "adj" in self.bag_keys:
+            bag_dict = self._add_coords(bag_dict)
         return bag_dict
