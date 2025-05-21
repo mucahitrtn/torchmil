@@ -8,31 +8,42 @@ from ..utils.common import read_csv, keep_only_existing_files
 class RSNAMILDataset(BinaryClassificationDataset, CTScanDataset):
     r"""
     RSNA Intracranial Hemorrhage Detection dataset for Multiple Instance Learning (MIL).
+    Download it from [Hugging Face Datasets](https://huggingface.co/datasets/Franblueee/RSNA_ICH_MIL).
 
-    The [original dataset](https://www.kaggle.com/competitions/rsna-intracranial-hemorrhage-detection) has been processed to be used for MIL binary classification problems.
-    It can be downloaded from [here](https://huggingface.co/datasets/Franblueee/RSNA_ICH_MIL).
+    **About the original RSNA Dataset.**
+    The original [RSNA-ICH dataset](https://www.kaggle.com/competitions/rsna-intracranial-hemorrhage-detection) contains head CT scans. The task is to identify whether a CT scan contains acute intracranial hemorrhage and its subtypes. The dataset includes a label for each slice. 
 
-    A slice is considered positive if it shows evidence of hemorrhage. The CT scan label is positive if at least one slice is positive.
+    **Dataset description.**
+    We have preprocessed the CT scans by computing features for each slice using various feature extractors.
 
-    The following directory structure is expected:
+    - A **slice** is labeled as positive (`slice_label=1`) if it contains evidence of hemorrhage.
+    - A **CT scan** is labeled as positive (`label=1`) if it contains at least one positive slice.
 
-        ```
-        root
-        ├── features
-        │   ├── features_{features}
-        │   │   ├── ctscan_name1.npy
-        │   │   ├── ctscan_name2.npy
-        │   │   └── ...
-        ├── labels
-        │   ├── ctscan_name1.npy
-        │   ├── ctscan_name2.npy
-        │   └── ...
-        ├── slice_labels
-        │   ├── ctscan_name1.npy
-        │   ├── ctscan_name2.npy
-        │   └── ...
-        └── splits.csv
-        ```
+    This means a CT scan is considered positive if there is any evidence of hemorrhage.
+
+    **Directory structure.**
+
+    After extracting the contents of the `.tar.gz` archives, the following directory structure is expected:
+
+    ```
+    root
+    ├── features
+    │   ├── features_{features}
+    │   │   ├── ctscan_name1.npy
+    │   │   ├── ctscan_name2.npy
+    │   │   └── ...
+    ├── labels
+    │   ├── ctscan_name1.npy
+    │   ├── ctscan_name2.npy
+    │   └── ...
+    ├── slice_labels
+    │   ├── ctscan_name1.npy
+    │   ├── ctscan_name2.npy
+    │   └── ...
+    └── splits.csv
+    ```
+
+    Each `.npy` file corresponds to a single CT scan. The `splits.csv` file defines train/test splits for standardized experimentation.
     """
     def __init__(
         self,

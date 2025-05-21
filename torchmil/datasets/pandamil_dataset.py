@@ -17,36 +17,46 @@ def keep_only_existing_files(path, names, ext='.npy'):
 class PANDAMILDataset(BinaryClassificationDataset, WSIDataset):
     r"""
     Prostate cANcer graDe Assessment (PANDA) dataset for Multiple Instance Learning (MIL).
+    Download it from [Hugging Face Datasets](https://huggingface.co/datasets/Franblueee/PANDA_MIL).
 
-    The [original PANDA dataset](https://www.kaggle.com/c/prostate-cancer-grade-assessment/data) has been processed to be used for MIL binary classification problems.
-    It can be downloaded from [here](https://huggingface.co/datasets/Franblueee/PANDA_MIL/).
+    **About the original PANDA Dataset.**
+    The original [PANDA dataset](https://panda.grand-challenge.org/data/) contains WSIs of hematoxylin and eosin (H&E) stained prostate biopsy samples. The task is to classify the severity of prostate cancer within each slide, and to localize the cancerous tissue precisely. The dataset includes high-quality pixel-level annotations marking the cancerous tissue.
 
-    A patch is considered positive if at least 50% of its pixels are annotated as tumor. The WSI label is positive if at least one patch is positive.
+    **Dataset Description.**
 
-    The following directory structure is expected:
+    We have preprocessed the whole-slide images (WSIs) by extracting relevant patches and computing features for each patch using various feature extractors.
+
+    - A **patch** is labeled as positive (`patch_label=1`) if more than 50% of its pixels are annotated as cancerous.
+    - A **WSI** is labeled as positive (`label=1`) if it contains at least one positive patch.
+
+    This means a slide is considered positive if there is any evidence of cancerous tissue.
+
+    **Directory Structure.**
+    After extracting the contents of the `.tar.gz` archives, the following directory structure is expected:
 
     ```
     root
     ├── patches_{patch_size}
-    │   ├── features
-    │   │   ├── features_{features}
-    │   │   │   ├── wsi1.npy
-    │   │   │   ├── wsi2.npy
-    │   │   │   └── ...
-    │   ├── labels
-    │   │   ├── wsi1.npy
-    │   │   ├── wsi2.npy
-    │   │   └── ...
-    │   ├── patch_labels
-    │   │   ├── wsi1.npy
-    │   │   ├── wsi2.npy
-    │   │   └── ...
-    │   ├── coords
-    │   │   ├── wsi1.npy
-    │   │   ├── wsi2.npy
-    │   │   └── ...
+    │ ├── features
+    │ │ ├── features_{features_name}
+    │ │ │ ├── wsi1.npy
+    │ │ │ ├── wsi2.npy
+    │ │ │ └── ...
+    │ ├── labels
+    │ │ ├── wsi1.npy
+    │ │ ├── wsi2.npy
+    │ │ └── ...
+    │ ├── patch_labels
+    │ │ ├── wsi1.npy
+    │ │ ├── wsi2.npy
+    │ │ └── ...
+    │ ├── coords
+    │ │ ├── wsi1.npy
+    │ │ ├── wsi2.npy
+    │ │ └── ...
     └── splits.csv
     ```
+    Each `.npy` file corresponds to a single WSI. The `splits.csv` file defines train/test splits for standardized experimentation.
     """
     def __init__(
         self,
