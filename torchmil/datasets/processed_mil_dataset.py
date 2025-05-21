@@ -9,31 +9,34 @@ from torchmil.utils import build_adj, normalize_adj, add_self_loops
 
 class ProcessedMILDataset(torch.utils.data.Dataset):
     r"""
-    This class represents a general MIL dataset where the bags have been processed.
+    This class represents a general MIL dataset where the bags have been processed and saved as numpy files.
+    It enforces strict data availability for core components, failing fast if expected files are missing.
 
     **MIL processing and directory structure.**
-    It is assumed that the bags have been processed and saved as numpy files.
-    A feature file should yield an array of shape `(bag_size, ...)`, where `...` represents the shape of the features.
-    A label file should yield an array of shape arbitrary shape, e.g., `(1,)` for binary classification.
-    An instance label file should yield an array of shape `(bag_size, ...)`, where `...` represents the shape of the instance labels.
-    A coordinates file should yield an array of shape `(bag_size, coords_dim)`, where `coords_dim` is the dimension of the coordinates.
-
+   The dataset expects pre-processed bags saved as individual numpy files.
+    - A feature file should yield an array of shape `(bag_size, ...)`, where `...` represents the shape of the features.
+    - A label file should yield an array of shape arbitrary shape, e.g., `(1,)` for binary classification.
+    - An instance label file should yield an array of shape `(bag_size, ...)`, where `...` represents the shape of the instance labels.
+    - A coordinates file should yield an array of shape `(bag_size, coords_dim)`, where `coords_dim` is the dimension of the coordinates.
+    
+    **Bag keys and directory structure.**
+    The dataset can be initialized with a list of bag keys, which are used to choose which data to load.
     This dataset expects the following directory structure:
 
     ```
-    features_path
+    features_path/ (if "X" in bag_keys)
     ├── bag1.npy
     ├── bag2.npy
     └── ...
-    labels_path
+    labels_path/ (if "Y" in bag_keys)
     ├── bag1.npy
     ├── bag2.npy
     └── ...
-    inst_labels_path
+    inst_labels_path/ (if "y_inst" in bag_keys)
     ├── bag1.npy
     ├── bag2.npy
     └── ...
-    coords_path
+    coords_path/ (if "coords" or "adj" in bag_keys)
     ├── bag1.npy
     ├── bag2.npy
     └── ...
@@ -60,8 +63,8 @@ class ProcessedMILDataset(torch.utils.data.Dataset):
 
     def __init__(
         self,
-        features_path: str,
-        labels_path: str,
+        features_path: str = None,
+        labels_path: str = None,
         inst_labels_path: str = None,
         coords_path: str = None,
         bag_names: list = None,
@@ -79,8 +82,13 @@ class ProcessedMILDataset(torch.utils.data.Dataset):
             labels_path: Path to the directory containing the bag labels.
             inst_labels_path: Path to the directory containing the instance labels.
             coords_path: Path to the directory containing the coordinates.
-            bag_keys: List of keys to use for the bag dictionary. See the `__getitem__` method for more details.
-            bag_names: List of bag names to load. If None, all bags are loaded.
+            bag_keys: List of keys to load the bags data. The TensorDict returned by the `__getitem__` method will have these keys. Possible keys are:
+                - "X": Load the features of the bag.
+                - "Y": Load the label of the bag.
+                - "y_inst": Load the instance labels of the bag.
+                - "adj": Load the adjacency matrix of the bag. It requires the coordinates to be loaded.
+                - "coords": Load the coordinates of the bag.
+            bag_names: List of bag names to load. If None, all bags from the `features_path` are loaded.
             dist_thr: Distance threshold for building the adjacency matrix.
             adj_with_dist: If True, the adjacency matrix is built using the Euclidean distance between the instance features. If False, the adjacency matrix is binary.
             norm_adj: If True, normalize the adjacency matrix.
@@ -99,7 +107,22 @@ class ProcessedMILDataset(torch.utils.data.Dataset):
         self.norm_adj = norm_adj
         self.load_at_init = load_at_init
 
+        if "X" in self.bag_keys and self.features_path is None:
+            raise ValueError("features_path must be provided if 'X' is in bag_keys")
+        if "Y" in self.bag_keys and self.labels_path is None:
+            raise ValueError("labels_path must be provided if 'Y' is in bag_keys")
+        if "y_inst" in self.bag_keys and self.inst_labels_path is None:
+            raise ValueError("inst_labels_path must be provided if 'y_inst' is in bag_keys")
+        if "coords" in self.bag_keys and self.coords_path is None:
+            raise ValueError("coords_path must be provided if 'coords' is in bag_keys")
+        if "adj" in self.bag_keys and self.coords_path is None:
+            raise ValueError("coords_path must be provided if 'adj' is in bag_keys")
+    
         if self.bag_names is None:
+            
+            if self.features_path is None:
+                raise ValueError("features_path must be provided if bag_names is None")
+
             self.bag_names = [ file for file in os.listdir(self.features_path) if file.endswith('.npy') ]
             self.bag_names = [ os.path.splitext(file)[0] for file in self.bag_names ]
         self.bag_names = sorted(self.bag_names)
@@ -120,10 +143,8 @@ class ProcessedMILDataset(torch.utils.data.Dataset):
             features: Features of the bag.
         """
         features_file = os.path.join(self.features_path, name+'.npy')
-        if not os.path.exists(features_file):
-            warnings.warn(f"Features file {features_file} not found. Setting features to None.")
-            return None
-        return np.load(features_file)
+        features = np.load(features_file)
+        return features
 
     def _load_labels(self, name: str) -> np.ndarray:
         """
@@ -136,11 +157,8 @@ class ProcessedMILDataset(torch.utils.data.Dataset):
             label: Label of the bag.
         """
         label_file = os.path.join(self.labels_path, name+'.npy')
-        if not os.path.exists(label_file):
-            warnings.warn(f"Label file {label_file} not found. Setting label to None.")
-            return None
-        out = np.load(label_file)
-        return out
+        label = np.load(label_file)
+        return label
 
     def _load_inst_labels(self, name: str) -> np.ndarray:
         """
@@ -152,15 +170,9 @@ class ProcessedMILDataset(torch.utils.data.Dataset):
         Returns:
             inst_labels: Instance labels of the bag.
         """
-        if self.inst_labels_path is None:
-            return None
-
         inst_labels_file = os.path.join(self.inst_labels_path, name+'.npy')
-        if not os.path.exists(inst_labels_file):
-            warnings.warn(f"Instance labels file {inst_labels_file} not found. Setting instance labels to None.")
-            return None
-        out = np.load(inst_labels_file)
-        return out
+        inst_labels = np.load(inst_labels_file)
+        return inst_labels
 
     def _load_coords(self, name: str) -> np.ndarray:
         """
@@ -172,14 +184,9 @@ class ProcessedMILDataset(torch.utils.data.Dataset):
         Returns:
             coords: Coordinates of the bag.
         """
-        if self.coords_path is None:
-            return None
-
         coords_file = os.path.join(self.coords_path, name+'.npy')
-        if not os.path.exists(coords_file):
-            warnings.warn(f"Coordinates file {coords_file} not found. Setting coordinates to None.")
-            return None
-        return np.load(coords_file)
+        coords = np.load(coords_file)
+        return coords
 
     def _load_bag(self, name: str) -> dict[str, torch.Tensor]:
         """
@@ -286,6 +293,7 @@ class ProcessedMILDataset(torch.utils.data.Dataset):
         """
 
         bag_name = self.bag_names[index]
+        print(f"Loading bag {bag_name}...")
 
         if bag_name in self.loaded_bags.keys():
             bag_dict = self.loaded_bags[bag_name]
