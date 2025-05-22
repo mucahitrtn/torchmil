@@ -296,7 +296,6 @@ class ProcessedMILDataset(torch.utils.data.Dataset):
         """
 
         bag_name = self.bag_names[index]
-        print(f"Loading bag {bag_name}...")
 
         if bag_name in self.loaded_bags.keys():
             bag_dict = self.loaded_bags[bag_name]
