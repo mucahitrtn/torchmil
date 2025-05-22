@@ -1,11 +1,44 @@
-name: Publish torchmil to PyPI
+name: Test & Publish torchmil
 
 on:
-  release:
-    types: [published, edited]
+  push:
+    tags:
+      - 'v*'
 
 jobs:
-  build-and-publish:
+  test-and-upload-testpypi:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install build tools and dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r ./tests/requirements.txt
+          pip install build twine pytest
+
+      - name: Run tests
+        run: pytest tests  # change this if needed
+
+      - name: Build the package
+        run: python -m build
+
+      - name: Upload to TestPyPI
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.TEST_PYPI_API_TOKEN }}
+        run: |
+          twine upload --repository-url https://test.pypi.org/legacy/ dist/
+
+  upload-to-pypi:
+    needs: test-and-upload-testpypi
     runs-on: ubuntu-latest
 
     steps:
@@ -25,8 +58,9 @@ jobs:
       - name: Build the package
         run: python -m build
 
-      - name: Publish to PyPI
+      - name: Upload to PyPI
         env:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
-        run: twine upload dist/*
+        run: |
+          twine upload dist/
