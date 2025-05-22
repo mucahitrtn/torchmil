@@ -58,6 +58,16 @@ class ProcessedMILDataset(torch.utils.data.Dataset):
 
     where $\mathbf{c}_i$ and $\mathbf{c}_j$ are the coordinates of the instances $i$ and $j$, respectively, $\text{dist_thr}$ is a threshold distance,
     and $\mathbf{x}_i \in \mathbb{R}^d$ and $\mathbf{x}_j \in \mathbb{R}^d$ are the features of instances $i$ and $j$, respectively.
+    
+    **How bags are built.**
+    When the `__getitem__` method is called, the bag is built as follows (pseudocode):
+    1. The `__getitem__` method is called with an index.
+    2. The bag name is retrieved from the list of bag names.
+    3. The `_build_bag` method is called with the bag name:
+        3.1. The `_build_bag` method loads the bag from disk using the `_load_bag` method. This method loads the features, labels, instance labels and coordinates from disk using the `_load_features`, `_load_labels`, `_load_inst_labels` and `_load_coords` methods.
+        3.2. If the coordinates have been provided, it builds the adjacency matrix using the `_build_adj` method.
+    4. The bag is returned as a dictionary containing the keys defined in `bag_keys` and their corresponding values.
+    This behaviour can be extended or modified by overriding the corresponding methods.
     """
 
 
@@ -72,7 +82,7 @@ class ProcessedMILDataset(torch.utils.data.Dataset):
         dist_thr: float = 1.5,
         adj_with_dist: bool = False,
         norm_adj: bool = True,
-        load_at_init: bool = True
+        load_at_init: bool = False
     ) -> None:
         """
         Class constructor.
