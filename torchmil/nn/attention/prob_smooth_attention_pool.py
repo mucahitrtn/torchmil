@@ -170,14 +170,14 @@ class ProbSmoothAttentionPool(torch.nn.Module):
             X: Bag features of shape `(batch_size, bag_size, dim)`.
             mask: Mask of shape `(batch_size, bag_size)`.
             adj: Adjacency matrix of shape `(batch_size, bag_size, bag_size)`. Only required when `return_kl_div=True`.
-            return_att: If True, returns a sample from the attention distribution `f` in addition to `z`.
-            return_attdist: If True, returns the attention distribution (`mu_f`, `diag_Sigma_f`) in addition to `z`.
+            return_att_samples: If True, returns samples from the attention distribution `f` in addition to `z`.
+            return_att_dist: If True, returns the attention distribution (`mu_f`, `diag_Sigma_f`) in addition to `z`.
             return_kl_div: If True, returns the KL divergence between the attention distribution and the prior distribution.
             n_samples: Number of samples to draw. If not provided, it will use `n_samples_train` during training and `n_samples_test` during testing.
 
         Returns:
             z: Bag representation of shape `(batch_size, dim, n_samples)`.
-            f: Sample from the attention distribution of shape `(batch_size, bag_size, n_samples)`. Only returned when `return_att_samples=True`.
+            f: Samples from the attention distribution of shape `(batch_size, bag_size, n_samples)`. Only returned when `return_att_samples=True`.
             mu_f: Mean of the attention distribution of shape `(batch_size, bag_size, 1)`. Only returned when `return_att_dist=True`.
             diag_Sigma_f: Covariance of the attention distribution of shape `(batch_size, bag_size, 1)`. Only returned when `return_att_dist=True`.
             kl_div: KL divergence between the attention distribution and the prior distribution, of shape `()`. Only returned when `return_kl_div=True`.

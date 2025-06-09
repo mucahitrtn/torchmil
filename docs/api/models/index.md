@@ -8,7 +8,7 @@ They all inherit from the [General MIL model](mil_model.md) class, which provide
 - [ABMIL](abmil.md)
 - [CAMIL](camil.md)
 - [CLAM](clam.md)
-- [DFTDMIL](dftdmil.md)
+- [DFTDMIL](dtfdmil.md)
 - [DSMIL](dsmil.md)
 - [GTP](gtp.md)
 - [ProbSmoothABMIL](prob_smooth_abmil.md)

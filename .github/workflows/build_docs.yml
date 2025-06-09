@@ -20,4 +20,4 @@ jobs:
       - name: Install dependencies
         run: pip install mkdocs-material mknotebooks mkdocstrings mkdocstrings-python mkdocs-exclude
       - name: Build docs and check for warnings
-        run: bash check_then_deploy.sh
+        run: bash check_deploy_docs.sh

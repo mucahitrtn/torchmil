@@ -39,7 +39,7 @@ class Trainer:
             lr_scheduler: Learning rate scheduler.
             annealing_scheduler_dict: Dictionary of annealing schedulers for loss coefficients. Keys should be the loss names and values should be instances of [AnnealingScheduler](./annealing_scheduler.md).
             device: Device to be used for training.
-            logger: Logger to log metrics. Must have a `log` method. It can be, for example, a [Wandb Run](https://docs.wandb.ai/ref/python/run/).
+            logger (Logger): Logger to log metrics. Must have a `log` method. It can be, for example, a [Wandb Run](https://docs.wandb.ai/ref/python/run/).
             early_stop_patience: Patience for early stopping. If None, early stopping is disabled.
             disable_pbar: Disable progress bar.
         """
