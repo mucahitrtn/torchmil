@@ -44,7 +44,7 @@ theme:
   # twitter_name: "@Franblueee"
   # twitter_url: "https://x.com/franblueee"
 
-strict: False
+strict: True
 
 extra_javascript:
   # The below two make MathJax work, see https://squidfunk.github.io/mkdocs-material/reference/mathjax/
