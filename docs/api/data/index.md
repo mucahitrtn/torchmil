@@ -1,5 +1,7 @@
 # torchmil.data
 
+<tt><b>torchmil.data</b></tt> provides a collection of utilities for handling data in Multiple Instance Learning (MIL) tasks.
+
 ## Bags in <tt><b>torchmil</b></tt>
 
 !!! note
