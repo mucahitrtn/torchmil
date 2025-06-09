@@ -3,8 +3,9 @@ from typing import Union
 import torch
 from torch import Tensor
 
-from torchmil.nn.utils import masked_softmax, LazyLinear
+from torchmil.nn.utils import masked_softmax
 from torchmil.nn.sm import Sm
+
 
 class SmAttentionPool(torch.nn.Module):
     r"""
@@ -36,18 +37,18 @@ class SmAttentionPool(torch.nn.Module):
     """
 
     def __init__(
-            self,
-            in_dim : int,
-            att_dim : int = 128,
-            act : str = 'gelu',
-            sm_mode : str = 'approx',
-            sm_alpha : Union[float, str] = 'trainable',
-            sm_layers : int = 1,
-            sm_steps : int = 10,
-            sm_pre : bool = False,
-            sm_post : bool = False,
-            sm_spectral_norm : bool = False
-        ):
+        self,
+        in_dim: int,
+        att_dim: int = 128,
+        act: str = "gelu",
+        sm_mode: str = "approx",
+        sm_alpha: Union[float, str] = "trainable",
+        sm_layers: int = 1,
+        sm_steps: int = 10,
+        sm_pre: bool = False,
+        sm_post: bool = False,
+        sm_spectral_norm: bool = False,
+    ):
         """
         Arguments:
             in_dim: Input dimension.
@@ -77,17 +78,19 @@ class SmAttentionPool(torch.nn.Module):
         self.proj1 = torch.nn.Linear(in_dim, att_dim)
         self.proj2 = torch.nn.Linear(att_dim, 1, bias=False)
 
-        if self.act == 'tanh':
+        if self.act == "tanh":
             act_layer_fn = torch.nn.Tanh
-        elif self.act == 'relu':
+        elif self.act == "relu":
             act_layer_fn = torch.nn.ReLU
-        elif self.act == 'gelu':
+        elif self.act == "gelu":
             act_layer_fn = torch.nn.GELU
         else:
-            raise ValueError(f"[{self.__class__.__name__}] act must be 'tanh', 'relu' or 'gelu'")
+            raise ValueError(
+                f"[{self.__class__.__name__}] act must be 'tanh', 'relu' or 'gelu'"
+            )
         self.act_layer = act_layer_fn()
 
-        self.sm = Sm(alpha = sm_alpha, num_steps = sm_steps, mode = sm_mode)
+        self.sm = Sm(alpha=sm_alpha, num_steps=sm_steps, mode=sm_mode)
 
         self.mlp = torch.nn.ModuleList()
         for _ in range(sm_layers):
@@ -101,12 +104,8 @@ class SmAttentionPool(torch.nn.Module):
             self.proj2 = torch.nn.utils.parametrizations.spectral_norm(self.proj2)
 
     def forward(
-            self,
-            X : Tensor,
-            adj : Tensor,
-            mask : Tensor = None,
-            return_att : bool = False
-        ) -> tuple[Tensor, Tensor]:
+        self, X: Tensor, adj: Tensor, mask: Tensor = None, return_att: bool = False
+    ) -> tuple[Tensor, Tensor]:
         """
         Forward pass.
 
@@ -126,26 +125,26 @@ class SmAttentionPool(torch.nn.Module):
 
         if mask is None:
             mask = torch.ones(batch_size, bag_size, device=X.device)
-        mask = mask.unsqueeze(dim=-1) # (batch_size, bag_size, 1)
+        mask = mask.unsqueeze(dim=-1)  # (batch_size, bag_size, 1)
 
         if self.sm_pre:
-            X = self.sm(X, adj) # (batch_size, bag_size, in_dim)
+            X = self.sm(X, adj)  # (batch_size, bag_size, in_dim)
 
-        H = self.proj1(X) # (batch_size, bag_size, att_dim)
-        H = self.act_layer(H) # (batch_size, bag_size, att_dim)
+        H = self.proj1(X)  # (batch_size, bag_size, att_dim)
+        H = self.act_layer(H)  # (batch_size, bag_size, att_dim)
 
         for layer in self.mlp:
             H = self.sm(H, adj)
             H = layer(H)
             H = self.act_layer(H)
 
-        f = self.proj2(H) # (batch_size, bag_size, 1)
+        f = self.proj2(H)  # (batch_size, bag_size, 1)
 
         if self.sm_post:
             f = self.sm(f, adj)
 
-        s = masked_softmax(f, mask) # (batch_size, bag_size, 1)
-        z = torch.bmm(X.transpose(1,2), s).squeeze(dim=-1) # (batch_size, D)
+        s = masked_softmax(f, mask)  # (batch_size, bag_size, 1)
+        z = torch.bmm(X.transpose(1, 2), s).squeeze(dim=-1)  # (batch_size, D)
 
         if return_att:
             return z, f.squeeze(dim=-1)

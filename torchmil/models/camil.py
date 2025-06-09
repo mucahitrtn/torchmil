@@ -6,6 +6,7 @@ from torchmil.models import MILModel
 
 from torchmil.nn.utils import masked_softmax, get_feat_dim
 
+
 class CAMILSelfAttention(nn.Module):
     r"""
     Self-attention layer used in [CAMIL: Context-Aware Multiple Instance Learning for Cancer Detection and Subtyping in Whole Slide Images](https://arxiv.org/abs/2305.05314).
@@ -19,20 +20,14 @@ class CAMILSelfAttention(nn.Module):
     Finally, it returns $\mathbf{L} = \left[ \mathbf{l}_1, \ldots, \mathbf{l}_N \right]^\top$.
 
     """
-    def __init__(
-        self,
-        in_dim : int,
-        att_dim : int = 512
-    ) -> None:
+
+    def __init__(self, in_dim: int, att_dim: int = 512) -> None:
         super(CAMILSelfAttention, self).__init__()
-        self.qk_nn = torch.nn.Linear(in_dim, 2*att_dim, bias = False)
-        self.v_nn = torch.nn.Linear(in_dim, in_dim, bias = False)
+        self.qk_nn = torch.nn.Linear(in_dim, 2 * att_dim, bias=False)
+        self.v_nn = torch.nn.Linear(in_dim, in_dim, bias=False)
 
     def forward(
-        self,
-        X : torch.Tensor,
-        adj : torch.Tensor,
-        mask : torch.Tensor = None
+        self, X: torch.Tensor, adj: torch.Tensor, mask: torch.Tensor = None
     ) -> torch.Tensor:
         """
         Forward pass.
@@ -47,12 +42,18 @@ class CAMILSelfAttention(nn.Module):
         """
 
         if mask is not None:
-            mask = mask[:, :, None] * mask[:, None, :] # (batch_size, bag_size, bag_size)
+            mask = (
+                mask[:, :, None] * mask[:, None, :]
+            )  # (batch_size, bag_size, bag_size)
         else:
-            mask = torch.ones(X.shape[0], X.shape[1], X.shape[1], device=X.device, dtype=X.dtype) # (batch_size, bag_size, bag_size)
+            mask = torch.ones(
+                X.shape[0], X.shape[1], X.shape[1], device=X.device, dtype=X.dtype
+            )  # (batch_size, bag_size, bag_size)
 
-        q, k = self.qk_nn(X).chunk(2, dim=-1) # (batch_size, bag_size, att_dim), (batch_size, bag_size, att_dim)
-        v = self.v_nn(X) # (batch_size, bag_size, in_dim)
+        q, k = self.qk_nn(X).chunk(
+            2, dim=-1
+        )  # (batch_size, bag_size, att_dim), (batch_size, bag_size, att_dim)
+        v = self.v_nn(X)  # (batch_size, bag_size, in_dim)
         att_dim = q.shape[-1]
 
         inv_scale = 1.0 / (att_dim**0.5)
@@ -60,9 +61,11 @@ class CAMILSelfAttention(nn.Module):
         if adj.is_sparse:
             adj = adj.to_dense()
 
-        w = inv_scale*(q.matmul(k.transpose(-2, -1)) * adj * mask).sum(dim = -1, keepdim = True) # (batch_size, bag_size, 1)
+        w = inv_scale * (q.matmul(k.transpose(-2, -1)) * adj * mask).sum(
+            dim=-1, keepdim=True
+        )  # (batch_size, bag_size, 1)
 
-        L = w.softmax(dim=1)*v # (batch_size, bag_size, in_dim)
+        L = w.softmax(dim=1) * v  # (batch_size, bag_size, in_dim)
 
         return L
 
@@ -83,12 +86,8 @@ class CAMILAttentionPool(nn.Module):
 
 
     """
-    def __init__(
-        self,
-        in_dim : int,
-        att_dim : int = 128,
-        gated: bool = False
-    ) -> None:
+
+    def __init__(self, in_dim: int, att_dim: int = 128, gated: bool = False) -> None:
         super(CAMILAttentionPool, self).__init__()
         self.gated = gated
         self.fc1 = torch.nn.Linear(in_dim, att_dim)
@@ -100,10 +99,10 @@ class CAMILAttentionPool(nn.Module):
 
     def forward(
         self,
-        T : torch.Tensor,
-        M : torch.Tensor,
-        mask : torch.Tensor = None,
-        return_att : bool = False
+        T: torch.Tensor,
+        M: torch.Tensor,
+        mask: torch.Tensor = None,
+        return_att: bool = False,
     ) -> torch.Tensor:
         """
         Forward pass.
@@ -119,19 +118,20 @@ class CAMILAttentionPool(nn.Module):
             f: (batch_size, bag_size) if `return_att
         """
 
-        H = torch.nn.functional.tanh(self.fc1(T)) # (batch_size, bag_size, att_dim)
+        H = torch.nn.functional.tanh(self.fc1(T))  # (batch_size, bag_size, att_dim)
         if self.gated:
-            G = self.act_gated(self.fc_gated(T)) # (batch_size, bag_size, att_dim)
+            G = self.act_gated(self.fc_gated(T))  # (batch_size, bag_size, att_dim)
             H = H * G
 
-        f = self.fc2(H) # (batch_size, bag_size, 1)
-        a = masked_softmax(f, mask) # (batch_size, bag_size, 1)
-        z = torch.bmm(M.transpose(1,2), a).squeeze(dim=2) # (batch_size, in_dim)
+        f = self.fc2(H)  # (batch_size, bag_size, 1)
+        a = masked_softmax(f, mask)  # (batch_size, bag_size, 1)
+        z = torch.bmm(M.transpose(1, 2), a).squeeze(dim=2)  # (batch_size, in_dim)
 
         if return_att:
             return z, f.squeeze(dim=2)
         else:
             return z
+
 
 class CAMIL(MILModel):
     r"""
@@ -155,19 +155,20 @@ class CAMIL(MILModel):
 
     Lastly, the final bag representation is computed using the [CAMILAttentionPool](./#torchmil.models.camil.CAMILAttentionPool), modification of the Gatted Attention Pool mechanism. The bag representation is then fed into a linear classifier to predict the bag label.
     """
+
     def __init__(
         self,
         in_shape: tuple,
-        nystrom_att_dim : int = 512,
-        pool_att_dim : int = 128,
-        gated_pool : bool = False,
-        n_heads : int = 4,
-        n_landmarks : int = None,
-        pinv_iterations : int = 6,
-        dropout : float = 0.0,
-        use_mlp : bool = False,
+        nystrom_att_dim: int = 512,
+        pool_att_dim: int = 128,
+        gated_pool: bool = False,
+        n_heads: int = 4,
+        n_landmarks: int = None,
+        pinv_iterations: int = 6,
+        dropout: float = 0.0,
+        use_mlp: bool = False,
         feat_ext: torch.nn.Module = torch.nn.Identity(),
-        criterion : torch.nn.Module = torch.nn.BCEWithLogitsLoss(),
+        criterion: torch.nn.Module = torch.nn.BCEWithLogitsLoss(),
     ) -> None:
         """
         Arguments:
@@ -194,10 +195,22 @@ class CAMIL(MILModel):
         else:
             self.fc1 = torch.nn.Identity()
 
-        self.nystrom_transformer_layer = NystromTransformerLayer(in_dim=nystrom_att_dim, att_dim=nystrom_att_dim, n_heads=n_heads, n_landmarks=n_landmarks, pinv_iterations=pinv_iterations, dropout=dropout, use_mlp=use_mlp)
+        self.nystrom_transformer_layer = NystromTransformerLayer(
+            in_dim=nystrom_att_dim,
+            att_dim=nystrom_att_dim,
+            n_heads=n_heads,
+            n_landmarks=n_landmarks,
+            pinv_iterations=pinv_iterations,
+            dropout=dropout,
+            use_mlp=use_mlp,
+        )
 
-        self.camil_self_attention = CAMILSelfAttention(in_dim=nystrom_att_dim, att_dim=nystrom_att_dim)
-        self.camil_att_pool = CAMILAttentionPool(in_dim=nystrom_att_dim, att_dim=pool_att_dim, gated=gated_pool)
+        self.camil_self_attention = CAMILSelfAttention(
+            in_dim=nystrom_att_dim, att_dim=nystrom_att_dim
+        )
+        self.camil_att_pool = CAMILAttentionPool(
+            in_dim=nystrom_att_dim, att_dim=pool_att_dim, gated=gated_pool
+        )
 
         self.classifier = nn.Linear(nystrom_att_dim, 1)
 
@@ -205,10 +218,10 @@ class CAMIL(MILModel):
 
     def forward(
         self,
-        X : torch.Tensor,
-        adj : torch.Tensor,
-        mask : torch.Tensor = None,
-        return_att : bool = False
+        X: torch.Tensor,
+        adj: torch.Tensor,
+        mask: torch.Tensor = None,
+        return_att: bool = False,
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Forward pass.
@@ -224,19 +237,25 @@ class CAMIL(MILModel):
             att: Only returned when `return_att=True`. Attention values (before normalization) of shape (batch_size, bag_size).
         """
 
-        X = self.feat_ext(X) # (batch_size, bag_size, feat_dim)
-        T = self.nystrom_transformer_layer(self.fc1(X)) # (batch_size, bag_size, feat_dim)
+        X = self.feat_ext(X)  # (batch_size, bag_size, feat_dim)
+        T = self.nystrom_transformer_layer(
+            self.fc1(X)
+        )  # (batch_size, bag_size, feat_dim)
 
-        L = self.camil_self_attention(T, adj, mask) # (batch_size, bag_size, feat_dim)
+        L = self.camil_self_attention(T, adj, mask)  # (batch_size, bag_size, feat_dim)
 
-        M = torch.sigmoid(L)*L + (1 - torch.sigmoid(L))*T # (batch_size, bag_size, feat_dim)
+        M = (
+            torch.sigmoid(L) * L + (1 - torch.sigmoid(L)) * T
+        )  # (batch_size, bag_size, feat_dim)
 
         if return_att:
-            z, att = self.camil_att_pool(T, M, mask, return_att=True) # (batch_size, feat_dim), (batch_size, bag_size)
+            z, att = self.camil_att_pool(
+                T, M, mask, return_att=True
+            )  # (batch_size, feat_dim), (batch_size, bag_size)
         else:
-            z = self.camil_att_pool(T, M, mask) # (batch_size, feat_dim)
+            z = self.camil_att_pool(T, M, mask)  # (batch_size, feat_dim)
 
-        Y_pred = self.classifier(z).squeeze(dim=-1) # (batch_size,)
+        Y_pred = self.classifier(z).squeeze(dim=-1)  # (batch_size,)
 
         if return_att:
             return Y_pred, att
@@ -248,7 +267,7 @@ class CAMIL(MILModel):
         Y: torch.Tensor,
         X: torch.Tensor,
         adj: torch.Tensor,
-        mask: torch.Tensor = None
+        mask: torch.Tensor = None,
     ) -> tuple[torch.Tensor, dict]:
         """
         Compute loss given true bag labels.
@@ -276,7 +295,7 @@ class CAMIL(MILModel):
         X: torch.Tensor,
         adj: torch.Tensor,
         mask: torch.Tensor = None,
-        return_inst_pred: bool = True
+        return_inst_pred: bool = True,
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Predict bag and (optionally) instance labels.

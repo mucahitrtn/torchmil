@@ -1,9 +1,10 @@
 import torch
 
+
 def seq_to_spatial(
-        X : torch.Tensor,
-        coords : torch.Tensor,
-    ) -> torch.Tensor:
+    X: torch.Tensor,
+    coords: torch.Tensor,
+) -> torch.Tensor:
     """
     Computes the spatial representation of a bag given the sequential representation and the coordinates.
 
@@ -25,13 +26,19 @@ def seq_to_spatial(
     batch_size = X.shape[0]
     bag_size = X.shape[1]
     n = coords.shape[-1]
-    shape = torch.Size([batch_size] + [int(coords[:, :, i].max().item()) + 1 for i in range(n)] + [X.shape[-1]])
+    shape = torch.Size(
+        [batch_size]
+        + [int(coords[:, :, i].max().item()) + 1 for i in range(n)]
+        + [X.shape[-1]]
+    )
 
     # Initialize the spatial representation
     X_enc = torch.zeros(shape, device=X.device, dtype=X.dtype)
 
     # Create batch indices of shape (batch_size, bag_size)
-    batch_indices = torch.arange(batch_size, device=X.device).unsqueeze(1).expand(-1, bag_size)
+    batch_indices = (
+        torch.arange(batch_size, device=X.device).unsqueeze(1).expand(-1, bag_size)
+    )
 
     # Create a list of spatial indices (one per coordinate dimension), each of shape (batch_size, bag_size)
     spatial_indices = [coords[:, :, i] for i in range(n)]
@@ -42,13 +49,13 @@ def seq_to_spatial(
     # Use advanced indexing to assign values from X into X_enc.
     X_enc[index_tuple] = X
 
-
     return X_enc
 
+
 def spatial_to_seq(
-        X_esp : torch.Tensor,
-        coords : torch.Tensor,
-    ) -> torch.Tensor:
+    X_esp: torch.Tensor,
+    coords: torch.Tensor,
+) -> torch.Tensor:
     """
     Computes the sequential representation of a bag given the spatial representation and the coordinates.
 
@@ -71,7 +78,9 @@ def spatial_to_seq(
     n = coords.shape[-1]
 
     # Create batch indices with shape (batch_size, bag_size)
-    batch_indices = torch.arange(batch_size, device=X_esp.device).unsqueeze(1).expand(-1, bag_size)
+    batch_indices = (
+        torch.arange(batch_size, device=X_esp.device).unsqueeze(1).expand(-1, bag_size)
+    )
 
     # Build the index tuple without using the unpack operator in the subscript.
     # Each element in the tuple has shape (batch_size, bag_size)

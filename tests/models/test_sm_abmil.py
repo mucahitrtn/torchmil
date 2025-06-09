@@ -1,10 +1,6 @@
-import sys
-
-print(sys.path)
 import torch
 import pytest
 from torch import nn
-from torch.testing import assert_close
 
 from torchmil.models import SmABMIL
 
@@ -78,6 +74,7 @@ def test_smabmil_with_feature_extractor(sample_data):
     assert Y_pred.shape == (2,)
     assert "BCEWithLogitsLoss" in loss_dict
     assert loss_dict["BCEWithLogitsLoss"].shape == ()
+
 
 def test_smabmil_different_pooling_params(sample_data):
     # Test different attention and Sm pooling parameters

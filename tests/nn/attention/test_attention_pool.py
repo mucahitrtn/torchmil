@@ -5,10 +5,10 @@ from torchmil.nn.attention.attention_pool import AttentionPool
 
 
 class TestAttentionPool:
-    @pytest.mark.parametrize("in_dim, att_dim, act, gated",
-                             [(10, 128, 'tanh', False),
-                              (15, 64, 'relu', True),
-                              (8, 256, 'gelu', False)])
+    @pytest.mark.parametrize(
+        "in_dim, att_dim, act, gated",
+        [(10, 128, "tanh", False), (15, 64, "relu", True), (8, 256, "gelu", False)],
+    )
     def test_forward_pass(self, in_dim, att_dim, act, gated):
         sample_input = torch.randn(2, 5, in_dim)  # batch_size, bag_size, in_dim
         pool = AttentionPool(in_dim, att_dim, act, gated)
@@ -33,13 +33,13 @@ class TestAttentionPool:
 
     def test_invalid_act_value(self):
         with pytest.raises(ValueError):
-            AttentionPool(in_dim=10, act='invalid')
+            AttentionPool(in_dim=10, act="invalid")
 
     def test_lazy_initialization(self):
         sample_input = torch.randn(2, 5, 10)
         pool = AttentionPool()  # in_dim is None
         output = pool(sample_input)  # shape: (2, 5, 10)
-        assert output.shape == (2, 10) # infers in_dim from the input
+        assert output.shape == (2, 10)  # infers in_dim from the input
 
     def test_mask_all_zeros(self):
         in_dim = 10

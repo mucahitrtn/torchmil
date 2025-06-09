@@ -1,25 +1,34 @@
 import torch
 import numpy as np
 
+
 class LazyLinear(torch.nn.Module):
     """
     Lazy Linear layer. Extends `torch.nn.Linear` with lazy initialization.
     """
-    def __init__(self, in_features=None, out_features=512, bias=True, device=None, dtype=None):
+
+    def __init__(
+        self, in_features=None, out_features=512, bias=True, device=None, dtype=None
+    ):
         super().__init__()
 
         if in_features is not None:
-            self.module = torch.nn.Linear(in_features, out_features, bias=bias, device=device, dtype=dtype)
+            self.module = torch.nn.Linear(
+                in_features, out_features, bias=bias, device=device, dtype=dtype
+            )
         else:
-            self.module = torch.nn.LazyLinear(out_features, bias=bias, device=device, dtype=dtype)
+            self.module = torch.nn.LazyLinear(
+                out_features, bias=bias, device=device, dtype=dtype
+            )
 
     def forward(self, x):
         return self.module(x)
 
+
 def masked_softmax(
-    X : torch.Tensor,
-    mask : torch.Tensor = None,
-    ) -> torch.Tensor:
+    X: torch.Tensor,
+    mask: torch.Tensor = None,
+) -> torch.Tensor:
     """
     Compute masked softmax along the second dimension.
 
@@ -44,14 +53,16 @@ def masked_softmax(
     # softmax_X = exp_X_masked / (sum_exp_X_masked + 1e-8)
     # return softmax_X
 
-    X_masked = X.masked_fill(mask == 0, -float('inf'))
+    X_masked = X.masked_fill(mask == 0, -float("inf"))
 
     return torch.nn.functional.softmax(X_masked, dim=1)
+
 
 class MaskedSoftmax(torch.nn.Module):
     """
     Compute masked softmax along the second dimension.
     """
+
     def __init__(self):
         super().__init__()
 
@@ -68,10 +79,8 @@ class MaskedSoftmax(torch.nn.Module):
         """
         return masked_softmax(X, mask)
 
-def get_feat_dim(
-        feat_ext : torch.nn.Module,
-        input_shape : tuple[int, ...]
-    ) -> int:
+
+def get_feat_dim(feat_ext: torch.nn.Module, input_shape: tuple[int, ...]) -> int:
     """
     Get feature dimension of a feature extractor.
 
@@ -96,7 +105,7 @@ class SinusoidalPositionalEncodingND(torch.nn.Module):
         super(SinusoidalPositionalEncodingND, self).__init__()
         self.n_dim = n_dim
         self.org_channels = channels
-        channels = int(np.ceil(channels / (2*n_dim)) * 2)
+        channels = int(np.ceil(channels / (2 * n_dim)) * 2)
         inv_freq = 1.0 / (10000 ** (torch.arange(0, channels, 2).float() / channels))
         self.register_buffer("inv_freq", inv_freq)
         self.dtype_override = dtype_override
@@ -132,14 +141,19 @@ class SinusoidalPositionalEncodingND(torch.nn.Module):
         )
 
         for i in range(self.n_dim):
-            pos = torch.arange(shape[i+1], device=tensor.device, dtype=self.inv_freq.dtype)
+            pos = torch.arange(
+                shape[i + 1], device=tensor.device, dtype=self.inv_freq.dtype
+            )
             sin_inp = torch.einsum("i,j->ij", pos, self.inv_freq)
             emb_i = self._get_embedding(sin_inp)
-            for _ in range(self.n_dim-i-1):
+            for _ in range(self.n_dim - i - 1):
                 emb_i = emb_i.unsqueeze(1)
-            emb[..., i*self.channels : (i+1)*self.channels] = emb_i
+            emb[..., i * self.channels : (i + 1) * self.channels] = emb_i
 
-        return emb[None, ..., :orig_ch].repeat(shape[0], *(1 for _ in range(self.n_dim)), 1)
+        return emb[None, ..., :orig_ch].repeat(
+            shape[0], *(1 for _ in range(self.n_dim)), 1
+        )
+
 
 def log_sum_exp(x):
     """
@@ -153,6 +167,7 @@ def log_sum_exp(x):
     """
     max_score, _ = x.max(1)
     return max_score + torch.log(torch.sum(torch.exp(x - max_score[:, None]), 1))
+
 
 def delta(y, labels, alpha=None):
     """
@@ -176,6 +191,7 @@ def delta(y, labels, alpha=None):
         delta = alpha * delta
     return delta
 
+
 def detect_large(x, k, tau, thresh):
     top, _ = x.topk(k + 1, 1)
     # switch to hard top-k if (k+1)-largest element is much smaller than k-largest element
@@ -183,17 +199,14 @@ def detect_large(x, k, tau, thresh):
     smooth = hard.eq(0)
     return smooth, hard
 
+
 class SmoothTop1SVM(torch.nn.Module):
     """
     Smooth Top-1 SVM loss, as described in [Smooth Loss Functions for Deep Top-k Classification](https://arxiv.org/abs/1802.07595).
     Implementation adapted from [the original code](https://github.com/oval-group/smooth-topk).
     """
-    def __init__(
-        self,
-        n_classes : int,
-        alpha : float = 1.0,
-        tau : float = 1.0
-    ) -> None:
+
+    def __init__(self, n_classes: int, alpha: float = 1.0, tau: float = 1.0) -> None:
         """
         Arguments:
             n_classes: Number of classes.
@@ -208,11 +221,7 @@ class SmoothTop1SVM(torch.nn.Module):
         self.thresh = 1e3
         self.labels = torch.from_numpy(np.arange(n_classes))
 
-    def forward(
-        self,
-        x : torch.Tensor,
-        y : torch.Tensor
-    ) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
         """
         Forward pass.
 

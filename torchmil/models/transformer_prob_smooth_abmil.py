@@ -2,7 +2,7 @@ import torch
 from torch import Tensor
 
 from torchmil.models.mil_model import MILModel
-from torchmil.nn import ProbSmoothAttentionPool,TransformerEncoder
+from torchmil.nn import ProbSmoothAttentionPool, TransformerEncoder
 from torchmil.nn.utils import get_feat_dim, LazyLinear
 
 
@@ -57,16 +57,16 @@ class TransformerProbSmoothABMIL(MILModel):
         self,
         in_shape: tuple = None,
         pool_att_dim: int = 128,
-        covar_mode: str = 'diag',
+        covar_mode: str = "diag",
         n_samples_train: int = 1000,
         n_samples_test: int = 5000,
         feat_ext: torch.nn.Module = torch.nn.Identity(),
-        transf_att_dim : int = 512,
-        transf_n_layers : int = 1,
-        transf_n_heads : int = 8,
-        transf_use_mlp : bool = True,
-        transf_add_self : bool = True,
-        transf_dropout : float = 0.0,
+        transf_att_dim: int = 512,
+        transf_n_layers: int = 1,
+        transf_n_heads: int = 8,
+        transf_use_mlp: bool = True,
+        transf_add_self: bool = True,
+        transf_dropout: float = 0.0,
         criterion: torch.nn.Module = torch.nn.BCEWithLogitsLoss(),
     ) -> None:
         """
@@ -102,7 +102,7 @@ class TransformerProbSmoothABMIL(MILModel):
             n_heads=transf_n_heads,
             use_mlp=transf_use_mlp,
             add_self=transf_add_self,
-            dropout=transf_dropout
+            dropout=transf_dropout,
         )
 
         self.pool = ProbSmoothAttentionPool(
@@ -110,7 +110,7 @@ class TransformerProbSmoothABMIL(MILModel):
             att_dim=pool_att_dim,
             covar_mode=covar_mode,
             n_samples_train=n_samples_train,
-            n_samples_test=n_samples_test
+            n_samples_test=n_samples_test,
         )
         self.classifier = LazyLinear(feat_dim, 1)
 
@@ -121,7 +121,7 @@ class TransformerProbSmoothABMIL(MILModel):
         mask: Tensor = None,
         return_att: bool = False,
         return_samples: bool = False,
-        return_kl_div: bool = False
+        return_kl_div: bool = False,
     ) -> tuple[Tensor, Tensor, Tensor]:
         """
         Forward pass.
@@ -145,7 +145,8 @@ class TransformerProbSmoothABMIL(MILModel):
         X = self.transformer_encoder(X, mask)  # (batch_size, bag_size, feat_dim)
 
         out_pool = self.pool(
-            X, adj, mask, return_att_samples=return_att, return_kl_div=return_kl_div)
+            X, adj, mask, return_att_samples=return_att, return_kl_div=return_kl_div
+        )
 
         if return_kl_div:
             if return_att:
@@ -179,11 +180,7 @@ class TransformerProbSmoothABMIL(MILModel):
                 return Y_pred
 
     def compute_loss(
-        self,
-        Y: Tensor,
-        X: Tensor,
-        adj: Tensor,
-        mask: Tensor = None
+        self, Y: Tensor, X: Tensor, adj: Tensor, mask: Tensor = None
     ) -> tuple[Tensor, dict]:
         """
         Compute loss given true bag labels.
@@ -199,21 +196,23 @@ class TransformerProbSmoothABMIL(MILModel):
         """
 
         Y_pred, kl_div = self.forward(
-            X, adj, mask, return_att=False, return_samples=True, return_kl_div=True)  # (batch_size, n_samples)
+            X, adj, mask, return_att=False, return_samples=True, return_kl_div=True
+        )  # (batch_size, n_samples)
         Y_pred_mean = Y_pred.mean(dim=-1)  # (batch_size,)
 
         Y = Y.unsqueeze(-1).expand(-1, Y_pred.shape[-1])
         crit_loss = self.criterion(Y_pred.float(), Y.float())
         crit_name = self.criterion.__class__.__name__
 
-        return Y_pred_mean, {crit_name: crit_loss, 'KLDiv': kl_div}
+        return Y_pred_mean, {crit_name: crit_loss, "KLDiv": kl_div}
 
-    def predict(self,
+    def predict(
+        self,
         X: Tensor,
         adj: Tensor,
         mask: Tensor = None,
         return_inst_pred: bool = True,
-        return_samples: bool = False
+        return_samples: bool = False,
     ) -> tuple[Tensor, Tensor]:
         """
         Predict bag and (optionally) instance labels.
@@ -228,4 +227,6 @@ class TransformerProbSmoothABMIL(MILModel):
             Y_pred: Bag label logits of shape `(batch_size,)`.
             y_inst_pred: Only returned when `return_inst_pred=True`. Attention values (before normalization) of shape `(batch_size, bag_size)` if `return_samples=False`, else `(batch_size, bag_size, n_samples)`.
         """
-        return self.forward(X, adj, mask, return_att=return_inst_pred, return_samples=return_samples)
+        return self.forward(
+            X, adj, mask, return_att=return_inst_pred, return_samples=return_samples
+        )

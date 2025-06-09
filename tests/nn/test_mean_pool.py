@@ -2,9 +2,11 @@ import torch
 import pytest
 from torchmil.nn import MeanPool
 
+
 @pytest.fixture
 def meanpool_instance():
     return MeanPool()
+
 
 def test_meanpool_no_mask(meanpool_instance):
     batch_size = 2
@@ -16,6 +18,7 @@ def test_meanpool_no_mask(meanpool_instance):
     for i in range(batch_size):
         for j in range(in_dim):
             assert torch.allclose(z[i, j], torch.mean(X[i, :, j]))
+
 
 def test_meanpool_with_mask(meanpool_instance):
     batch_size = 2
@@ -31,7 +34,8 @@ def test_meanpool_with_mask(meanpool_instance):
             if len(masked_values) > 0:
                 assert torch.allclose(z[i, j], torch.mean(masked_values))
             else:
-                assert torch.allclose(z[i,j], torch.tensor(0.0))
+                assert torch.allclose(z[i, j], torch.tensor(0.0))
+
 
 def test_meanpool_empty_mask(meanpool_instance):
     batch_size = 2
@@ -42,6 +46,7 @@ def test_meanpool_empty_mask(meanpool_instance):
     z = meanpool_instance(X, mask)
     assert z.shape == (batch_size, in_dim)
     assert torch.allclose(z, torch.zeros(batch_size, in_dim))
+
 
 def test_meanpool_all_mask(meanpool_instance):
     batch_size = 2

@@ -3,12 +3,14 @@ from typing import Any
 import torch
 from tensordict import TensorDict
 
+
 def get_args_names(fn):
-    args_names = fn.__code__.co_varnames[:fn.__code__.co_argcount]
+    args_names = fn.__code__.co_varnames[: fn.__code__.co_argcount]
     # remove self from arg_names if exists
-    if 'self' in args_names:
+    if "self" in args_names:
         args_names = args_names[1:]
     return args_names
+
 
 class MILModel(torch.nn.Module):
     r"""
@@ -21,21 +23,13 @@ class MILModel(torch.nn.Module):
     - `predict`: Predict bag and (optionally) instance labels. Accepts bag features (and optionally other arguments) and returns label predictions (and optionally instance label predictions).
     """
 
-    def __init__(
-            self,
-            *args,
-            **kwargs
-        ):
+    def __init__(self, *args, **kwargs):
         """
         Initializes the module.
         """
         super(MILModel, self).__init__()
 
-    def forward(
-            self,
-            X : torch.Tensor,
-            *args, **kwargs
-        ) -> torch.Tensor:
+    def forward(self, X: torch.Tensor, *args, **kwargs) -> torch.Tensor:
         """
         Arguments:
             X: Bag features of shape `(batch_size, bag_size, ...)`.
@@ -46,11 +40,8 @@ class MILModel(torch.nn.Module):
         raise NotImplementedError
 
     def compute_loss(
-            self,
-            Y: torch.Tensor,
-            X: torch.Tensor,
-            *args, **kwargs
-        ) -> tuple[torch.Tensor, dict]:
+        self, Y: torch.Tensor, X: torch.Tensor, *args, **kwargs
+    ) -> tuple[torch.Tensor, dict]:
         """
         Arguments:
             Y: Bag labels of shape `(batch_size,)`.
@@ -65,11 +56,8 @@ class MILModel(torch.nn.Module):
         return out, {}
 
     def predict(
-            self,
-            X: torch.Tensor,
-            return_inst_pred: bool = False,
-            *args, **kwargs
-        ) -> tuple[torch.Tensor, torch.Tensor]:
+        self, X: torch.Tensor, return_inst_pred: bool = False, *args, **kwargs
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Arguments:
             X: Bag features of shape `(batch_size, bag_size, ...)`.
@@ -79,6 +67,7 @@ class MILModel(torch.nn.Module):
             y_inst_pred: If `return_inst_pred=True`, returns instance labels predictions of shape `(batch_size, bag_size)`.
         """
         raise NotImplementedError
+
 
 class MILModelWrapper(MILModel):
     """
@@ -96,22 +85,17 @@ class MILModelWrapper(MILModel):
     Y_pred_B = model_B_w(bag) # calls model_B.forward(X=bag['X'])
     ```
     """
-    def __init__(
-        self,
-        model : MILModel
-    ) -> None:
+
+    def __init__(self, model: MILModel) -> None:
         super().__init__()
         self.model = model
+
     """
     Arguments:
         model: MILModel instance to wrap.
     """
 
-    def forward(
-        self,
-        bag : TensorDict,
-        **kwargs
-    ) -> Any:
+    def forward(self, bag: TensorDict, **kwargs) -> Any:
         """
         Arguments:
             bag: Dictionary containing one key for each argument accepted by the model's `forward` method.
@@ -123,11 +107,7 @@ class MILModelWrapper(MILModel):
         arg_dict = {k: bag[k] for k in bag.keys() if k in arg_names}
         return self.model(**arg_dict, **kwargs)
 
-    def compute_loss(
-        self,
-        bag : TensorDict,
-        **kwargs
-    ) -> tuple[Any, dict]:
+    def compute_loss(self, bag: TensorDict, **kwargs) -> tuple[Any, dict]:
         """
         Arguments:
             bag: Dictionary containing one key for each argument accepted by the model's `forward` method.
@@ -139,11 +119,7 @@ class MILModelWrapper(MILModel):
         arg_dict = {k: bag[k] for k in bag.keys() if k in arg_names}
         return self.model.compute_loss(**arg_dict, **kwargs)
 
-    def predict(
-        self,
-        bag : TensorDict,
-        **kwargs
-    ) -> Any:
+    def predict(self, bag: TensorDict, **kwargs) -> Any:
         """
         Arguments:
             bag: Dictionary containing one key for each argument accepted by the model's `forward` method.

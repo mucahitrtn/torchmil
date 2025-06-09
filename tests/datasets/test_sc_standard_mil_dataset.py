@@ -32,7 +32,9 @@ def test_negative_bag_structure():
 
 
 def test_poisoning_in_test_mode():
-    dataset = SCStandardMILDataset(D=2, num_bags=5, B=2, pos_class_prob=1.0, train=False)
+    dataset = SCStandardMILDataset(
+        D=2, num_bags=5, B=2, pos_class_prob=1.0, train=False
+    )
     bag = dataset[0]
     assert -1 in bag["y_inst"]  # Poison instance should be labeled -1
 

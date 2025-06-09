@@ -23,15 +23,15 @@ class NystromTransformerLayer(Layer):
 
     def __init__(
         self,
-        in_dim : int,
-        out_dim : int = None,
-        att_dim : int = 512,
-        n_heads : int = 4,
-        learn_weights : bool = True,
-        n_landmarks : int = 256,
-        pinv_iterations : int = 6,
-        dropout : float = 0.0,
-        use_mlp : bool = False
+        in_dim: int,
+        out_dim: int = None,
+        att_dim: int = 512,
+        n_heads: int = 4,
+        learn_weights: bool = True,
+        n_landmarks: int = 256,
+        pinv_iterations: int = 6,
+        dropout: float = 0.0,
+        use_mlp: bool = False,
     ) -> None:
         """
         Arguments:
@@ -45,24 +45,27 @@ class NystromTransformerLayer(Layer):
             use_mlp: Whether to use a MLP after the attention layer.
         """
         att_module = NystromAttention(
-            in_dim=in_dim, out_dim=att_dim, att_dim=att_dim, n_heads=n_heads, learn_weights=learn_weights, n_landmarks=n_landmarks, pinv_iterations=pinv_iterations
+            in_dim=in_dim,
+            out_dim=att_dim,
+            att_dim=att_dim,
+            n_heads=n_heads,
+            learn_weights=learn_weights,
+            n_landmarks=n_landmarks,
+            pinv_iterations=pinv_iterations,
         )
 
         super(NystromTransformerLayer, self).__init__(
-            in_dim=in_dim, 
+            in_dim=in_dim,
             att_in_dim=in_dim,
-            out_dim=out_dim, 
-            att_out_dim=att_dim, 
-            att_module=att_module, 
-            use_mlp=use_mlp, 
-            dropout=dropout
+            out_dim=out_dim,
+            att_out_dim=att_dim,
+            att_module=att_module,
+            use_mlp=use_mlp,
+            dropout=dropout,
         )
 
     def forward(
-            self,
-            X : torch.Tensor,
-            mask : torch.Tensor = None,
-            return_att : bool = False
+        self, X: torch.Tensor, mask: torch.Tensor = None, return_att: bool = False
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Forward pass.
@@ -101,16 +104,16 @@ class NystromTransformerEncoder(Encoder):
 
     def __init__(
         self,
-        in_dim : int,
-        out_dim : int = None,
-        att_dim : int = 512,
-        n_heads : int = 8,
-        n_layers : int = 4,
-        n_landmarks : int = 256,
-        pinv_iterations : int = 6,
-        dropout : float = 0.0,
-        use_mlp : bool = False,
-        add_self : bool = False
+        in_dim: int,
+        out_dim: int = None,
+        att_dim: int = 512,
+        n_heads: int = 8,
+        n_layers: int = 4,
+        n_landmarks: int = 256,
+        pinv_iterations: int = 6,
+        dropout: float = 0.0,
+        use_mlp: bool = False,
+        add_self: bool = False,
     ) -> None:
         """
         Arguments:
@@ -129,24 +132,28 @@ class NystromTransformerEncoder(Encoder):
         if out_dim is None:
             out_dim = in_dim
 
-        layers = torch.nn.ModuleList([
-            NystromTransformerLayer(
-                in_dim=in_dim if i == 0 else att_dim,
-                out_dim=out_dim if i == n_layers - 1 else att_dim,
-                att_dim=att_dim, 
-                n_heads=n_heads, n_landmarks=n_landmarks, pinv_iterations=pinv_iterations, dropout=dropout, use_mlp=use_mlp
-            ) for i in range(n_layers)
-        ])
+        layers = torch.nn.ModuleList(
+            [
+                NystromTransformerLayer(
+                    in_dim=in_dim if i == 0 else att_dim,
+                    out_dim=out_dim if i == n_layers - 1 else att_dim,
+                    att_dim=att_dim,
+                    n_heads=n_heads,
+                    n_landmarks=n_landmarks,
+                    pinv_iterations=pinv_iterations,
+                    dropout=dropout,
+                    use_mlp=use_mlp,
+                )
+                for i in range(n_layers)
+            ]
+        )
 
         super(NystromTransformerEncoder, self).__init__(layers, add_self=add_self)
 
         self.norm = torch.nn.LayerNorm(out_dim)
 
     def forward(
-        self,
-        X: torch.Tensor,
-        mask: torch.Tensor = None,
-        return_att: bool = False
+        self, X: torch.Tensor, mask: torch.Tensor = None, return_att: bool = False
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Forward method.

@@ -3,6 +3,7 @@ import numpy as np
 
 from torchmil.utils import degree, add_self_loops, normalize_adj, build_adj
 
+
 @pytest.fixture
 def sample_graph():
     """
@@ -44,8 +45,9 @@ def test_degree(sample_graph):
     empty_index = np.empty((2, 0), dtype=np.longlong)
     expected_empty_degree = np.zeros(0)
     calculated_empty_degree = degree(empty_index, n_nodes=0)
-    assert np.allclose(calculated_empty_degree, expected_empty_degree), "Degree calculation with empty graph is incorrect"
-
+    assert np.allclose(
+        calculated_empty_degree, expected_empty_degree
+    ), "Degree calculation with empty graph is incorrect"
 
 
 def test_add_self_loops(sample_graph):
@@ -97,7 +99,6 @@ def test_add_self_loops(sample_graph):
     ), "Self-loops with empty graph: edge weights incorrect"
 
 
-
 def test_normalize_adj(sample_graph):
     """
     Test cases for the normalize_adj function.
@@ -130,7 +131,6 @@ def test_normalize_adj(sample_graph):
     ), "Normalization with empty graph is incorrect"
 
 
-
 def test_build_adj():
     """
     Test cases for the build_adj function.
@@ -153,8 +153,12 @@ def test_build_adj():
             np.exp(-np.linalg.norm(feat1[2] - feat1[1]) / 2),
         ]
     )
-    assert np.array_equal(edge_index1, expected_edge_index1), "Test case 1: edge index incorrect"
-    assert np.allclose(edge_weight1, expected_edge_weight1), "Test case 1: edge weights incorrect"
+    assert np.array_equal(
+        edge_index1, expected_edge_index1
+    ), "Test case 1: edge index incorrect"
+    assert np.allclose(
+        edge_weight1, expected_edge_weight1
+    ), "Test case 1: edge weights incorrect"
 
     # Test case 2: Without features
     coords2 = np.array([[0, 0], [1, 0], [0, 1]], dtype=np.float32)
@@ -164,8 +168,12 @@ def test_build_adj():
         [[0, 0, 1, 1, 2, 2], [1, 2, 0, 2, 0, 1]], dtype=np.longlong
     )
     expected_edge_weight2 = np.array([1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
-    assert np.array_equal(edge_index2, expected_edge_index2), "Test case 2: edge index incorrect"
-    assert np.allclose(edge_weight2, expected_edge_weight2), "Test case 2: edge weights incorrect"
+    assert np.array_equal(
+        edge_index2, expected_edge_index2
+    ), "Test case 2: edge index incorrect"
+    assert np.allclose(
+        edge_weight2, expected_edge_weight2
+    ), "Test case 2: edge weights incorrect"
 
     # Test case 3: With self-loops
     coords3 = np.array([[0, 0], [1, 0], [0, 1]], dtype=np.float32)
@@ -193,8 +201,12 @@ def test_build_adj():
             np.exp(-np.linalg.norm(feat3[2] - feat3[1]) / 2),
         ]
     )
-    assert np.array_equal(edge_index3, expected_edge_index3), "Test case 3: edge index incorrect"
-    assert np.allclose(edge_weight3, expected_edge_weight3), "Test case 3: edge weights incorrect"
+    assert np.array_equal(
+        edge_index3, expected_edge_index3
+    ), "Test case 3: edge index incorrect"
+    assert np.allclose(
+        edge_weight3, expected_edge_weight3
+    ), "Test case 3: edge weights incorrect"
 
     # Test case 4: No neighbors within distance threshold
     coords4 = np.array([[0, 0], [10, 0], [0, 10]], dtype=np.float32)

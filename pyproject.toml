@@ -1,69 +1,74 @@
 [build-system]
-requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
+requires = ["setuptools", "wheel"]
 
 [project]
-name = "torchmil"
-version = "0.1.0"
 authors = [
-    { name="Francisco Miguel Castro-Macías", email="francastro8b@gmail.com" },
-]
-description = "Deep Multiple Instance Learning library for Pytorch"
-readme = "README.md"
-requires-python = ">=3.10"
-license = "Apache-2.0"
-keywords=[
-    "deep-learning",
-    "pytorch",
-    "multiple-instance-learning",
-    "multi-instance-learning",
-    "mil",
+  {email = "francastro8b@gmail.com", name = "Francisco Miguel Castro-Macías"}
 ]
 classifiers = [
-    "Intended Audience :: Developers",
-    "Intended Audience :: Information Technology",
-    "Intended Audience :: Science/Research",
-    "Natural Language :: English",
-    "Programming Language :: Python :: 3",
-    "Topic :: Scientific/Engineering :: Artificial Intelligence",
-    "Topic :: Scientific/Engineering :: Information Analysis",
-    "Topic :: Scientific/Engineering :: Mathematics",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Information Technology",
+  "Intended Audience :: Science/Research",
+  "Natural Language :: English",
+  "Programming Language :: Python :: 3",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+  "Topic :: Scientific/Engineering :: Information Analysis",
+  "Topic :: Scientific/Engineering :: Mathematics"
 ]
 dependencies = [
-    "torch",
-    "tensordict",
-    "torchmetrics",
-    "einops",
-    "scipy",
-    "tqdm",
-    "numpy",
+  "torch",
+  "tensordict",
+  "torchmetrics",
+  "einops",
+  "scipy",
+  "tqdm",
+  "numpy"
 ]
+description = "Deep Multiple Instance Learning library for Pytorch"
+keywords = [
+  "deep-learning",
+  "pytorch",
+  "multiple-instance-learning",
+  "multi-instance-learning",
+  "mil"
+]
+license = "Apache-2.0"
+name = "torchmil"
+readme = "README.md"
+requires-python = ">=3.10"
+version = "0.1.0"
 
 [project.optional-dependencies]
+dev = [
+  "pre-commit",
+  "ruff",
+  "toml-sort"
+]
 docs = [
-    "mkdocs",
-    "mkdocs-material",
-    "mknotebooks",
-    "mkdocstrings",
-    "mkdocstrings-python",
-    "mkdocs-exclude",
+  "mkdocs",
+  "mkdocs-material",
+  "mknotebooks",
+  "mkdocstrings",
+  "mkdocstrings-python",
+  "mkdocs-exclude"
 ]
 tests = [
-    "torchmil",
-    "pytest",
-    "pytest-cov",
-    "pandas",
+  "torchmil",
+  "pytest",
+  "pytest-cov",
+  "pandas"
 ]
 
 [project.urls]
-homepage = "https://franblueee.github.io/torchmil/"
 documentation = "https://franblueee.github.io/torchmil/api/"
-repository = "https://github.com/Franblueee/torchmil"
+homepage = "https://franblueee.github.io/torchmil/"
 issues = "https://github.com/Franblueee/torchmil/issues"
+repository = "https://github.com/Franblueee/torchmil"
 
 [tool.flake8]
-max-line-length = 100
 exclude = [".ipynb", "build", ".pytest_cache"]
+max-line-length = 100
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

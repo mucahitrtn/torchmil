@@ -8,6 +8,7 @@ from torchmil.nn import SmAttentionPool, SmTransformerEncoder
 
 from torchmil.nn.utils import get_feat_dim
 
+
 class SmTransformerABMIL(MILModel):
     r"""
     Transformer Attention-based Multiple Instance Learning model with the $\texttt{Sm}$ operator.
@@ -31,30 +32,31 @@ class SmTransformerABMIL(MILModel):
 
     See [SmAttentionPool](../nn/attention/sm_attention_pool.md) for more details on the attention-based pooling, and [SmTransformerEncoder](../nn/transformers/sm_transformer.md) for more details on the transformer encoder.
     """
+
     def __init__(
         self,
-        in_shape : tuple,
-        pool_att_dim : int = 128,
-        pool_act : str = 'tanh',
-        pool_sm_mode : str = 'approx',
-        pool_sm_alpha : Union[float, str] = 'trainable',
-        pool_sm_layers : int = 1,
-        pool_sm_steps : int = 10,
-        pool_sm_pre : bool = False,
-        pool_sm_post : bool = False,
-        pool_sm_spectral_norm : bool = False,
+        in_shape: tuple,
+        pool_att_dim: int = 128,
+        pool_act: str = "tanh",
+        pool_sm_mode: str = "approx",
+        pool_sm_alpha: Union[float, str] = "trainable",
+        pool_sm_layers: int = 1,
+        pool_sm_steps: int = 10,
+        pool_sm_pre: bool = False,
+        pool_sm_post: bool = False,
+        pool_sm_spectral_norm: bool = False,
         feat_ext: torch.nn.Module = torch.nn.Identity(),
-        transf_att_dim : int = 512,
-        transf_n_layers : int = 1,
-        transf_n_heads : int = 4,
-        transf_use_mlp : bool = True,
-        transf_add_self : bool = True,
-        transf_dropout : float = 0.0,
+        transf_att_dim: int = 512,
+        transf_n_layers: int = 1,
+        transf_n_heads: int = 4,
+        transf_use_mlp: bool = True,
+        transf_add_self: bool = True,
+        transf_dropout: float = 0.0,
         transf_sm_alpha: float = "trainable",
         transf_sm_mode: str = "approx",
         transf_sm_steps: int = 10,
         criterion: torch.nn.Module = torch.nn.BCEWithLogitsLoss(),
-        ) -> None:
+    ) -> None:
         """
         Class constructor.
 
@@ -96,7 +98,7 @@ class SmTransformerABMIL(MILModel):
             dropout=transf_dropout,
             sm_alpha=transf_sm_alpha,
             sm_mode=transf_sm_mode,
-            sm_steps=transf_sm_steps
+            sm_steps=transf_sm_steps,
         )
         self.pool = SmAttentionPool(
             in_dim=feat_dim,
@@ -108,7 +110,7 @@ class SmTransformerABMIL(MILModel):
             sm_steps=pool_sm_steps,
             sm_pre=pool_sm_pre,
             sm_post=pool_sm_post,
-            sm_spectral_norm=pool_sm_spectral_norm
+            sm_spectral_norm=pool_sm_spectral_norm,
         )
         self.last_layer = torch.nn.Linear(feat_dim, 1)
 
@@ -117,7 +119,7 @@ class SmTransformerABMIL(MILModel):
         X: torch.Tensor,
         adj: torch.Tensor,
         mask: torch.Tensor = None,
-        return_att: bool = False
+        return_att: bool = False,
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Forward pass.
@@ -133,18 +135,20 @@ class SmTransformerABMIL(MILModel):
             att: Only returned when `return_att=True`. Attention values (before normalization) of shape (batch_size, bag_size).
         """
 
-        X = self.feat_ext(X) # (batch_size, bag_size, feat_dim)
+        X = self.feat_ext(X)  # (batch_size, bag_size, feat_dim)
 
-        Y = self.transformer_encoder(X, mask=mask, adj=adj) # (batch_size, bag_size, feat_dim)
+        Y = self.transformer_encoder(
+            X, mask=mask, adj=adj
+        )  # (batch_size, bag_size, feat_dim)
 
         out_pool = self.pool(Y, adj=adj, mask=mask, return_att=return_att)
         if return_att:
-            Z, f = out_pool # Z: (batch_size, emb_dim), f: (batch_size, bag_size)
+            Z, f = out_pool  # Z: (batch_size, emb_dim), f: (batch_size, bag_size)
         else:
-            Z = out_pool # (batch_size, emb_dim)
+            Z = out_pool  # (batch_size, emb_dim)
 
-        Y_pred = self.last_layer(Z) # (batch_size, n_samples, 1)
-        Y_pred = Y_pred.squeeze(-1) # (batch_size,)
+        Y_pred = self.last_layer(Z)  # (batch_size, n_samples, 1)
+        Y_pred = Y_pred.squeeze(-1)  # (batch_size,)
 
         if return_att:
             return Y_pred, f
@@ -184,7 +188,7 @@ class SmTransformerABMIL(MILModel):
         X: torch.Tensor,
         adj: torch.Tensor,
         mask: torch.Tensor = None,
-        return_inst_pred: bool = True
+        return_inst_pred: bool = True,
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Predict bag and (optionally) instance labels.

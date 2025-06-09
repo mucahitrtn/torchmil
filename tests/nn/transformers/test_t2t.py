@@ -1,7 +1,8 @@
 import torch
 import pytest
 
-from torchmil.nn.transformers import T2TLayer 
+from torchmil.nn.transformers import T2TLayer
+
 
 @pytest.mark.parametrize(
     "batch_size, seq_len, in_dim, att_dim, kernel_size, stride, padding, dilation, n_heads, use_mlp",
@@ -40,10 +41,13 @@ def test_t2t_layer_forward(
 
     # Calculate expected output sequence length
     s = int(seq_len**0.5)  # Original feature map size (assuming square input)
-    new_s = (s + 2 * padding[0] - dilation[0] * (kernel_size[0] - 1) - 1) // stride[0] + 1
+    new_s = (s + 2 * padding[0] - dilation[0] * (kernel_size[0] - 1) - 1) // stride[
+        0
+    ] + 1
     expected_out_dim = att_dim * kernel_size[0] * kernel_size[1]
     expected_output_shape = (batch_size, new_s * new_s, expected_out_dim)
     assert output.shape == expected_output_shape
+
 
 @pytest.mark.parametrize(
     "batch_size, seq_len, in_dim, att_dim, kernel_size, stride, padding, dilation, n_heads, use_mlp, out_dim",
@@ -84,6 +88,8 @@ def test_t2t_layer_forward_with_out_dim(
 
     # Calculate expected output sequence length
     s = int(seq_len**0.5)  # Original feature map size (assuming square input)
-    new_s = (s + 2 * padding[0] - dilation[0] * (kernel_size[0] - 1) - 1) // stride[0] + 1
+    new_s = (s + 2 * padding[0] - dilation[0] * (kernel_size[0] - 1) - 1) // stride[
+        0
+    ] + 1
     expected_output_shape = (batch_size, new_s * new_s, out_dim)
     assert output.shape == expected_output_shape

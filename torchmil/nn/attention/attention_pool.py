@@ -31,10 +31,10 @@ class AttentionPool(torch.nn.Module):
 
     def __init__(
         self,
-        in_dim : int = None,
-        att_dim : int = 128,
-        act : str = 'tanh',
-        gated : bool = False
+        in_dim: int = None,
+        att_dim: int = 128,
+        act: str = "tanh",
+        gated: bool = False,
     ) -> None:
         """
         Arguments:
@@ -57,20 +57,19 @@ class AttentionPool(torch.nn.Module):
             self.fc_gated = LazyLinear(in_dim, att_dim)
             self.act_gated = torch.nn.Sigmoid()
 
-        if self.act == 'tanh':
+        if self.act == "tanh":
             self.act_layer = torch.nn.Tanh()
-        elif self.act == 'relu':
+        elif self.act == "relu":
             self.act_layer = torch.nn.ReLU()
-        elif self.act == 'gelu':
+        elif self.act == "gelu":
             self.act_layer = torch.nn.GELU()
         else:
-            raise ValueError(f"[{self.__class__.__name__}] act must be 'tanh', 'relu' or 'gelu'")
+            raise ValueError(
+                f"[{self.__class__.__name__}] act must be 'tanh', 'relu' or 'gelu'"
+            )
 
     def forward(
-        self,
-        X : Tensor,
-        mask : Tensor = None,
-        return_att : bool = False
+        self, X: Tensor, mask: Tensor = None, return_att: bool = False
     ) -> tuple[Tensor, Tensor]:
         """
         Forward pass.
@@ -90,20 +89,20 @@ class AttentionPool(torch.nn.Module):
 
         if mask is None:
             mask = torch.ones(batch_size, bag_size, device=X.device)
-        mask = mask.unsqueeze(dim=-1) # (batch_size, bag_size, 1)
+        mask = mask.unsqueeze(dim=-1)  # (batch_size, bag_size, 1)
 
-        H = self.fc1(X) # (batch_size, bag_size, att_dim)
-        H = self.act_layer(H) # (batch_size, bag_size, att_dim)
+        H = self.fc1(X)  # (batch_size, bag_size, att_dim)
+        H = self.act_layer(H)  # (batch_size, bag_size, att_dim)
 
         if self.gated:
             G = self.fc_gated(X)
             G = self.act_gated(G)
             H = H * G
 
-        f = self.fc2(H) # (batch_size, bag_size, 1)
+        f = self.fc2(H)  # (batch_size, bag_size, 1)
 
-        s = masked_softmax(f, mask) # (batch_size, bag_size, 1)
-        z = torch.bmm(X.transpose(1,2), s).squeeze(dim=-1) # (batch_size, in_dim)
+        s = masked_softmax(f, mask)  # (batch_size, bag_size, 1)
+        z = torch.bmm(X.transpose(1, 2), s).squeeze(dim=-1)  # (batch_size, in_dim)
 
         if return_att:
             return z, f.squeeze(dim=-1)

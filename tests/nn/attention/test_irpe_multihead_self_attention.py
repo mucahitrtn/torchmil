@@ -1,7 +1,9 @@
 import pytest
 import torch
 
-from torchmil.nn.attention.irpe_multihead_self_attention import iRPEMultiheadSelfAttention
+from torchmil.nn.attention.irpe_multihead_self_attention import (
+    iRPEMultiheadSelfAttention,
+)
 
 
 class TestiRPEMultiheadSelfAttention:
@@ -11,8 +13,34 @@ class TestiRPEMultiheadSelfAttention:
             (10, 20, 32, 2, 0.1, True, 2.0, "product", "contextual", True, 1, "k"),
             (16, 16, 64, 4, 0.0, False, 1.5, "cross", "bias", False, 0, "q"),
             (8, None, 128, 8, 0.2, True, 1.0, "product", "contextual", True, 1, "v"),
-            (10, 5, 32, 2, 0.1, True, 2.0, "cross", "bias", False, 1, "k"),  # out_dim < att_dim
-            (10, 20, 32, 2, 0.1, False, 1.5, "product", "contextual", True, 0, "q"), # learn_weights = False
+            (
+                10,
+                5,
+                32,
+                2,
+                0.1,
+                True,
+                2.0,
+                "cross",
+                "bias",
+                False,
+                1,
+                "k",
+            ),  # out_dim < att_dim
+            (
+                10,
+                20,
+                32,
+                2,
+                0.1,
+                False,
+                1.5,
+                "product",
+                "contextual",
+                True,
+                0,
+                "q",
+            ),  # learn_weights = False
         ],
     )
     def test_forward_pass(
@@ -79,9 +107,6 @@ class TestiRPEMultiheadSelfAttention:
         in_dim = 10
         att_dim = 32
         n_heads = 3
-        batch_size = 2
-        seq_len = 5
-        x = torch.randn(batch_size, seq_len, in_dim)
         with pytest.raises(AssertionError):
             iRPEMultiheadSelfAttention(in_dim=in_dim, att_dim=att_dim, n_heads=n_heads)
 
@@ -93,7 +118,9 @@ class TestiRPEMultiheadSelfAttention:
         batch_size = 2
         seq_len = 5
         x = torch.randn(batch_size, seq_len, in_dim)
-        layer = iRPEMultiheadSelfAttention(in_dim, out_dim, att_dim, n_heads, learn_weights=False)
+        layer = iRPEMultiheadSelfAttention(
+            in_dim, out_dim, att_dim, n_heads, learn_weights=False
+        )
         output = layer(x)
         assert output.shape == (batch_size, seq_len, out_dim)
 
@@ -105,7 +132,9 @@ class TestiRPEMultiheadSelfAttention:
         batch_size = 2
         seq_len = 25  # height = 5, width = 5
         x = torch.randn(batch_size, seq_len, in_dim)
-        layer = iRPEMultiheadSelfAttention(in_dim, out_dim, att_dim, n_heads, rpe_skip=0)
+        layer = iRPEMultiheadSelfAttention(
+            in_dim, out_dim, att_dim, n_heads, rpe_skip=0
+        )
         output = layer(x, height=5, width=5)
         assert output.shape == (batch_size, seq_len, out_dim)
 
@@ -117,7 +146,9 @@ class TestiRPEMultiheadSelfAttention:
         batch_size = 2
         seq_len = 5
         x = torch.randn(batch_size, seq_len, in_dim)
-        for rpe_on in ['q', 'k', 'v']:
-            layer = iRPEMultiheadSelfAttention(in_dim, out_dim, att_dim, n_heads, rpe_on=rpe_on)
+        for rpe_on in ["q", "k", "v"]:
+            layer = iRPEMultiheadSelfAttention(
+                in_dim, out_dim, att_dim, n_heads, rpe_on=rpe_on
+            )
             output = layer(x)
             assert output.shape == (batch_size, seq_len, out_dim)

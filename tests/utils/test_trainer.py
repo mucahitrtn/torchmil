@@ -2,7 +2,7 @@ import torch
 import pytest
 from torch.utils.data import DataLoader, Dataset
 from torchmil.models import ABMIL
-from torchmil.utils import Trainer  
+from torchmil.utils import Trainer
 from tensordict import TensorDict
 
 
@@ -19,14 +19,18 @@ class DummyMILData(Dataset):
     def __getitem__(self, idx):
         bag = torch.randn(self.bag_size, self.n_features)
         label = torch.randint(0, 2, (1,), dtype=torch.float32)
-        return {'X': bag, 'Y': label.squeeze()}
+        return {"X": bag, "Y": label.squeeze()}
+
 
 # Custom collate_fn for MIL batching
 def collate_fn(batch):
-    return TensorDict({
-        'X': [item['X'] for item in batch],
-        'Y': torch.stack([item['Y'] for item in batch])
-    })
+    return TensorDict(
+        {
+            "X": [item["X"] for item in batch],
+            "Y": torch.stack([item["Y"] for item in batch]),
+        }
+    )
+
 
 @pytest.fixture
 def dummy_dataloader():
@@ -44,7 +48,7 @@ def test_trainer_runs(dummy_dataloader):
         device="cpu",
         verbose=False,
         disable_pbar=True,
-        early_stop_patience=2
+        early_stop_patience=2,
     )
 
     # Just 1 epoch for a sanity check
@@ -52,7 +56,7 @@ def test_trainer_runs(dummy_dataloader):
         max_epochs=1,
         train_dataloader=dummy_dataloader,
         val_dataloader=dummy_dataloader,
-        test_dataloader=dummy_dataloader
+        test_dataloader=dummy_dataloader,
     )
 
     best_model_dict = trainer.get_best_model_state_dict()

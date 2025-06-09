@@ -2,6 +2,7 @@ import numpy as np
 
 from .processed_mil_dataset import ProcessedMILDataset
 
+
 class CTScanDataset(ProcessedMILDataset):
     r"""
     This class represents a dataset of Computed Tomography (CT) scans for Multiple Instance Learning (MIL).
@@ -49,7 +50,6 @@ class CTScanDataset(ProcessedMILDataset):
     where $\mathbf{x}_i \in \mathbb{R}^d$ and $\mathbf{x}_j \in \mathbb{R}^d$ are the features of instances $i$ and $j$, respectively.
     """
 
-
     def __init__(
         self,
         features_path: str,
@@ -59,7 +59,7 @@ class CTScanDataset(ProcessedMILDataset):
         bag_keys: list = ["X", "Y", "y_inst", "adj", "coords"],
         adj_with_dist: bool = False,
         norm_adj: bool = True,
-        load_at_init: bool = True
+        load_at_init: bool = True,
     ) -> None:
         """
         Class constructor.
@@ -86,7 +86,7 @@ class CTScanDataset(ProcessedMILDataset):
             adj_with_dist=adj_with_dist,
             dist_thr=dist_thr,
             norm_adj=norm_adj,
-            load_at_init=load_at_init
+            load_at_init=load_at_init,
         )
 
     def _add_coords(self, bag_dict: dict[str, np.ndarray]) -> dict[str, np.ndarray]:
@@ -99,8 +99,8 @@ class CTScanDataset(ProcessedMILDataset):
         Returns:
             bag_dict: Dictionary containing the features, label, instance labels and coordinates of the bag.
         """
-        bag_size = bag_dict['X'].shape[0]
-        bag_dict['coords'] = np.arange(0, bag_size).reshape(-1, 1)
+        bag_size = bag_dict["X"].shape[0]
+        bag_dict["coords"] = np.arange(0, bag_size).reshape(-1, 1)
 
         return bag_dict
 
@@ -116,14 +116,14 @@ class CTScanDataset(ProcessedMILDataset):
         """
         bag_dict = {}
         if "X" in self.bag_keys:
-            bag_dict['X'] = self._load_features(name)
-        
+            bag_dict["X"] = self._load_features(name)
+
         if "Y" in self.bag_keys:
-            bag_dict['Y'] = self._load_labels(name)
-        
+            bag_dict["Y"] = self._load_labels(name)
+
         if "y_inst" in self.bag_keys:
-            bag_dict['y_inst'] = self._load_inst_labels(name)
-        
+            bag_dict["y_inst"] = self._load_inst_labels(name)
+
         if "coords" in self.bag_keys or "adj" in self.bag_keys:
             bag_dict = self._add_coords(bag_dict)
         return bag_dict

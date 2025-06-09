@@ -1,18 +1,10 @@
 import numpy as np
-import os
 
 from .binary_classification_dataset import BinaryClassificationDataset
 from .wsi_dataset import WSIDataset
 
 from ..utils.common import read_csv, keep_only_existing_files
 
-def keep_only_existing_files(path, names, ext='.npy'):
-    existing_files = []
-    for name in names:
-        file = f'{path}/{name}{ext}'
-        if os.path.isfile(file):
-            existing_files.append(name)
-    return existing_files
 
 class PANDAMILDataset(BinaryClassificationDataset, WSIDataset):
     r"""
@@ -58,16 +50,17 @@ class PANDAMILDataset(BinaryClassificationDataset, WSIDataset):
     ```
     Each `.npy` file corresponds to a single WSI. The `splits.csv` file defines train/test splits for standardized experimentation.
     """
+
     def __init__(
         self,
-        root : str,
-        features : str = 'UNI',
-        partition : str = 'train',
+        root: str,
+        features: str = "UNI",
+        partition: str = "train",
         bag_keys: list = ["X", "Y", "y_inst", "adj", "coords"],
         patch_size: int = 512,
         adj_with_dist: bool = False,
         norm_adj: bool = True,
-        load_at_init: bool = True
+        load_at_init: bool = True,
     ) -> None:
         """
         Arguments:
@@ -80,14 +73,14 @@ class PANDAMILDataset(BinaryClassificationDataset, WSIDataset):
             norm_adj: If True, normalize the adjacency matrix.
             load_at_init: If True, load the bags at initialization. If False, load the bags on demand.
         """
-        features_path = f'{root}/patches_{patch_size}/features/features_{features}/'
-        labels_path = f'{root}/patches_{patch_size}/labels/'
-        patch_labels_path = f'{root}/patches_{patch_size}/patch_labels/'
-        coords_path = f'{root}/patches_{patch_size}/coords/'
+        features_path = f"{root}/patches_{patch_size}/features/features_{features}/"
+        labels_path = f"{root}/patches_{patch_size}/labels/"
+        patch_labels_path = f"{root}/patches_{patch_size}/patch_labels/"
+        coords_path = f"{root}/patches_{patch_size}/coords/"
 
-        splits_file = f'{root}/splits.csv'
+        splits_file = f"{root}/splits.csv"
         dict_list = read_csv(splits_file)
-        wsi_names = [ row['bag_name'] for row in dict_list if row['split'] == partition]
+        wsi_names = [row["bag_name"] for row in dict_list if row["split"] == partition]
         wsi_names = list(set(wsi_names))
         wsi_names = keep_only_existing_files(features_path, wsi_names)
 
@@ -102,7 +95,7 @@ class PANDAMILDataset(BinaryClassificationDataset, WSIDataset):
             patch_size=patch_size,
             adj_with_dist=adj_with_dist,
             norm_adj=norm_adj,
-            load_at_init=load_at_init
+            load_at_init=load_at_init,
         )
 
     def _load_bag(self, name: str) -> dict[str, np.ndarray]:

@@ -1,4 +1,3 @@
-import pytest
 import torch
 from torch.nn import BCEWithLogitsLoss, Identity
 
@@ -28,10 +27,11 @@ def test_sm_transformer_abmil_initialization():
 
         def forward(self, x):
             return self.linear(x)
+
     feat_ext = CustomFeatExt(in_dim)
     pool_att_dim = 64
-    pool_act = 'relu'
-    pool_sm_mode = 'exact'
+    pool_act = "relu"
+    pool_sm_mode = "exact"
     pool_sm_alpha = 0.8
     pool_sm_layers = 2
     pool_sm_steps = 5
@@ -45,7 +45,7 @@ def test_sm_transformer_abmil_initialization():
     transf_add_self = False
     transf_dropout = 0.2
     transf_sm_alpha = 0.2
-    transf_sm_mode = 'approx'
+    transf_sm_mode = "approx"
     transf_sm_steps = 8
     criterion = torch.nn.CrossEntropyLoss()
 
@@ -80,7 +80,6 @@ def test_sm_transformer_abmil_initialization():
     assert isinstance(model.criterion, torch.nn.CrossEntropyLoss)
 
 
-
 def test_sm_transformer_abmil_forward():
     # Define input shape
     in_dim = 256
@@ -105,7 +104,6 @@ def test_sm_transformer_abmil_forward():
     assert att.shape == (batch_size, bag_size)
 
 
-
 def test_sm_transformer_abmil_compute_loss():
     # Define input shape
     in_dim = 256
@@ -126,7 +124,6 @@ def test_sm_transformer_abmil_compute_loss():
     assert isinstance(loss_dict, dict)
     assert "BCEWithLogitsLoss" in loss_dict
     assert loss_dict["BCEWithLogitsLoss"].shape == torch.Size([])  # Scalar loss
-
 
 
 def test_sm_transformer_abmil_predict():

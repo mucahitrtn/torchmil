@@ -4,6 +4,7 @@ from torch import Tensor
 from .mil_model import MILModel
 from torchmil.nn import ProbSmoothAttentionPool, get_feat_dim, LazyLinear
 
+
 class ProbSmoothABMIL(MILModel):
     r"""
     Attention-based Multiple Instance Learning (ABMIL) model with Probabilistic Smooth Attention Pooling.
@@ -56,7 +57,7 @@ class ProbSmoothABMIL(MILModel):
         self,
         in_shape: tuple = None,
         att_dim: int = 128,
-        covar_mode: str = 'diag',
+        covar_mode: str = "diag",
         n_samples_train: int = 1000,
         n_samples_test: int = 5000,
         feat_ext: torch.nn.Module = torch.nn.Identity(),
@@ -85,7 +86,7 @@ class ProbSmoothABMIL(MILModel):
             att_dim=att_dim,
             covar_mode=covar_mode,
             n_samples_train=n_samples_train,
-            n_samples_test=n_samples_test
+            n_samples_test=n_samples_test,
         )
         self.classifier = LazyLinear(feat_dim, 1)
 
@@ -96,7 +97,7 @@ class ProbSmoothABMIL(MILModel):
         mask: Tensor = None,
         return_att: bool = False,
         return_samples: bool = False,
-        return_kl_div: bool = False
+        return_kl_div: bool = False,
     ) -> tuple[Tensor, Tensor, Tensor]:
         """
         Forward pass.
@@ -117,7 +118,9 @@ class ProbSmoothABMIL(MILModel):
 
         X = self.feat_ext(X)  # (batch_size, bag_size, feat_dim)
 
-        out_pool = self.pool(X, adj, mask, return_att_samples=return_att, return_kl_div=return_kl_div)
+        out_pool = self.pool(
+            X, adj, mask, return_att_samples=return_att, return_kl_div=return_kl_div
+        )
 
         if return_kl_div:
             if return_att:
@@ -151,11 +154,7 @@ class ProbSmoothABMIL(MILModel):
                 return Y_pred
 
     def compute_loss(
-        self,
-        Y: Tensor,
-        X: Tensor,
-        adj: Tensor,
-        mask: Tensor = None
+        self, Y: Tensor, X: Tensor, adj: Tensor, mask: Tensor = None
     ) -> tuple[Tensor, dict]:
         """
         Compute loss given true bag labels.
@@ -172,20 +171,22 @@ class ProbSmoothABMIL(MILModel):
         """
 
         Y_pred, kl_div = self.forward(
-            X, adj, mask, return_att=False, return_samples=True, return_kl_div=True)  # (batch_size, n_samples)
+            X, adj, mask, return_att=False, return_samples=True, return_kl_div=True
+        )  # (batch_size, n_samples)
         Y_pred_mean = Y_pred.mean(dim=-1)  # (batch_size,)
 
         Y = Y.unsqueeze(-1).expand(-1, Y_pred.shape[-1])
         crit_loss = self.criterion(Y_pred.float(), Y.float())
         crit_name = self.criterion.__class__.__name__
 
-        return Y_pred_mean, {crit_name: crit_loss, 'KLDiv': kl_div}
+        return Y_pred_mean, {crit_name: crit_loss, "KLDiv": kl_div}
 
-    def predict(self,
+    def predict(
+        self,
         X: Tensor,
         mask: Tensor = None,
         return_inst_pred: bool = True,
-        return_samples: bool = False
+        return_samples: bool = False,
     ) -> tuple[Tensor, Tensor]:
         """
         Predict bag and (optionally) instance labels.
@@ -200,7 +201,10 @@ class ProbSmoothABMIL(MILModel):
             Y_pred: Bag label logits of shape `(batch_size,)`.
             y_inst_pred: Only returned when `return_inst_pred=True`. Attention values (before normalization) of shape `(batch_size, bag_size)` if `return_samples=False`, else `(batch_size, bag_size, n_samples)`.
         """
-        return self.forward(X, mask, return_att=return_inst_pred, return_samples=return_samples)
+        return self.forward(
+            X, mask, return_att=return_inst_pred, return_samples=return_samples
+        )
+
 
 class SmoothABMIL(ProbSmoothABMIL):
     def __init__(
@@ -222,19 +226,15 @@ class SmoothABMIL(ProbSmoothABMIL):
         super().__init__(
             in_shape=in_shape,
             att_dim=att_dim,
-            covar_mode='zero',
+            covar_mode="zero",
             n_samples_train=1,
             n_samples_test=1,
             feat_ext=feat_ext,
-            criterion=criterion
+            criterion=criterion,
         )
 
     def compute_loss(
-        self,
-        Y: Tensor,
-        X: Tensor,
-        adj: Tensor,
-        mask: Tensor = None
+        self, Y: Tensor, X: Tensor, adj: Tensor, mask: Tensor = None
     ) -> tuple[Tensor, dict]:
         """
         Compute loss given true bag labels.
@@ -251,6 +251,6 @@ class SmoothABMIL(ProbSmoothABMIL):
         """
 
         Y_pred, loss_dict = super().compute_loss(Y, X, adj, mask)
-        loss_dict['DirEnergy'] = loss_dict.pop('KLDiv')
+        loss_dict["DirEnergy"] = loss_dict.pop("KLDiv")
 
         return Y_pred, loss_dict

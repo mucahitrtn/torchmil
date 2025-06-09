@@ -1,7 +1,11 @@
 import pytest
 import torch
 
-from torchmil.models.transmil import PPEG, TransMIL  # Assuming your modules are in your_module.py
+from torchmil.models.transmil import (
+    PPEG,
+    TransMIL,
+)  # Assuming your modules are in your_module.py
+
 
 # PPEG Tests
 class TestPPEG:
@@ -15,7 +19,9 @@ class TestPPEG:
         assert ppeg.proj2.in_channels == dim
         assert ppeg.proj2.out_channels == dim
 
-    @pytest.mark.parametrize("batch_size, H, W, dim", [(2, 8, 8, 16), (4, 16, 16, 32), (1, 32, 32, 64)])
+    @pytest.mark.parametrize(
+        "batch_size, H, W, dim", [(2, 8, 8, 16), (4, 16, 16, 32), (1, 32, 32, 64)]
+    )
     def test_ppeg_forward(self, batch_size, H, W, dim):
         x = torch.randn(batch_size, H * W + 1, dim)
         ppeg = PPEG(dim)
@@ -32,6 +38,7 @@ class TestPPEG:
         ppeg = PPEG(dim)
         y = ppeg(x, H, W)
         assert not torch.allclose(x, y)
+
 
 # TransMIL Tests
 class TestTransMIL:
@@ -67,7 +74,9 @@ class TestTransMIL:
         assert model.layers[0].use_mlp == use_mlp
         assert len(model.layers) == n_layers
 
-    @pytest.mark.parametrize("batch_size, bag_size, in_dim", [(2, 10, 10), (4, 20, 20), (1, 5, 30)])
+    @pytest.mark.parametrize(
+        "batch_size, bag_size, in_dim", [(2, 10, 10), (4, 20, 20), (1, 5, 30)]
+    )
     def test_transmil_forward(self, batch_size, bag_size, in_dim):
         in_shape = (in_dim,)  # Example in_shape
         att_dim = 32

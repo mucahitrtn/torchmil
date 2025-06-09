@@ -1,22 +1,28 @@
 import torch
-import pytest
 from tensordict import TensorDict
-from typing import Any
 
 # Import the modules to be tested
-from torchmil.models.mil_model import MILModel, MILModelWrapper, get_args_names  # Replace 'your_module'
+from torchmil.models.mil_model import (
+    MILModel,
+    MILModelWrapper,
+    get_args_names,
+)  # Replace 'your_module'
+
 
 # Test get_args_names function
 def test_get_args_names():
     def sample_function(self, X, Y, Z=None):
         pass
+
     args_names = get_args_names(sample_function)
-    assert args_names == ('X', 'Y', 'Z')
+    assert args_names == ("X", "Y", "Z")
 
     def sample_function_no_self(X, Y, Z=None):
         pass
+
     args_names = get_args_names(sample_function_no_self)
-    assert args_names == ('X', 'Y', 'Z')
+    assert args_names == ("X", "Y", "Z")
+
 
 # Define a dummy MILModel for testing MILModelWrapper
 class DummyMILModel(MILModel):
@@ -30,7 +36,7 @@ class DummyMILModel(MILModel):
             X = X + adj  # Use adj if provided
         x = self.linear1(X)
         x = torch.relu(x)
-        Y_pred = self.linear2(x).mean(dim=(1,2))  # Average over the bag
+        Y_pred = self.linear2(x).mean(dim=(1, 2))  # Average over the bag
         return Y_pred
 
     def compute_loss(self, Y, X, adj=None, **kwargs):
@@ -41,9 +47,12 @@ class DummyMILModel(MILModel):
     def predict(self, X, adj=None, return_inst_pred=False, **kwargs):
         Y_pred = self.forward(X, adj, **kwargs)
         if return_inst_pred:
-            y_inst_pred = torch.sigmoid(Y_pred).unsqueeze(1).expand(-1, X.size(1))  # Expand to bag size
+            y_inst_pred = (
+                torch.sigmoid(Y_pred).unsqueeze(1).expand(-1, X.size(1))
+            )  # Expand to bag size
             return Y_pred, y_inst_pred
         return Y_pred
+
 
 # Test MILModelWrapper
 def test_mil_model_wrapper():
@@ -76,7 +85,10 @@ def test_mil_model_wrapper():
     # Test predict
     Y_pred, y_inst_pred = wrapped_model.predict(bag, return_inst_pred=True)
     assert Y_pred.shape == (batch_size,), "Output shape should be (batch_size,)"
-    assert y_inst_pred.shape == (batch_size, bag_size), "Instance prediction shape should be (batch_size, bag_size)"
+    assert y_inst_pred.shape == (
+        batch_size,
+        bag_size,
+    ), "Instance prediction shape should be (batch_size, bag_size)"
 
     Y_pred = wrapped_model.predict(bag, return_inst_pred=False)
     assert Y_pred.shape == (batch_size,), "Output shape should be (batch_size,)"

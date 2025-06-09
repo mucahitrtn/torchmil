@@ -13,7 +13,9 @@ def mock_ctscan_data(tmp_path):
         p.mkdir(parents=True, exist_ok=True)
 
     scan_name = "scan1"
-    np.save(features_path / f"{scan_name}.npy", np.random.rand(5, 64))   # 5 slices, 64 features each
+    np.save(
+        features_path / f"{scan_name}.npy", np.random.rand(5, 64)
+    )  # 5 slices, 64 features each
     np.save(labels_path / f"{scan_name}.npy", np.array(0))
     np.save(slice_labels_path / f"{scan_name}.npy", np.random.randint(0, 2, size=(5,)))
 
@@ -24,7 +26,7 @@ def mock_ctscan_data(tmp_path):
         "ctscan_names": [scan_name],
         "adj_with_dist": False,
         "norm_adj": True,
-        "load_at_init": False
+        "load_at_init": False,
     }
 
 

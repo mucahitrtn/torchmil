@@ -3,12 +3,13 @@ import pytest
 
 from torchmil.models.setmil import SETMIL, PMF
 
+
 # Fixtures for test data
 @pytest.fixture
 def sample_setmil_data():
     batch_size = 2
     bag_size = 10
-    in_shape = (256,) 
+    in_shape = (256,)
     feat_dim = 256
     coord_dim = 2
     # X: (batch_size, bag_size, *in_shape)
@@ -56,12 +57,17 @@ def test_setmil(sample_setmil_data):
     Y_pred, loss_dict = model.compute_loss(Y, X, coords)
     assert Y_pred.shape == (X.shape[0],), "Output shape should be (batch_size,)"
     assert isinstance(loss_dict, dict), "Loss should be a dictionary"
-    assert "BCEWithLogitsLoss" in loss_dict, "Loss dict should contain the criterion loss"
+    assert (
+        "BCEWithLogitsLoss" in loss_dict
+    ), "Loss dict should contain the criterion loss"
 
     # Test forward pass with attention
     Y_pred, att = model(X, coords, return_att=True)
     assert Y_pred.shape == (X.shape[0],), "Output shape should be (batch_size,)"
-    assert att.shape == (X.shape[0], X.shape[1]), "Attention shape should be (batch_size, bag_size)"
+    assert att.shape == (
+        X.shape[0],
+        X.shape[1],
+    ), "Attention shape should be (batch_size, bag_size)"
 
     # Test predict
     Y_pred = model.predict(X, coords, return_inst_pred=False)
@@ -69,4 +75,7 @@ def test_setmil(sample_setmil_data):
 
     Y_pred, y_inst_pred = model.predict(X, coords, return_inst_pred=True)
     assert Y_pred.shape == (X.shape[0],), "Output shape should be (batch_size,)"
-    assert y_inst_pred.shape == (X.shape[0], X.shape[1]), "Instance prediction shape should be (batch_size, bag_size)"
+    assert y_inst_pred.shape == (
+        X.shape[0],
+        X.shape[1],
+    ), "Instance prediction shape should be (batch_size, bag_size)"

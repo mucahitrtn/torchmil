@@ -4,6 +4,7 @@ from .mil_model import MILModel
 from torchmil.nn import AttentionPool
 from torchmil.nn.utils import get_feat_dim, LazyLinear, SmoothTop1SVM
 
+
 class CLAM_SB(MILModel):
     r"""
 
@@ -39,16 +40,17 @@ class CLAM_SB(MILModel):
     The total instance-level loss is $\ell_{\text{in}} + \ell_{\text{out}}$, which is added to the bag-level loss to train the model.
 
     """
+
     def __init__(
         self,
-        in_shape : tuple = None,
-        att_dim : int = 128,
-        att_act : str = 'tanh',
-        k_sample : int = 10,
-        gated : bool = False,
-        inst_loss_name : str = 'SmoothTop1SVM',
+        in_shape: tuple = None,
+        att_dim: int = 128,
+        att_act: str = "tanh",
+        k_sample: int = 10,
+        gated: bool = False,
+        inst_loss_name: str = "SmoothTop1SVM",
         feat_ext: torch.nn.Module = torch.nn.Identity(),
-        criterion: torch.nn.Module = torch.nn.BCEWithLogitsLoss()
+        criterion: torch.nn.Module = torch.nn.BCEWithLogitsLoss(),
     ) -> None:
         """
         Arguments:
@@ -70,18 +72,22 @@ class CLAM_SB(MILModel):
         else:
             feat_dim = None
 
-        self.pool = AttentionPool(in_dim = feat_dim, att_dim = att_dim, act = att_act, gated = gated)
+        self.pool = AttentionPool(
+            in_dim=feat_dim, att_dim=att_dim, act=att_act, gated=gated
+        )
         self.classifier = LazyLinear(feat_dim, 1)
-        self.inst_classifiers = torch.nn.ModuleList([LazyLinear(feat_dim, 2) for i in range(2)])
-        if inst_loss_name == 'SmoothTop1SVM':
-            self.inst_loss_fn = SmoothTop1SVM(n_classes = 2)
-        elif inst_loss_name == 'BCEWithLogitsLoss':
+        self.inst_classifiers = torch.nn.ModuleList(
+            [LazyLinear(feat_dim, 2) for i in range(2)]
+        )
+        if inst_loss_name == "SmoothTop1SVM":
+            self.inst_loss_fn = SmoothTop1SVM(n_classes=2)
+        elif inst_loss_name == "BCEWithLogitsLoss":
             self.inst_loss_fn = torch.nn.BCEWithLogitsLoss()
         else:
             raise ValueError(f"Invalid instance loss name: {inst_loss_name}")
 
     @staticmethod
-    def create_positive_targets(length : int, device : torch.device) -> torch.Tensor:
+    def create_positive_targets(length: int, device: torch.device) -> torch.Tensor:
         """
         Create positive targets.
 
@@ -92,10 +98,10 @@ class CLAM_SB(MILModel):
         Returns:
             pos_targets: Tensor of shape `(length,)` with all elements set to 1.
         """
-        return torch.full((length, ), 1, device=device).long()
+        return torch.full((length,), 1, device=device).long()
 
     @staticmethod
-    def create_negative_targets(length : int, device : torch.device) -> torch.Tensor:
+    def create_negative_targets(length: int, device: torch.device) -> torch.Tensor:
         """
         Create negative targets.
 
@@ -106,15 +112,15 @@ class CLAM_SB(MILModel):
         Returns:
             neg_targets: Tensor of shape `(length,)` with all elements set to 0.
         """
-        return torch.full((length, ), 0, device=device).long()
+        return torch.full((length,), 0, device=device).long()
 
     def inst_eval(
-            self,
-            att : torch.Tensor,
-            emb : torch.Tensor,
-            classifier : torch.nn.Module,
-            mask = None
-        ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        self,
+        att: torch.Tensor,
+        emb: torch.Tensor,
+        classifier: torch.nn.Module,
+        mask=None,
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
         Evaluate instance-level loss for in-the-class attention branch.
 
@@ -139,35 +145,37 @@ class CLAM_SB(MILModel):
         k_sample = min(self.k_sample, bag_size)
 
         if mask is not None:
-            att = att.masked_fill(~mask, -1e9) # (bag_size,)
-        top_p_ids = torch.topk(att, k_sample)[1] # (k_sample,)
-        top_p = torch.index_select(emb, dim=0, index=top_p_ids) # (k_sample, feat_dim)
+            att = att.masked_fill(~mask, -1e9)  # (bag_size,)
+        top_p_ids = torch.topk(att, k_sample)[1]  # (k_sample,)
+        top_p = torch.index_select(emb, dim=0, index=top_p_ids)  # (k_sample, feat_dim)
 
         if mask is not None:
-            att = att.masked_fill(~mask, 1e9) # (bag_size,)
+            att = att.masked_fill(~mask, 1e9)  # (bag_size,)
 
-        top_n_ids = torch.topk(-att, k_sample)[1] # (k_sample,)
-        top_n = torch.index_select(emb, dim=0, index=top_n_ids) # (k_sample, feat_dim)
+        top_n_ids = torch.topk(-att, k_sample)[1]  # (k_sample,)
+        top_n = torch.index_select(emb, dim=0, index=top_n_ids)  # (k_sample, feat_dim)
 
-        p_targets = self.create_positive_targets(k_sample, device) # (k_sample,)
-        n_targets = self.create_negative_targets(k_sample, device) # (k_sample,)
+        p_targets = self.create_positive_targets(k_sample, device)  # (k_sample,)
+        n_targets = self.create_negative_targets(k_sample, device)  # (k_sample,)
 
-        all_targets = torch.cat([p_targets, n_targets], dim=0) # (2 * k_sample,)
-        all_instances = torch.cat([top_p, top_n], dim=0) # (2 * k_sample, feat_dim)
-        logits = classifier(all_instances) # (2 * k_sample, 2)
-        all_preds = torch.topk(logits, 1, dim = 1)[1] # (2 * k_sample,)
+        all_targets = torch.cat([p_targets, n_targets], dim=0)  # (2 * k_sample,)
+        all_instances = torch.cat([top_p, top_n], dim=0)  # (2 * k_sample, feat_dim)
+        logits = classifier(all_instances)  # (2 * k_sample, 2)
+        all_preds = torch.topk(logits, 1, dim=1)[1]  # (2 * k_sample,)
         # instance_loss = self.inst_loss_fn(logits.float(), all_targets.unsqueeze(-1).float())
-        all_preds_one_hot = torch.nn.functional.one_hot(all_preds.squeeze(-1), num_classes=2).float() # (2 * k_sample, 2)
+        all_preds_one_hot = torch.nn.functional.one_hot(
+            all_preds.squeeze(-1), num_classes=2
+        ).float()  # (2 * k_sample, 2)
         instance_loss = self.inst_loss_fn(logits.float(), all_preds_one_hot)
         return instance_loss, all_preds, all_targets
 
     def inst_eval_out(
-            self,
-            att : torch.Tensor,
-            emb : torch.Tensor,
-            classifier : torch.nn.Module,
-            mask = None
-        ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        self,
+        att: torch.Tensor,
+        emb: torch.Tensor,
+        classifier: torch.nn.Module,
+        mask=None,
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
         Evaluate instance-level loss for out-of-the-class attention branch.
 
@@ -194,22 +202,24 @@ class CLAM_SB(MILModel):
         if mask is not None:
             att = att.masked_fill(~mask, -1e9)
 
-        top_p_ids = torch.topk(att, k_sample)[1] # (k_sample,)
-        top_p = torch.index_select(emb, dim=0, index=top_p_ids) # (k_sample, feat_dim)
-        p_targets = self.create_negative_targets(k_sample, device) # (k_sample,)
-        logits = classifier(top_p) # (k_sample, 2)
-        p_preds = torch.topk(logits, 1, dim = 1)[1] # (k_sample,)
+        top_p_ids = torch.topk(att, k_sample)[1]  # (k_sample,)
+        top_p = torch.index_select(emb, dim=0, index=top_p_ids)  # (k_sample, feat_dim)
+        p_targets = self.create_negative_targets(k_sample, device)  # (k_sample,)
+        logits = classifier(top_p)  # (k_sample, 2)
+        p_preds = torch.topk(logits, 1, dim=1)[1]  # (k_sample,)
         # instance_loss = self.inst_loss_fn(logits.float(), p_targets.unsqueeze(-1).float()) # (k_sample,)
-        p_preds_one_hot = torch.nn.functional.one_hot(p_preds.squeeze(-1), num_classes=2).float() # (k_sample, 2)
+        p_preds_one_hot = torch.nn.functional.one_hot(
+            p_preds.squeeze(-1), num_classes=2
+        ).float()  # (k_sample, 2)
         instance_loss = self.inst_loss_fn(logits.float(), p_preds_one_hot)
         return instance_loss, p_preds, p_targets
 
     def compute_inst_loss(
         self,
-        att : torch.Tensor,
-        emb : torch.Tensor,
-        labels : torch.Tensor,
-        mask : torch.Tensor = None
+        att: torch.Tensor,
+        emb: torch.Tensor,
+        labels: torch.Tensor,
+        mask: torch.Tensor = None,
     ) -> torch.Tensor:
         """
         Computes instance loss.
@@ -235,19 +245,28 @@ class CLAM_SB(MILModel):
             else:
                 in_idx = 1
                 out_idx = 0
-            inst_loss_in, _, _ = self.inst_eval(att[i], emb[i], self.inst_classifiers[in_idx], mask[i] if mask is not None else None)
-            inst_loss_out, _, _ = self.inst_eval_out(att[i], emb[i], self.inst_classifiers[out_idx], mask[i] if mask is not None else None)
+            inst_loss_in, _, _ = self.inst_eval(
+                att[i],
+                emb[i],
+                self.inst_classifiers[in_idx],
+                mask[i] if mask is not None else None,
+            )
+            inst_loss_out, _, _ = self.inst_eval_out(
+                att[i],
+                emb[i],
+                self.inst_classifiers[out_idx],
+                mask[i] if mask is not None else None,
+            )
 
             sum_inst_loss += inst_loss_in + inst_loss_out
         return sum_inst_loss
 
-
     def forward(
         self,
-        X : torch.Tensor,
-        mask : torch.Tensor = None,
-        return_att : bool = False,
-        return_emb : bool = False
+        X: torch.Tensor,
+        mask: torch.Tensor = None,
+        return_att: bool = False,
+        return_emb: bool = False,
     ) -> torch.Tensor:
         """
         Forward pass.
@@ -264,11 +283,13 @@ class CLAM_SB(MILModel):
             emb: Only returned when `return_emb=True`. Embeddings of shape (batch_size, bag_size, feat_dim).
         """
 
-        X = self.feat_ext(X) # (batch_size, bag_size, D)
+        X = self.feat_ext(X)  # (batch_size, bag_size, D)
 
-        z, f = self.pool(X, mask, return_att=True) # z: (batch_size, D), f: (batch_size, bag_size)
+        z, f = self.pool(
+            X, mask, return_att=True
+        )  # z: (batch_size, D), f: (batch_size, bag_size)
 
-        Y_pred = self.classifier(z).squeeze(1) # (batch_size,)
+        Y_pred = self.classifier(z).squeeze(1)  # (batch_size,)
 
         if return_emb:
             if return_att:
@@ -281,10 +302,7 @@ class CLAM_SB(MILModel):
             return Y_pred
 
     def compute_loss(
-        self,
-        Y : torch.Tensor,
-        X : torch.Tensor,
-        mask : torch.Tensor = None
+        self, Y: torch.Tensor, X: torch.Tensor, mask: torch.Tensor = None
     ) -> tuple[torch.Tensor, dict]:
         """
         Compute loss given true bag labels.
@@ -298,18 +316,15 @@ class CLAM_SB(MILModel):
             Y_pred: Bag label logits of shape `(batch_size,)`.
             loss_dict: Dictionary containing the loss value.
         """
-        Y_pred, att, emb = self.forward(X, mask, return_att = True, return_emb=True)
+        Y_pred, att, emb = self.forward(X, mask, return_att=True, return_emb=True)
         crit_loss = self.criterion(Y_pred.float(), Y.float())
         crit_name = self.criterion.__class__.__name__
         inst_loss = self.compute_inst_loss(att, emb, Y)
 
-        return Y_pred, { crit_name: crit_loss, 'InstLoss' : inst_loss}
+        return Y_pred, {crit_name: crit_loss, "InstLoss": inst_loss}
 
     def predict(
-        self,
-        X : torch.Tensor,
-        mask : torch.Tensor = None,
-        return_inst_pred : bool = True
+        self, X: torch.Tensor, mask: torch.Tensor = None, return_inst_pred: bool = True
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Predict bag labels.

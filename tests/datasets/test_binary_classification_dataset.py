@@ -3,6 +3,7 @@ import pytest
 import numpy as np
 from torchmil.datasets import BinaryClassificationDataset
 
+
 def clean_temp_dir():
     """
     Helper function to clean up temporary directories.
@@ -15,6 +16,7 @@ def clean_temp_dir():
             for name in dirs:
                 os.rmdir(os.path.join(root, name))
         os.rmdir(temp_dir)
+
 
 @pytest.fixture
 def temp_binary_data():
@@ -34,7 +36,12 @@ def temp_binary_data():
     os.makedirs(inst_labels_dir, exist_ok=True)  # Corrected variable name
     os.makedirs(coords_dir, exist_ok=True)
 
-    bag_names = ["bag1", "bag2", "bag3", "bag4"]  # Added bag4 for more comprehensive testing
+    bag_names = [
+        "bag1",
+        "bag2",
+        "bag3",
+        "bag4",
+    ]  # Added bag4 for more comprehensive testing
     bag_data = {
         "bag1": {
             "features": np.array([[1, 2], [3, 4], [5, 6]]),
@@ -58,18 +65,29 @@ def temp_binary_data():
             "features": np.array([[1, 1], [2, 2], [3, 3]]),
             "labels": np.array(0),
             "inst_labels": np.array([[1], [1], [1]]),
-            "coords": np.array([[5,5], [6,5], [7,5]])
-        }
+            "coords": np.array([[5, 5], [6, 5], [7, 5]]),
+        },
     }
 
     for name, data in bag_data.items():
         np.save(os.path.join(features_dir, name + ".npy"), data["features"])
         np.save(os.path.join(labels_dir, name + ".npy"), data["labels"])
         if data["inst_labels"] is not None:  # Added check for None
-            np.save(os.path.join(inst_labels_dir, name + ".npy"), data["inst_labels"])  # Corrected path
+            np.save(
+                os.path.join(inst_labels_dir, name + ".npy"), data["inst_labels"]
+            )  # Corrected path
         np.save(os.path.join(coords_dir, name + ".npy"), data["coords"])
 
-    return temp_dir, features_dir, labels_dir, inst_labels_dir, coords_dir, bag_names, bag_data
+    return (
+        temp_dir,
+        features_dir,
+        labels_dir,
+        inst_labels_dir,
+        coords_dir,
+        bag_names,
+        bag_data,
+    )
+
 
 def test_binary_classification_dataset(temp_binary_data):
     """
@@ -100,17 +118,29 @@ def test_binary_classification_dataset(temp_binary_data):
         expected_data = bag_data[bag_name]
 
         # Test data loading
-        assert np.array_equal(bag["X"], expected_data["features"]), f"Features for {bag_name} are incorrect"
-        assert np.array_equal(bag["Y"], expected_data["labels"]), f"Labels for {bag_name} are incorrect"
+        assert np.array_equal(
+            bag["X"], expected_data["features"]
+        ), f"Features for {bag_name} are incorrect"
+        assert np.array_equal(
+            bag["Y"], expected_data["labels"]
+        ), f"Labels for {bag_name} are incorrect"
         assert "adj" in bag, f"Adjacency matrix is missing for {bag_name}"
-        assert np.array_equal(bag["coords"], expected_data["coords"]), f"Coordinates for {bag_name} are incorrect"
+        assert np.array_equal(
+            bag["coords"], expected_data["coords"]
+        ), f"Coordinates for {bag_name} are incorrect"
 
         # Test instance label handling
         if expected_data["inst_labels"] is None:
-            assert np.all(bag["y_inst"].numpy() == -1), f"Instance labels for {bag_name} should be -1"
+            assert np.all(
+                bag["y_inst"].numpy() == -1
+            ), f"Instance labels for {bag_name} should be -1"
         elif bag_name == "bag4":  # Check the bag with inconsistent labels
-            assert np.all(bag["y_inst"].numpy() == -1), f"Instance labels for {bag_name} should be -1"
+            assert np.all(
+                bag["y_inst"].numpy() == -1
+            ), f"Instance labels for {bag_name} should be -1"
         else:
-            assert np.array_equal(bag["y_inst"].numpy(), expected_data["inst_labels"].squeeze()), f"Instance labels for {bag_name} are incorrect"
-    
+            assert np.array_equal(
+                bag["y_inst"].numpy(), expected_data["inst_labels"].squeeze()
+            ), f"Instance labels for {bag_name} are incorrect"
+
     clean_temp_dir()

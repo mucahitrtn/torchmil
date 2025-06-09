@@ -2,10 +2,7 @@ import torch
 
 from torchmil.models.mil_model import MILModel
 
-from torchmil.nn.utils import (
-    get_feat_dim,
-    SinusoidalPositionalEncodingND
-)
+from torchmil.nn.utils import get_feat_dim, SinusoidalPositionalEncodingND
 
 from torchmil.nn.transformers import iRPETransformerEncoder, TransformerLayer
 
@@ -13,6 +10,7 @@ from torchmil.data import (
     seq_to_spatial,
     spatial_to_seq,
 )
+
 
 class T2TLayer(torch.nn.Module):
     r"""
@@ -30,7 +28,7 @@ class T2TLayer(torch.nn.Module):
         dilation: tuple[int, int] = (1, 1),
         n_heads: int = 4,
         use_mlp: bool = True,
-        dropout: float = 0.0
+        dropout: float = 0.0,
     ):
         """
         Arguments:
@@ -47,15 +45,17 @@ class T2TLayer(torch.nn.Module):
         """
         super().__init__()
 
-        self.unfold = torch.nn.Unfold(kernel_size=kernel_size, stride=stride, padding=padding, dilation=dilation)
+        self.unfold = torch.nn.Unfold(
+            kernel_size=kernel_size, stride=stride, padding=padding, dilation=dilation
+        )
 
         self.transf_layer = TransformerLayer(
-            in_dim=in_dim*kernel_size[0]*kernel_size[1],
+            in_dim=in_dim * kernel_size[0] * kernel_size[1],
             att_dim=att_dim,
             out_dim=att_dim,
             n_heads=n_heads,
             use_mlp=use_mlp,
-            dropout=dropout
+            dropout=dropout,
         )
 
         if out_dim != att_dim:
@@ -63,10 +63,7 @@ class T2TLayer(torch.nn.Module):
         else:
             self.out_proj = torch.nn.Identity()
 
-    def forward(
-        self,
-        X: torch.Tensor
-    ) -> torch.Tensor:
+    def forward(self, X: torch.Tensor) -> torch.Tensor:
         """
         Arguments:
             X: Input tensor of shape `(batch_size, in_dim, h, w)`.
@@ -75,14 +72,18 @@ class T2TLayer(torch.nn.Module):
         """
 
         # unfold
-        X = self.unfold(X) # (batch_size, in_dim * kernel_size[0] * kernel_size[1], new_seq_len)
-        X = X.transpose(1, 2) # (batch_size, new_seq_len, in_dim * kernel_size[0] * kernel_size[1])
+        X = self.unfold(
+            X
+        )  # (batch_size, in_dim * kernel_size[0] * kernel_size[1], new_seq_len)
+        X = X.transpose(
+            1, 2
+        )  # (batch_size, new_seq_len, in_dim * kernel_size[0] * kernel_size[1])
 
         # transformer layer
-        X = self.transf_layer(X) # (batch_size, new_seq_len, att_dim)
+        X = self.transf_layer(X)  # (batch_size, new_seq_len, att_dim)
 
         # output projection
-        X = self.out_proj(X) # (batch_size, new_seq_len, out_dim)
+        X = self.out_proj(X)  # (batch_size, new_seq_len, out_dim)
 
         return X
 
@@ -144,10 +145,7 @@ class PMF(torch.nn.Module):
         else:
             self.out_proj = torch.nn.Identity()
 
-    def forward(
-        self,
-        X: torch.Tensor
-    ) -> torch.Tensor:
+    def forward(self, X: torch.Tensor) -> torch.Tensor:
         """
         Arguments:
             X: Input tensor of shape `(batch_size, in_dim, h, w)`.
@@ -184,7 +182,7 @@ class SETMIL(MILModel):
     Finally, using the class token computed by the SET module, the model predicts the bag label $\hat{Y}$ using a linear layer.
 
     **Note.** When `use_pmf=True`, the input bag is reshaped to a square shape, and the PMF module is applied.
-    This modifies the bag structure unreversibly, and thus attention values cannot be computed. 
+    This modifies the bag structure unreversibly, and thus attention values cannot be computed.
     If `return_att=True`, the attention values will be set to zeros.
     """
 
@@ -303,10 +301,7 @@ class SETMIL(MILModel):
         return X
 
     def forward(
-        self,
-        X: torch.Tensor,
-        coords: torch.Tensor,
-        return_att: bool = False
+        self, X: torch.Tensor, coords: torch.Tensor, return_att: bool = False
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Forward pass.
@@ -330,9 +325,7 @@ class SETMIL(MILModel):
         X = self.feat_ext(X)  # (batch_size, bag_size, feat_dim)
         X = self.proj(X)  # (batch_size, bag_size, att_dim)
 
-        X = seq_to_spatial(
-            X, coords
-        )  # (batch_size, coord1, coord2, att_dim)
+        X = seq_to_spatial(X, coords)  # (batch_size, coord1, coord2, att_dim)
 
         X = X.transpose(1, -1)  # (batch_size, att_dim, coord2, coord1)
         X = X.transpose(-1, -2)  # (batch_size, att_dim, coord1, coord2)
@@ -342,8 +335,10 @@ class SETMIL(MILModel):
         if self.use_pmf:
             X = self.pmf(X)  # (batch_size, new_seq_len, att_dim)
         else:
-            X = X.reshape(batch_size, -1, self.att_dim)  # (batch_size, bag_size, att_dim)
-                        
+            X = X.reshape(
+                batch_size, -1, self.att_dim
+            )  # (batch_size, bag_size, att_dim)
+
         # Add class token
         cls_token = self.cls_token.expand(
             batch_size, -1, -1
@@ -358,17 +353,17 @@ class SETMIL(MILModel):
                 X = self.se_transf(X)  # (batch_size, new_seq_len + 1, att_dim)
                 att = torch.zeros(batch_size, orig_bag_size, device=X.device)
             else:
-                X, att = self.se_transf(X, return_att=True)  # (batch_size, seq_len + 1, att_dim), (n_layers, batch_size, n_heads, seq_len+1, seq_len+1)
-                
-                att = att.mean(2) # (n_layers, batch_size, seq_len + 1, seq_len + 1)
-                att = att[-1, :, 0, 1:] # (batch_size, seq_len)
+                X, att = self.se_transf(
+                    X, return_att=True
+                )  # (batch_size, seq_len + 1, att_dim), (n_layers, batch_size, n_heads, seq_len+1, seq_len+1)
+
+                att = att.mean(2)  # (n_layers, batch_size, seq_len + 1, seq_len + 1)
+                att = att[-1, :, 0, 1:]  # (batch_size, seq_len)
                 att = att.view(
                     batch_size, max_coord, max_coord
                 )  # (batch_size, max_coord, max_coord)
                 att = att.unsqueeze(-1)  # (batch_size, max_coord, max_coord, 1)
-                att = spatial_to_seq(
-                    att, coords
-                )  # (batch_size, bag_size, 1)
+                att = spatial_to_seq(att, coords)  # (batch_size, bag_size, 1)
                 att = att.squeeze(-1)  # (batch_size, bag_size)
         else:
             X = self.se_transf(X)  # (batch_size, bag_size' + 1, att_dim)

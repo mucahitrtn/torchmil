@@ -1,6 +1,6 @@
 # torchmil.nn
 
-<tt>torchmil.nn</tt> is a collection of PyTorch modules frequently used in Multiple Instance Learning (MIL) models.
+<tt><b>torchmil</b></tt> is a collection of PyTorch modules frequently used in Multiple Instance Learning (MIL) models.
 These modules are designed to be flexible and easy to use, allowing you to build custom MIL models with ease.
 
 ## Available modules

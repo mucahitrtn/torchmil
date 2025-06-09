@@ -8,6 +8,7 @@ from torchmil.nn.utils import get_feat_dim
 from torchmil.nn.gnns.dense_mincut_pool import dense_mincut_pool
 from torchmil.nn.gnns.gcn_conv import GCNConv
 
+
 class GTP(MILModel):
     r"""
     Method proposed in the paper [GTP: Graph-Transformer for Whole Slide Image Classification](https://arxiv.org/abs/2205.09671).
@@ -46,16 +47,16 @@ class GTP(MILModel):
 
     def __init__(
         self,
-        in_shape : tuple,
-        att_dim : int = 512,
-        n_clusters : int = 100,
-        n_layers : int = 1,
-        n_heads : int = 8,
-        use_mlp : bool = True,
-        dropout : float = 0.0,
+        in_shape: tuple,
+        att_dim: int = 512,
+        n_clusters: int = 100,
+        n_layers: int = 1,
+        n_heads: int = 8,
+        use_mlp: bool = True,
+        dropout: float = 0.0,
         feat_ext: torch.nn.Module = torch.nn.Identity(),
         criterion: torch.nn.Module = torch.nn.BCEWithLogitsLoss(),
-        ) -> None:
+    ) -> None:
         """
         Class constructor.
 
@@ -76,11 +77,19 @@ class GTP(MILModel):
         self.feat_ext = feat_ext
         feat_dim = get_feat_dim(feat_ext, in_shape)
 
-        self.gcn_conv = GCNConv(feat_dim, feat_dim, add_self_loops=True, learn_weights=True, activation=torch.nn.ReLU())
+        self.gcn_conv = GCNConv(
+            feat_dim,
+            feat_dim,
+            add_self_loops=True,
+            learn_weights=True,
+            activation=torch.nn.ReLU(),
+        )
 
         self.cluster_proj = torch.nn.Linear(feat_dim, n_clusters)
 
-        self.cls_token = torch.nn.Parameter(torch.zeros(1, 1, feat_dim), requires_grad=True)
+        self.cls_token = torch.nn.Parameter(
+            torch.zeros(1, 1, feat_dim), requires_grad=True
+        )
         self.transformer_encoder = TransformerEncoder(
             in_dim=feat_dim,
             att_dim=att_dim,
@@ -88,19 +97,18 @@ class GTP(MILModel):
             n_layers=n_layers,
             n_heads=n_heads,
             use_mlp=use_mlp,
-            dropout=dropout
+            dropout=dropout,
         )
         self.classifier = Linear(feat_dim, 1)
         self.index_select = IndexSelect()
 
-
     def forward(
         self,
         X: torch.Tensor,
-        adj : torch.Tensor,
+        adj: torch.Tensor,
         mask: torch.Tensor = None,
         return_cam: bool = False,
-        return_loss: bool = False
+        return_loss: bool = False,
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Forward pass.
@@ -116,34 +124,42 @@ class GTP(MILModel):
             cam: Only returned when `return_cam=True`. Class activation map of shape (batch_size, bag_size).
         """
 
-        X = self.feat_ext(X) # (batch_size, bag_size, feat_dim)
-        X = self.gcn_conv(X, adj) # (batch_size, bag_size, feat_dim)
-        S = self.cluster_proj(X) # (batch_size, bag_size, n_clusters)
+        X = self.feat_ext(X)  # (batch_size, bag_size, feat_dim)
+        X = self.gcn_conv(X, adj)  # (batch_size, bag_size, feat_dim)
+        S = self.cluster_proj(X)  # (batch_size, bag_size, n_clusters)
 
-        X, adj, mc_loss, o_loss = dense_mincut_pool(X, adj, S, mask) # X: (batch_size, n_clusters, feat_dim), adj: (batch_size, n_clusters, n_clusters), mc_loss: (batch_size, 1), o_loss: (batch_size, 1)
+        X, adj, mc_loss, o_loss = dense_mincut_pool(
+            X, adj, S, mask
+        )  # X: (batch_size, n_clusters, feat_dim), adj: (batch_size, n_clusters, n_clusters), mc_loss: (batch_size, 1), o_loss: (batch_size, 1)
 
         cls_token = self.cls_token.repeat(X.size(0), 1, 1)
-        X = torch.cat([cls_token, X], dim=1) # (batch_size, n_clusters+1, feat_dim)
+        X = torch.cat([cls_token, X], dim=1)  # (batch_size, n_clusters+1, feat_dim)
 
-        X = self.transformer_encoder(X) # (batch_size, n_clusters+1, feat_dim)
+        X = self.transformer_encoder(X)  # (batch_size, n_clusters+1, feat_dim)
 
         # z = X[:, 0] # (batch_size, feat_dim)
-        z = self.index_select(X, dim=1, indices=torch.tensor(0, device=X.device)) # (batch_size, 1, feat_dim)
+        z = self.index_select(
+            X, dim=1, indices=torch.tensor(0, device=X.device)
+        )  # (batch_size, 1, feat_dim)
 
-        Y_pred = self.classifier(z) # (batch_size, 1, 1)
+        Y_pred = self.classifier(z)  # (batch_size, 1, 1)
 
         if return_cam:
-            R = self.classifier.relprop(Y_pred) # (batch_size, feat_dim)
-            R = self.index_select.relprop(R) # (batch_size, n_clusters+1, feat_dim)
-            _, att_rel_list = self.transformer_encoder.relprop(R, return_att_relevance=True) # (batch_size, n_clusters+1, feat_dim)
-            cam = self._rollout_attention(att_rel_list) # (batch_size, n_clusters+1, n_clusters+1)
-            cam = cam[:, 0, 1:].unsqueeze(-1) # (batch_size, n_clusters, 1)
-            cam = torch.bmm(S, cam).squeeze(-1) # (batch_size, bag_size)
+            R = self.classifier.relprop(Y_pred)  # (batch_size, feat_dim)
+            R = self.index_select.relprop(R)  # (batch_size, n_clusters+1, feat_dim)
+            _, att_rel_list = self.transformer_encoder.relprop(
+                R, return_att_relevance=True
+            )  # (batch_size, n_clusters+1, feat_dim)
+            cam = self._rollout_attention(
+                att_rel_list
+            )  # (batch_size, n_clusters+1, n_clusters+1)
+            cam = cam[:, 0, 1:].unsqueeze(-1)  # (batch_size, n_clusters, 1)
+            cam = torch.bmm(S, cam).squeeze(-1)  # (batch_size, bag_size)
 
-        Y_pred = Y_pred.squeeze(-1).squeeze(-1) # (batch_size,)
+        Y_pred = Y_pred.squeeze(-1).squeeze(-1)  # (batch_size,)
 
         if return_loss:
-            loss_dict = { 'MinCutLoss' : mc_loss, 'OrthoLoss' : o_loss }
+            loss_dict = {"MinCutLoss": mc_loss, "OrthoLoss": o_loss}
             if return_cam:
                 return Y_pred, cam, loss_dict
             else:
@@ -164,14 +180,17 @@ class GTP(MILModel):
         Returns:
             cam: Class activation map of shape `(batch_size, n_clusters+1, n_clusters+1)`.
         """
-        cam = torch.stack(att_rel_list, dim=0) # (len, batch_size, n_heads, n_clusters+1, n_clusters+1)
-        cam = cam.mean(dim=2) # (len, batch_size, n_clusters+1, n_clusters+1)
+        cam = torch.stack(
+            att_rel_list, dim=0
+        )  # (len, batch_size, n_heads, n_clusters+1, n_clusters+1)
+        cam = cam.mean(dim=2)  # (len, batch_size, n_clusters+1, n_clusters+1)
         # add identity matrix to attention relevance
-        id_mat = torch.eye(cam.size(-1), device=cam.device).unsqueeze(0).unsqueeze(0) # (1, 1, n_clusters+1, n_clusters+1)
+        id_mat = (
+            torch.eye(cam.size(-1), device=cam.device).unsqueeze(0).unsqueeze(0)
+        )  # (1, 1, n_clusters+1, n_clusters+1)
         cam = cam + id_mat
-        cam = cam.prod(dim=0) # (batch_size, n_clusters+1, n_clusters+1)
+        cam = cam.prod(dim=0)  # (batch_size, n_clusters+1, n_clusters+1)
         return cam
-
 
     def compute_loss(
         self,
@@ -194,7 +213,9 @@ class GTP(MILModel):
             loss_dict: Dictionary containing the loss value.
         """
 
-        Y_pred, loss_dict = self.forward(X, adj, mask, return_cam=False, return_loss=True)
+        Y_pred, loss_dict = self.forward(
+            X, adj, mask, return_cam=False, return_loss=True
+        )
 
         crit_loss = self.criterion(Y_pred.float(), Y.float())
         crit_name = self.criterion.__class__.__name__
@@ -206,7 +227,7 @@ class GTP(MILModel):
         X: torch.Tensor,
         adj: torch.Tensor,
         mask: torch.Tensor = None,
-        return_inst_pred: bool = True
+        return_inst_pred: bool = True,
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Predict bag and (optionally) instance labels.

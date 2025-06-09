@@ -19,12 +19,12 @@ class Trainer:
         metrics_dict: dict[str : torchmetrics.Metric] = {
             "accuracy": torchmetrics.Accuracy(task="binary"),
         },
-        obj_metric : str = 'accuracy',
-        obj_metric_mode : str = 'max',
+        obj_metric: str = "accuracy",
+        obj_metric_mode: str = "max",
         lr_scheduler: torch.optim.lr_scheduler._LRScheduler = None,
         annealing_scheduler_dict: dict[str:AnnealingScheduler] = None,
         device: str = "cuda",
-        logger = None,
+        logger=None,
         early_stop_patience: int = None,
         disable_pbar: bool = False,
         verbose: bool = True,
@@ -57,10 +57,12 @@ class Trainer:
         self.verbose = verbose
 
         if self.early_stop_patience is None:
-            self.early_stop_patience = float('inf')
+            self.early_stop_patience = float("inf")
 
-        if self.obj_metric_mode not in ['max', 'min']:
-            raise ValueError(f"obj_metric_mode must be one of ['max', 'min'], but got {self.obj_metric_mode}")
+        if self.obj_metric_mode not in ["max", "min"]:
+            raise ValueError(
+                f"obj_metric_mode must be one of ['max', 'min'], but got {self.obj_metric_mode}"
+            )
 
         self.best_model_state_dict = None
         self.best_obj_metric = None
@@ -108,13 +110,12 @@ class Trainer:
 
         if self.best_model_state_dict is None:
             self.best_model_state_dict = self.get_model_state_dict()
-            if self.obj_metric_mode == 'max':
-                self.best_obj_metric = float('-inf')
+            if self.obj_metric_mode == "max":
+                self.best_obj_metric = float("-inf")
             else:
-                self.best_obj_metric = float('inf')
+                self.best_obj_metric = float("inf")
         early_stop_count = 0
         for epoch in range(1, max_epochs + 1):
-
             # Train loop
             train_metrics = self._shared_loop(
                 train_dataloader,
@@ -143,12 +144,18 @@ class Trainer:
             if self.lr_scheduler is not None:
                 self.lr_scheduler.step()
 
-            self._print(f'Best {self.obj_metric_name}: {self.best_obj_metric}, Current {self.obj_metric_name}: {val_metrics[f"val/{self.obj_metric_name}"]}')
+            self._print(
+                f'Best {self.obj_metric_name}: {self.best_obj_metric}, Current {self.obj_metric_name}: {val_metrics[f"val/{self.obj_metric_name}"]}'
+            )
 
-            if self.obj_metric_mode == 'max':
-                is_better = val_metrics[f"val/{self.obj_metric_name}"] > self.best_obj_metric
+            if self.obj_metric_mode == "max":
+                is_better = (
+                    val_metrics[f"val/{self.obj_metric_name}"] > self.best_obj_metric
+                )
             else:
-                is_better = val_metrics[f"val/{self.obj_metric_name}"] < self.best_obj_metric
+                is_better = (
+                    val_metrics[f"val/{self.obj_metric_name}"] < self.best_obj_metric
+                )
 
             if not is_better:
                 early_stop_count += 1
@@ -159,7 +166,7 @@ class Trainer:
                 early_stop_count = 0
 
             if early_stop_count >= self.early_stop_patience:
-                self._print(f"Reached early stopping condition")
+                self._print("Reached early stopping condition")
                 break
 
     def _shared_loop(
@@ -196,7 +203,6 @@ class Trainer:
         loop_loss_dict = {"loss": torchmetrics.MeanMetric()}
 
         for batch_idx, batch in pbar:
-
             batch = batch.to(self.device)
 
             Y = batch["Y"]  # (batch_size, 1)
@@ -217,8 +223,7 @@ class Trainer:
                 loop_loss_dict[loss_name].update(loss_value.item())
             loop_loss_dict["loss"].update(loss.item())
 
-            if mode == "train":                
-
+            if mode == "train":
                 loss.backward()
                 self.optimizer.step()
 

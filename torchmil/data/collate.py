@@ -3,12 +3,10 @@ from torch import Tensor
 
 from tensordict import TensorDict
 
-import numpy as np
 
 def pad_tensors(
-        tensor_list : list[Tensor],
-        padding_value : int = 0
-    ) -> tuple[Tensor, Tensor]:
+    tensor_list: list[Tensor], padding_value: int = 0
+) -> tuple[Tensor, Tensor]:
     """
     Pads a list of tensors to the same shape and returns a mask.
 
@@ -22,16 +20,25 @@ def pad_tensors(
     """
 
     if len(tensor_list) == 1:
-        padded_tensor = tensor_list[0].unsqueeze(0) # (1, bag_size, ...)
-        mask = torch.ones((1, tensor_list[0].size(0)), dtype=torch.uint8, device=tensor_list[0].device) # (1, bag_size)
+        padded_tensor = tensor_list[0].unsqueeze(0)  # (1, bag_size, ...)
+        mask = torch.ones(
+            (1, tensor_list[0].size(0)), dtype=torch.uint8, device=tensor_list[0].device
+        )  # (1, bag_size)
     else:
         # Determine the maximum bag size
         max_bag_size = max(tensor.size(0) for tensor in tensor_list)
         feature_shape = tensor_list[0].size()[1:]
 
         batch_size = len(tensor_list)
-        padded_tensor = torch.full((batch_size, max_bag_size, *feature_shape), padding_value, dtype=tensor_list[0].dtype, device=tensor_list[0].device)
-        mask = torch.zeros((batch_size, max_bag_size), dtype=torch.uint8, device=tensor_list[0].device)
+        padded_tensor = torch.full(
+            (batch_size, max_bag_size, *feature_shape),
+            padding_value,
+            dtype=tensor_list[0].dtype,
+            device=tensor_list[0].device,
+        )
+        mask = torch.zeros(
+            (batch_size, max_bag_size), dtype=torch.uint8, device=tensor_list[0].device
+        )
 
         for i, tensor in enumerate(tensor_list):
             bag_size = tensor.size(0)
@@ -40,10 +47,11 @@ def pad_tensors(
 
     return padded_tensor, mask
 
+
 def collate_fn(
-        batch_list : list[dict[str, torch.Tensor]],
-        sparse : bool = True,
-    ) -> TensorDict:
+    batch_list: list[dict[str, torch.Tensor]],
+    sparse: bool = True,
+) -> TensorDict:
     """
     Collate function for MIL datasets. Given a list of bags (represented as dictionaries)
     it pads the tensors in the bag to the same shape. Then, it returns a dictionary representing
@@ -76,8 +84,8 @@ def collate_fn(
             else:
                 data, mask = pad_tensors(data_list)
                 batch_dict[key] = data
-                if 'mask' not in batch_dict:
-                    batch_dict['mask'] = mask
+                if "mask" not in batch_dict:
+                    batch_dict["mask"] = mask
         else:
             index_list = []
             value_list = []
@@ -88,7 +96,10 @@ def collate_fn(
                 size_list.append(data_list[i].size())
             max_size = max(size_list)
 
-            data_list = [ torch.sparse_coo_tensor(index, value, max_size) for index, value in zip(index_list, value_list) ]
+            data_list = [
+                torch.sparse_coo_tensor(index, value, max_size)
+                for index, value in zip(index_list, value_list)
+            ]
             batch_dict[key] = torch.stack(data_list).coalesce()
             if not sparse:
                 batch_dict[key] = batch_dict[key].to_dense()

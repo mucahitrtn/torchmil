@@ -1,7 +1,9 @@
-import pytest
 import torch
 
-from torchmil.models.transformer_prob_smooth_abmil import TransformerProbSmoothABMIL  # Assuming your script is saved as 'your_module.py'
+from torchmil.models.transformer_prob_smooth_abmil import (
+    TransformerProbSmoothABMIL,
+)  # Assuming your script is saved as 'your_module.py'
+
 
 # Helper function to create dummy data
 def create_dummy_data(batch_size=2, bag_size=3, feat_dim=5):
@@ -11,8 +13,8 @@ def create_dummy_data(batch_size=2, bag_size=3, feat_dim=5):
     mask = torch.ones(batch_size, bag_size, dtype=torch.bool)
     return X, Y, adj, mask
 
-class TestTransformerProbSmoothABMIL:
 
+class TestTransformerProbSmoothABMIL:
     def test_forward(self):
         model = TransformerProbSmoothABMIL(in_shape=(5,))
         model.eval()
@@ -29,8 +31,15 @@ class TestTransformerProbSmoothABMIL:
         output_with_samples_att = model(X, adj, return_att=True, return_samples=True)
         assert isinstance(output_with_samples_att, tuple)
         assert len(output_with_samples_att) == 2
-        assert output_with_samples_att[0].shape == (X.shape[0], model.pool.n_samples_test)
-        assert output_with_samples_att[1].shape == (X.shape[0], X.shape[1], model.pool.n_samples_test)
+        assert output_with_samples_att[0].shape == (
+            X.shape[0],
+            model.pool.n_samples_test,
+        )
+        assert output_with_samples_att[1].shape == (
+            X.shape[0],
+            X.shape[1],
+            model.pool.n_samples_test,
+        )
 
         output_with_kl = model(X, adj, return_kl_div=True)
         assert isinstance(output_with_kl, tuple)
@@ -38,11 +47,17 @@ class TestTransformerProbSmoothABMIL:
         assert output_with_kl[0].shape == (X.shape[0],)
         assert isinstance(output_with_kl[1], torch.Tensor)
 
-        output_with_all = model(X, adj, mask, return_att=True, return_samples=True, return_kl_div=True)
+        output_with_all = model(
+            X, adj, mask, return_att=True, return_samples=True, return_kl_div=True
+        )
         assert isinstance(output_with_all, tuple)
         assert len(output_with_all) == 3
         assert output_with_all[0].shape == (X.shape[0], model.pool.n_samples_test)
-        assert output_with_all[1].shape == (X.shape[0], X.shape[1], model.pool.n_samples_test)
+        assert output_with_all[1].shape == (
+            X.shape[0],
+            X.shape[1],
+            model.pool.n_samples_test,
+        )
         assert isinstance(output_with_all[2], torch.Tensor)
 
     def test_compute_loss(self):
@@ -51,10 +66,10 @@ class TestTransformerProbSmoothABMIL:
         Y_pred, loss_dict = model.compute_loss(Y, X, adj, mask)
         assert Y_pred.shape == (X.shape[0],)
         assert isinstance(loss_dict, dict)
-        assert 'BCEWithLogitsLoss' in loss_dict
-        assert 'KLDiv' in loss_dict
-        assert isinstance(loss_dict['BCEWithLogitsLoss'], torch.Tensor)
-        assert isinstance(loss_dict['KLDiv'], torch.Tensor)
+        assert "BCEWithLogitsLoss" in loss_dict
+        assert "KLDiv" in loss_dict
+        assert isinstance(loss_dict["BCEWithLogitsLoss"], torch.Tensor)
+        assert isinstance(loss_dict["KLDiv"], torch.Tensor)
 
     def test_predict(self):
         model = TransformerProbSmoothABMIL(in_shape=(5,))
@@ -67,6 +82,12 @@ class TestTransformerProbSmoothABMIL:
         Y_pred_no_inst = model.predict(X, adj, mask, return_inst_pred=False)
         assert Y_pred_no_inst.shape == (X.shape[0],)
 
-        Y_pred_samples, att_val_samples = model.predict(X, adj, mask, return_inst_pred=True, return_samples=True)
+        Y_pred_samples, att_val_samples = model.predict(
+            X, adj, mask, return_inst_pred=True, return_samples=True
+        )
         assert Y_pred_samples.shape == (X.shape[0], model.pool.n_samples_test)
-        assert att_val_samples.shape == (X.shape[0], X.shape[1], model.pool.n_samples_test)
+        assert att_val_samples.shape == (
+            X.shape[0],
+            X.shape[1],
+            model.pool.n_samples_test,
+        )

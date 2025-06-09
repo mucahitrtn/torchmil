@@ -7,8 +7,13 @@ from .encoder import Encoder
 from .layer import Layer
 
 
-SDP_BACKEND = [SDPBackend.MATH, SDPBackend.FLASH_ATTENTION,
-               SDPBackend.EFFICIENT_ATTENTION, SDPBackend.CUDNN_ATTENTION]
+SDP_BACKEND = [
+    SDPBackend.MATH,
+    SDPBackend.FLASH_ATTENTION,
+    SDPBackend.EFFICIENT_ATTENTION,
+    SDPBackend.CUDNN_ATTENTION,
+]
+
 
 class TransformerLayer(Layer):
     r"""
@@ -28,11 +33,11 @@ class TransformerLayer(Layer):
     def __init__(
         self,
         in_dim: int,
-        out_dim : int = None,
+        out_dim: int = None,
         att_dim: int = 512,
         n_heads: int = 4,
         use_mlp: bool = True,
-        dropout: float = 0.0
+        dropout: float = 0.0,
     ):
         """
         Class constructor.
@@ -47,28 +52,25 @@ class TransformerLayer(Layer):
         """
 
         att_module = MultiheadSelfAttention(
-            att_dim=att_dim, 
-            in_dim=in_dim, 
-            out_dim=att_dim, 
-            n_heads=n_heads, 
-            dropout=dropout
+            att_dim=att_dim,
+            in_dim=in_dim,
+            out_dim=att_dim,
+            n_heads=n_heads,
+            dropout=dropout,
         )
 
         super(TransformerLayer, self).__init__(
-            in_dim=in_dim, 
+            in_dim=in_dim,
             att_in_dim=in_dim,
-            out_dim=out_dim, 
-            att_out_dim=att_dim, 
-            att_module=att_module, 
-            use_mlp=use_mlp, 
-            dropout=dropout
+            out_dim=out_dim,
+            att_out_dim=att_dim,
+            att_module=att_module,
+            use_mlp=use_mlp,
+            dropout=dropout,
         )
 
     def forward(
-        self,
-        X: torch.Tensor,
-        mask: torch.Tensor = None,
-        return_att: bool = False
+        self, X: torch.Tensor, mask: torch.Tensor = None, return_att: bool = False
     ) -> torch.Tensor:
         """
         Forward method.
@@ -83,6 +85,7 @@ class TransformerLayer(Layer):
         """
 
         return super().forward(X, mask=mask, return_att=return_att)
+
 
 class TransformerEncoder(Encoder):
     r"""
@@ -110,7 +113,7 @@ class TransformerEncoder(Encoder):
         n_layers: int = 4,
         use_mlp: bool = True,
         add_self: bool = False,
-        dropout: float = 0.0
+        dropout: float = 0.0,
     ):
         """
         Class constructor
@@ -129,25 +132,26 @@ class TransformerEncoder(Encoder):
         if out_dim is None:
             out_dim = in_dim
 
-        layers = torch.nn.ModuleList([
-            TransformerLayer(
-                in_dim=in_dim if i == 0 else att_dim,
-                out_dim=out_dim if i == n_layers - 1 else att_dim,
-                att_dim=att_dim,
-                n_heads=n_heads, use_mlp=use_mlp, dropout=dropout
-            )
-            for i in range(n_layers)
-        ])
+        layers = torch.nn.ModuleList(
+            [
+                TransformerLayer(
+                    in_dim=in_dim if i == 0 else att_dim,
+                    out_dim=out_dim if i == n_layers - 1 else att_dim,
+                    att_dim=att_dim,
+                    n_heads=n_heads,
+                    use_mlp=use_mlp,
+                    dropout=dropout,
+                )
+                for i in range(n_layers)
+            ]
+        )
 
         super(TransformerEncoder, self).__init__(layers, add_self=add_self)
 
         self.norm = torch.nn.LayerNorm(out_dim)
 
     def forward(
-        self,
-        X: torch.Tensor,
-        mask: torch.Tensor = None,
-        return_att: bool = False
+        self, X: torch.Tensor, mask: torch.Tensor = None, return_att: bool = False
     ) -> torch.Tensor:
         """
         Forward method.
@@ -163,9 +167,9 @@ class TransformerEncoder(Encoder):
 
         if return_att:
             Y, att = super().forward(X, mask=mask, return_att=True)
-            Y = self.norm(Y) # (batch_size, bag_size, att_dim)
+            Y = self.norm(Y)  # (batch_size, bag_size, att_dim)
             return Y, att
         else:
             Y = super().forward(X, mask=mask, return_att=False)
-            Y = self.norm(Y) # (batch_size, bag_size, att_dim)
+            Y = self.norm(Y)  # (batch_size, bag_size, att_dim)
             return Y

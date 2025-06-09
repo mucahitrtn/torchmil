@@ -2,6 +2,7 @@ import numpy as np
 
 from .processed_mil_dataset import ProcessedMILDataset
 
+
 class WSIDataset(ProcessedMILDataset):
     r"""
     This class represents a dataset of Whole Slide Images (WSI) for Multiple Instance Learning (MIL).
@@ -68,7 +69,6 @@ class WSIDataset(ProcessedMILDataset):
     If no `dist_thr` is provided, it is set to $\sqrt{2} \times \text{patch_size}$.
     """
 
-
     def __init__(
         self,
         features_path: str,
@@ -113,8 +113,9 @@ class WSIDataset(ProcessedMILDataset):
             dist_thr=dist_thr,
             adj_with_dist=adj_with_dist,
             norm_adj=norm_adj,
-            load_at_init=load_at_init
+            load_at_init=load_at_init,
         )
+
     def _load_coords(self, name):
         coords = super()._load_coords(name)
         if coords is not None:

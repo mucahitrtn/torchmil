@@ -4,6 +4,7 @@ from torchmil.nn import GCNConv, DeepGCNLayer
 
 from torchmil.nn.utils import get_feat_dim, LazyLinear, masked_softmax
 
+
 class DeepGraphSurv(torch.nn.Module):
     r"""
     DeepGraphSurv model, as proposed in [Graph CNN for Survival Analysis on Whole Slide Pathological Images](https://link.springer.com/chapter/10.1007/978-3-030-00934-2_20).
@@ -31,15 +32,17 @@ class DeepGraphSurv(torch.nn.Module):
     where $s_n$ is the normalized attention score for the $n$-th instance.
     The bag representation $\mathbf{z}$ is then fed into a classifier (one linear layer) to predict the bag label.
     """
-    def __init__(self,
+
+    def __init__(
+        self,
         in_shape: tuple = None,
-        n_layers_rep : int = 4,
-        n_layers_att : int = 2,
-        hidden_dim : int = None,
-        att_dim : int = 128,
-        dropout : float = 0.0,
+        n_layers_rep: int = 4,
+        n_layers_att: int = 2,
+        hidden_dim: int = None,
+        att_dim: int = 128,
+        dropout: float = 0.0,
         feat_ext: torch.nn.Module = torch.nn.Identity(),
-        criterion : torch.nn.Module = torch.nn.BCEWithLogitsLoss()
+        criterion: torch.nn.Module = torch.nn.BCEWithLogitsLoss(),
     ):
         """
         Arguments:
@@ -66,20 +69,34 @@ class DeepGraphSurv(torch.nn.Module):
 
         self.layers_rep = torch.nn.ModuleList()
         for i in range(n_layers_rep):
-            conv_layer = GCNConv( feat_dim if i == 0 else hidden_dim, hidden_dim, add_self_loops=True, learn_weights=True)
+            conv_layer = GCNConv(
+                feat_dim if i == 0 else hidden_dim,
+                hidden_dim,
+                add_self_loops=True,
+                learn_weights=True,
+            )
             norm_layer = torch.nn.LayerNorm(hidden_dim, elementwise_affine=True)
             act_layer = torch.nn.ReLU()
             self.layers_rep.append(
-                DeepGCNLayer(conv_layer, norm_layer, act_layer, dropout=dropout, block='plain')
+                DeepGCNLayer(
+                    conv_layer, norm_layer, act_layer, dropout=dropout, block="plain"
+                )
             )
 
         self.layers_att = torch.nn.ModuleList()
         for i in range(n_layers_att):
-            conv_layer = GCNConv(hidden_dim if i==0 else att_dim, att_dim, add_self_loops=True, learn_weights=True)
+            conv_layer = GCNConv(
+                hidden_dim if i == 0 else att_dim,
+                att_dim,
+                add_self_loops=True,
+                learn_weights=True,
+            )
             norm_layer = torch.nn.LayerNorm(att_dim, elementwise_affine=True)
             act_layer = torch.nn.ReLU()
             self.layers_att.append(
-                DeepGCNLayer(conv_layer, norm_layer, act_layer, dropout=dropout, block='plain')
+                DeepGCNLayer(
+                    conv_layer, norm_layer, act_layer, dropout=dropout, block="plain"
+                )
             )
 
         self.proj1d = LazyLinear(att_dim, 1)
@@ -88,10 +105,10 @@ class DeepGraphSurv(torch.nn.Module):
 
     def forward(
         self,
-        X : torch.Tensor,
-        adj : torch.Tensor,
-        mask : torch.Tensor = None,
-        return_att : bool = False
+        X: torch.Tensor,
+        adj: torch.Tensor,
+        mask: torch.Tensor = None,
+        return_att: bool = False,
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Forward pass.
@@ -111,15 +128,15 @@ class DeepGraphSurv(torch.nn.Module):
         for layer in self.layers_rep:
             X = layer(X, adj)
 
-        H = X # (batch_size, bag_size, hidden_dim)
+        H = X  # (batch_size, bag_size, hidden_dim)
         for layer in self.layers_att:
-            H = layer(H, adj) # (batch_size, bag_size, att_dim)
-        f = self.proj1d(H) # (batch_size, bag_size, 1)
-        s = masked_softmax(f, mask) # (batch_size, bag_size, 1)
+            H = layer(H, adj)  # (batch_size, bag_size, att_dim)
+        f = self.proj1d(H)  # (batch_size, bag_size, 1)
+        s = masked_softmax(f, mask)  # (batch_size, bag_size, 1)
 
-        z = torch.bmm(X.transpose(1,2), s).squeeze(-1) # (batch_size, hidden_dim)
+        z = torch.bmm(X.transpose(1, 2), s).squeeze(-1)  # (batch_size, hidden_dim)
 
-        Y_pred = self.classifier(z).squeeze(-1) # (batch_size,)
+        Y_pred = self.classifier(z).squeeze(-1)  # (batch_size,)
 
         if return_att:
             return Y_pred, f.squeeze(-1)
@@ -128,10 +145,10 @@ class DeepGraphSurv(torch.nn.Module):
 
     def compute_loss(
         self,
-        Y : torch.Tensor,
-        X : torch.Tensor,
-        adj : torch.Tensor,
-        mask : torch.Tensor = None,
+        Y: torch.Tensor,
+        X: torch.Tensor,
+        adj: torch.Tensor,
+        mask: torch.Tensor = None,
     ) -> tuple[torch.Tensor, dict]:
         """
         Arguments:
@@ -147,14 +164,14 @@ class DeepGraphSurv(torch.nn.Module):
         Y_pred = self.forward(X, adj, mask)
         crit_loss = self.criterion(Y_pred.float(), Y.float())
         crit_name = self.criterion.__class__.__name__
-        return Y_pred, { crit_name: crit_loss }
+        return Y_pred, {crit_name: crit_loss}
 
     def predict(
         self,
-        X : torch.Tensor,
-        adj : torch.Tensor,
-        mask : torch.Tensor = None,
-        return_inst_pred : bool = False
+        X: torch.Tensor,
+        adj: torch.Tensor,
+        mask: torch.Tensor = None,
+        return_inst_pred: bool = False,
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Arguments:

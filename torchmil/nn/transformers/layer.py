@@ -1,5 +1,6 @@
 import torch
 
+
 class Layer(torch.nn.Module):
     r"""
     Generic Transformer layer class.
@@ -18,14 +19,14 @@ class Layer(torch.nn.Module):
 
     def __init__(
         self,
-        att_module : torch.nn.Module,
+        att_module: torch.nn.Module,
         in_dim: int,
-        att_in_dim : int,
+        att_in_dim: int,
         out_dim: int = None,
-        att_out_dim : int = None,
+        att_out_dim: int = None,
         use_mlp: bool = True,
         mlp_module: torch.nn.Module = None,
-        dropout: float = 0.0
+        dropout: float = 0.0,
     ):
         """
         Arguments:
@@ -44,7 +45,7 @@ class Layer(torch.nn.Module):
 
         if out_dim is None:
             out_dim = in_dim
-        
+
         if att_out_dim is None:
             att_out_dim = att_in_dim
 
@@ -62,11 +63,11 @@ class Layer(torch.nn.Module):
         if use_mlp:
             if mlp_module is None:
                 self.mlp_module = torch.nn.Sequential(
-                    torch.nn.Linear(att_out_dim, 4*att_out_dim),
+                    torch.nn.Linear(att_out_dim, 4 * att_out_dim),
                     torch.nn.GELU(),
                     torch.nn.Dropout(dropout),
-                    torch.nn.Linear(4*att_out_dim, att_out_dim),
-                    torch.nn.Dropout(dropout)
+                    torch.nn.Linear(4 * att_out_dim, att_out_dim),
+                    torch.nn.Dropout(dropout),
                 )
             else:
                 self.mlp_module = mlp_module
@@ -90,7 +91,7 @@ class Layer(torch.nn.Module):
             X: Input tensor of shape `(batch_size, seq_len, in_dim)`.
             return_att: If True, returns attention weights, of shape `(batch_size, n_heads, seq_len, seq_len)`.
             kwargs (Any): Additional arguments for the attention module.
-        
+
         Returns:
             Y: Output tensor of shape `(batch_size, seq_len, out_dim)`.
             If `return_att` is True, also returns attention weights, of shape `(batch_size, n_heads, seq_len, seq_len)`.

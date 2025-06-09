@@ -7,8 +7,13 @@ from .encoder import Encoder
 from .layer import Layer
 
 
-SDP_BACKEND = [SDPBackend.MATH, SDPBackend.FLASH_ATTENTION,
-               SDPBackend.EFFICIENT_ATTENTION, SDPBackend.CUDNN_ATTENTION]
+SDP_BACKEND = [
+    SDPBackend.MATH,
+    SDPBackend.FLASH_ATTENTION,
+    SDPBackend.EFFICIENT_ATTENTION,
+    SDPBackend.CUDNN_ATTENTION,
+]
+
 
 class SmMultiheadSelfAttention(MultiheadSelfAttention):
     r"""
@@ -24,7 +29,7 @@ class SmMultiheadSelfAttention(MultiheadSelfAttention):
         dropout: float = 0.0,
         sm_alpha: float = "trainable",
         sm_mode: str = "approx",
-        sm_steps: int = 10
+        sm_steps: int = 10,
     ):
         """
         Arguments:
@@ -39,17 +44,21 @@ class SmMultiheadSelfAttention(MultiheadSelfAttention):
         """
 
         super(SmMultiheadSelfAttention, self).__init__(
-            att_dim=att_dim, in_dim=in_dim, out_dim=out_dim, n_heads=n_heads, dropout=dropout
+            att_dim=att_dim,
+            in_dim=in_dim,
+            out_dim=out_dim,
+            n_heads=n_heads,
+            dropout=dropout,
         )
 
         self.sm = Sm(alpha=sm_alpha, mode=sm_mode, num_steps=sm_steps)
 
     def forward(
         self,
-        X : torch.Tensor,
-        adj : torch.Tensor,
-        mask : torch.Tensor = None,
-        return_att : bool = False
+        X: torch.Tensor,
+        adj: torch.Tensor,
+        mask: torch.Tensor = None,
+        return_att: bool = False,
     ) -> torch.Tensor:
         """
         Forward method.
@@ -71,6 +80,7 @@ class SmMultiheadSelfAttention(MultiheadSelfAttention):
         else:
             return Y
 
+
 class SmTransformerLayer(Layer):
     r"""
     One layer of the Transformer encoder with the $\texttt{Sm}$ operator.
@@ -91,14 +101,14 @@ class SmTransformerLayer(Layer):
     def __init__(
         self,
         in_dim: int,
-        out_dim : int = None,
+        out_dim: int = None,
         att_dim: int = 512,
         n_heads: int = 4,
         use_mlp: bool = True,
         dropout: float = 0.0,
         sm_alpha: float = "trainable",
         sm_mode: str = "approx",
-        sm_steps: int = 10
+        sm_steps: int = 10,
     ):
         """
         Class constructor.
@@ -116,18 +126,24 @@ class SmTransformerLayer(Layer):
         """
 
         att_module = SmMultiheadSelfAttention(
-            att_dim=att_dim, in_dim=in_dim, out_dim=att_dim, n_heads=n_heads, dropout=dropout,
-            sm_alpha=sm_alpha, sm_mode=sm_mode, sm_steps=sm_steps
+            att_dim=att_dim,
+            in_dim=in_dim,
+            out_dim=att_dim,
+            n_heads=n_heads,
+            dropout=dropout,
+            sm_alpha=sm_alpha,
+            sm_mode=sm_mode,
+            sm_steps=sm_steps,
         )
 
         super(SmTransformerLayer, self).__init__(
-            in_dim=in_dim, 
+            in_dim=in_dim,
             att_in_dim=in_dim,
-            out_dim=out_dim, 
-            att_out_dim=att_dim, 
-            att_module=att_module, 
-            use_mlp=use_mlp, 
-            dropout=dropout
+            out_dim=out_dim,
+            att_out_dim=att_dim,
+            att_module=att_module,
+            use_mlp=use_mlp,
+            dropout=dropout,
         )
 
     def forward(
@@ -135,7 +151,7 @@ class SmTransformerLayer(Layer):
         X: torch.Tensor,
         adj: torch.Tensor,
         mask: torch.Tensor = None,
-        return_att: bool = False
+        return_att: bool = False,
     ) -> torch.Tensor:
         """
         Forward method.
@@ -151,6 +167,7 @@ class SmTransformerLayer(Layer):
         """
 
         return super().forward(X, mask=mask, adj=adj, return_att=return_att)
+
 
 class SmTransformerEncoder(Encoder):
     r"""
@@ -183,7 +200,7 @@ class SmTransformerEncoder(Encoder):
         dropout: float = 0.0,
         sm_alpha: float = "trainable",
         sm_mode: str = "approx",
-        sm_steps: int = 10
+        sm_steps: int = 10,
     ):
         """
         Class constructor
@@ -202,15 +219,22 @@ class SmTransformerEncoder(Encoder):
         if out_dim is None:
             out_dim = in_dim
 
-        layers = torch.nn.ModuleList([
-            SmTransformerLayer(
-                in_dim=in_dim if i == 0 else att_dim,
-                out_dim=out_dim if i == n_layers - 1 else att_dim,
-                att_dim=att_dim,  n_heads=n_heads, use_mlp=use_mlp, dropout=dropout,
-                sm_alpha=sm_alpha, sm_mode=sm_mode, sm_steps=sm_steps
-            )
-            for i in range(n_layers)
-        ])
+        layers = torch.nn.ModuleList(
+            [
+                SmTransformerLayer(
+                    in_dim=in_dim if i == 0 else att_dim,
+                    out_dim=out_dim if i == n_layers - 1 else att_dim,
+                    att_dim=att_dim,
+                    n_heads=n_heads,
+                    use_mlp=use_mlp,
+                    dropout=dropout,
+                    sm_alpha=sm_alpha,
+                    sm_mode=sm_mode,
+                    sm_steps=sm_steps,
+                )
+                for i in range(n_layers)
+            ]
+        )
 
         super(SmTransformerEncoder, self).__init__(layers, add_self=add_self)
 
@@ -221,7 +245,7 @@ class SmTransformerEncoder(Encoder):
         X: torch.Tensor,
         adj: torch.Tensor,
         mask: torch.Tensor = None,
-        return_att: bool = False
+        return_att: bool = False,
     ) -> torch.Tensor:
         """
         Forward method.
@@ -239,9 +263,9 @@ class SmTransformerEncoder(Encoder):
 
         if return_att:
             Y, att = out
-            Y = self.norm(Y) # (batch_size, bag_size, att_dim)
+            Y = self.norm(Y)  # (batch_size, bag_size, att_dim)
             return Y, att
         else:
             Y = out
-            Y = self.norm(Y) # (batch_size, bag_size, att_dim)
+            Y = self.norm(Y)  # (batch_size, bag_size, att_dim)
             return Y

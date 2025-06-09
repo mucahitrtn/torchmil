@@ -48,11 +48,16 @@ def test_compute_loss(camil_model, dummy_inputs):
     Y_pred, loss_dict = camil_model.compute_loss(Y, X, adj, mask)
     assert isinstance(loss_dict, dict), "Loss output should be a dictionary"
     for name, loss in loss_dict.items():
-        assert torch.is_tensor(loss) and loss.requires_grad, f"Loss {name} is not a valid differentiable tensor"
+        assert (
+            torch.is_tensor(loss) and loss.requires_grad
+        ), f"Loss {name} is not a valid differentiable tensor"
 
 
 def test_predict_with_instance_output(camil_model, dummy_inputs):
     X, adj, mask, _ = dummy_inputs
     Y_pred, inst_pred = camil_model.predict(X, adj, mask, return_inst_pred=True)
     assert Y_pred.shape == (X.shape[0],)
-    assert inst_pred.shape == (X.shape[0], X.shape[1]), "Instance prediction shape mismatch"
+    assert inst_pred.shape == (
+        X.shape[0],
+        X.shape[1],
+    ), "Instance prediction shape mismatch"

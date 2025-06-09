@@ -2,24 +2,26 @@ import torch
 
 from torchmil.nn import LazyLinear
 
+
 class GCNConv(torch.nn.Module):
     """
     Implementation of a Graph Convolutional Network (GCN) layer.
 
     Adapts the implementation from [torch_geometric](https://pytorch-geometric.readthedocs.io/en/latest/generated/torch_geometric.nn.conv.GCNConv.html).
     """
+
     def __init__(
         self,
-        in_dim : int,
-        out_dim : int = None,
-        add_self_loops : bool = False,
-        learn_weights : bool = False,
-        layer_norm : bool = False,
-        normalize : bool = False,
-        dropout : float = 0.0,
-        activation : torch.nn.Module = torch.nn.Identity(),
-        bias : bool = True
-        ):
+        in_dim: int,
+        out_dim: int = None,
+        add_self_loops: bool = False,
+        learn_weights: bool = False,
+        layer_norm: bool = False,
+        normalize: bool = False,
+        dropout: float = 0.0,
+        activation: torch.nn.Module = torch.nn.Identity(),
+        bias: bool = True,
+    ):
         """
         Arguments:
             in_dim: Input dimension.
@@ -33,7 +35,7 @@ class GCNConv(torch.nn.Module):
             bias: Whether to use bias.
         """
 
-        super(GCNConv,self).__init__()
+        super(GCNConv, self).__init__()
 
         if out_dim is None or not learn_weights:
             out_dim = in_dim
@@ -53,11 +55,7 @@ class GCNConv(torch.nn.Module):
         else:
             self.layer_norm = torch.nn.Identity()
 
-    def forward(
-        self,
-        x : torch.Tensor,
-        adj : torch.Tensor
-    ) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, adj: torch.Tensor) -> torch.Tensor:
         """
         Arguments:
             x : Node features of shape (batch_size, n_nodes, in_dim).

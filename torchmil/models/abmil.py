@@ -26,7 +26,7 @@ class ABMIL(MILModel):
         self,
         in_shape: tuple = None,
         att_dim: int = 128,
-        att_act: str = 'tanh',
+        att_act: str = "tanh",
         gated: bool = False,
         feat_ext: torch.nn.Module = torch.nn.Identity(),
         criterion: torch.nn.Module = torch.nn.BCEWithLogitsLoss(),
@@ -49,15 +49,13 @@ class ABMIL(MILModel):
         else:
             feat_dim = None
         self.pool = AttentionPool(
-            in_dim=feat_dim, att_dim=att_dim, act=att_act, gated=gated)
+            in_dim=feat_dim, att_dim=att_dim, act=att_act, gated=gated
+        )
 
         self.classifier = LazyLinear(in_features=feat_dim, out_features=1)
 
     def forward(
-        self,
-        X: torch.Tensor,
-        mask: torch.Tensor = None,
-        return_att: bool = False
+        self, X: torch.Tensor, mask: torch.Tensor = None, return_att: bool = False
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Forward pass.
@@ -90,10 +88,7 @@ class ABMIL(MILModel):
             return Y_pred
 
     def compute_loss(
-        self,
-        Y: torch.Tensor,
-        X: torch.Tensor,
-        mask: torch.Tensor = None
+        self, Y: torch.Tensor, X: torch.Tensor, mask: torch.Tensor = None
     ) -> tuple[torch.Tensor, dict]:
         """
         Compute loss given true bag labels.
@@ -116,10 +111,7 @@ class ABMIL(MILModel):
         return Y_pred, {crit_name: crit_loss}
 
     def predict(
-        self,
-        X: torch.Tensor,
-        mask: torch.Tensor = None,
-        return_inst_pred: bool = True
+        self, X: torch.Tensor, mask: torch.Tensor = None, return_inst_pred: bool = True
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Predict bag and (optionally) instance labels.

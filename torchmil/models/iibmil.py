@@ -66,17 +66,27 @@ class IIBMIL(torch.nn.Module):
             self.feat_proj = torch.nn.Identity()
 
         self.encoder = TransformerEncoder(
-            in_dim=feat_dim, att_dim=att_dim, out_dim=att_dim,
-            n_heads=n_heads, n_layers=n_layers_encoder, use_mlp=use_mlp_encoder
+            in_dim=feat_dim,
+            att_dim=att_dim,
+            out_dim=att_dim,
+            n_heads=n_heads,
+            n_layers=n_layers_encoder,
+            use_mlp=use_mlp_encoder,
         )
 
         self.decoder = TransformerEncoder(
-            in_dim=att_dim, att_dim=att_dim, out_dim=att_dim,
-            n_heads=n_heads, n_layers=n_layers_decoder, use_mlp=use_mlp_decoder, add_self=False
+            in_dim=att_dim,
+            att_dim=att_dim,
+            out_dim=att_dim,
+            n_heads=n_heads,
+            n_layers=n_layers_decoder,
+            use_mlp=use_mlp_decoder,
+            add_self=False,
         )
 
         self.cls_token = torch.nn.Parameter(
-            torch.zeros(1, 1, att_dim), requires_grad=True)
+            torch.zeros(1, 1, att_dim), requires_grad=True
+        )
 
         # self.decoder = IIBMILDecoder(att_dim, n_layers_decoder, n_heads, use_mlp_decoder)
 
@@ -118,23 +128,20 @@ class IIBMIL(torch.nn.Module):
             X_enc = torch.masked_select(
                 X_enc,
                 mask.unsqueeze(-1).repeat(1, X_enc.shape[-1]),
-            ).reshape(
-                -1, X_enc.shape[-1]
-            )
+            ).reshape(-1, X_enc.shape[-1])
 
         prototypes = self.prototypes.clone().detach()  # (2, dim)
 
         # Compute prototypical logits
         logits_prot = torch.mm(X_enc.detach(), prototypes.t()).squeeze(
-            1)  # (batch_size * bag_size, 2)
+            1
+        )  # (batch_size * bag_size, 2)
         # (batch_size * bag_size, 2)
         score_prot = torch.softmax(logits_prot, dim=1)
 
         # compute pseudo labels
-        pseudo_labels = torch.argmax(
-            score_prot, dim=1)  # (batch_size * bag_size)
-        pseudo_labels = pseudo_labels.type(
-            torch.float32)  # (batch_size * bag_size)
+        pseudo_labels = torch.argmax(score_prot, dim=1)  # (batch_size * bag_size)
+        pseudo_labels = pseudo_labels.type(torch.float32)  # (batch_size * bag_size)
 
         # compute instance loss
         loss_instance = self.criterion(y_pred, pseudo_labels)  # (1,)
@@ -180,9 +187,7 @@ class IIBMIL(torch.nn.Module):
             X_enc = torch.masked_select(
                 X_enc,
                 mask.unsqueeze(-1).repeat(1, emb_dim),
-            ).reshape(
-                -1, emb_dim
-            )  # (batch_size * bag_size, dim)
+            ).reshape(-1, emb_dim)  # (batch_size * bag_size, dim)
 
         k = y_pred.shape[0] // 10
         _, index_0 = torch.topk(
@@ -207,10 +212,12 @@ class IIBMIL(torch.nn.Module):
         X_enc_1 = X_enc[index_1, :]  # (batch_size * bag_size, k, dim)
 
         for i in range(k):
-            self.prototypes[0, :] = self.prototypes[0, :] * \
-                proto_m + (1 - proto_m) * X_enc_0[i]
-            self.prototypes[1, :] = self.prototypes[1, :] * \
-                proto_m + (1 - proto_m) * X_enc_1[i]
+            self.prototypes[0, :] = (
+                self.prototypes[0, :] * proto_m + (1 - proto_m) * X_enc_0[i]
+            )
+            self.prototypes[1, :] = (
+                self.prototypes[1, :] * proto_m + (1 - proto_m) * X_enc_1[i]
+            )
 
     def forward(
         self,
@@ -235,16 +242,14 @@ class IIBMIL(torch.nn.Module):
         """
 
         X = self.feat_ext(X)  # (batch_size, bag_size, feat_dim)
-        X_enc = self.encoder(X, mask) # (batch_size, bag_size, att_dim)
+        X_enc = self.encoder(X, mask)  # (batch_size, bag_size, att_dim)
 
         y_pred = self.inst_classifier(X_enc).squeeze(-1)  # (batch_size, bag_size,)
 
-        cls_token = self.cls_token.repeat(X.size(0), 1, 1) # (batch_size, 1, att_dim)
-        Z = torch.cat([cls_token, X_enc], dim=1) # (batch_size, bag_size + 1, att_dim)
+        cls_token = self.cls_token.repeat(X.size(0), 1, 1)  # (batch_size, 1, att_dim)
+        Z = torch.cat([cls_token, X_enc], dim=1)  # (batch_size, bag_size + 1, att_dim)
         if mask is not None:
-            mask = torch.cat(
-                [torch.ones(X.size(0), 1, device=X.device), mask], dim=1
-            )
+            mask = torch.cat([torch.ones(X.size(0), 1, device=X.device), mask], dim=1)
         Z = self.decoder(Z, mask)  # (batch_size, bag_size + 1, att_dim)
         z = Z[:, 0]  # (batch_size, att_dim)
 
@@ -289,10 +294,7 @@ class IIBMIL(torch.nn.Module):
         return Y_pred, {crit_name: crit_loss, "InstLoss": inst_loss}
 
     def predict(
-        self,
-        X: torch.Tensor,
-        mask: torch.Tensor = None,
-        return_inst_pred: bool = True
+        self, X: torch.Tensor, mask: torch.Tensor = None, return_inst_pred: bool = True
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Predict bag and (optionally) instance labels.

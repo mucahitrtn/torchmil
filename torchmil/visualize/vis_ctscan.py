@@ -100,9 +100,7 @@ def draw_heatmap_ctscan(
         color = value * max_color + (1 - value) * min_color
         canvas_copy[y : y + slice_size, x : x + slice_size] = (1 - alpha) * canvas_copy[
             y : y + slice_size, x : x + slice_size
-        ] + alpha * (
-            color * 255
-        )  # Scale color to 0-255
+        ] + alpha * (color * 255)  # Scale color to 0-255
 
     return np.clip(canvas_copy, 0, 255).astype(
         np.uint8

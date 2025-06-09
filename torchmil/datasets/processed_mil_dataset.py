@@ -1,11 +1,11 @@
 import os
-import warnings
 import torch
 import copy
 import numpy as np
 
 from tensordict import TensorDict
 from torchmil.utils import build_adj, normalize_adj, add_self_loops
+
 
 class ProcessedMILDataset(torch.utils.data.Dataset):
     r"""
@@ -70,7 +70,6 @@ class ProcessedMILDataset(torch.utils.data.Dataset):
     This behaviour can be extended or modified by overriding the corresponding methods.
     """
 
-
     def __init__(
         self,
         features_path: str = None,
@@ -82,7 +81,7 @@ class ProcessedMILDataset(torch.utils.data.Dataset):
         dist_thr: float = 1.5,
         adj_with_dist: bool = False,
         norm_adj: bool = True,
-        load_at_init: bool = False
+        load_at_init: bool = False,
     ) -> None:
         """
         Class constructor.
@@ -122,22 +121,25 @@ class ProcessedMILDataset(torch.utils.data.Dataset):
         if "Y" in self.bag_keys and self.labels_path is None:
             raise ValueError("labels_path must be provided if 'Y' is in bag_keys")
         if "y_inst" in self.bag_keys and self.inst_labels_path is None:
-            raise ValueError("inst_labels_path must be provided if 'y_inst' is in bag_keys")
+            raise ValueError(
+                "inst_labels_path must be provided if 'y_inst' is in bag_keys"
+            )
         if "coords" in self.bag_keys and self.coords_path is None:
             raise ValueError("coords_path must be provided if 'coords' is in bag_keys")
         if "adj" in self.bag_keys and self.coords_path is None:
             raise ValueError("coords_path must be provided if 'adj' is in bag_keys")
-    
+
         if self.bag_names is None:
-            
             if self.features_path is None:
                 raise ValueError("features_path must be provided if bag_names is None")
 
-            self.bag_names = [ file for file in os.listdir(self.features_path) if file.endswith('.npy') ]
-            self.bag_names = [ os.path.splitext(file)[0] for file in self.bag_names ]
+            self.bag_names = [
+                file for file in os.listdir(self.features_path) if file.endswith(".npy")
+            ]
+            self.bag_names = [os.path.splitext(file)[0] for file in self.bag_names]
             if len(self.bag_names) == 0:
                 raise ValueError("No bags found in features_path")
-            
+
         self.bag_names = sorted(self.bag_names)
 
         self.loaded_bags = {}
@@ -155,7 +157,7 @@ class ProcessedMILDataset(torch.utils.data.Dataset):
         Returns:
             features: Features of the bag.
         """
-        features_file = os.path.join(self.features_path, name+'.npy')
+        features_file = os.path.join(self.features_path, name + ".npy")
         features = np.load(features_file)
         return features
 
@@ -169,7 +171,7 @@ class ProcessedMILDataset(torch.utils.data.Dataset):
         Returns:
             label: Label of the bag.
         """
-        label_file = os.path.join(self.labels_path, name+'.npy')
+        label_file = os.path.join(self.labels_path, name + ".npy")
         label = np.load(label_file)
         return label
 
@@ -183,7 +185,7 @@ class ProcessedMILDataset(torch.utils.data.Dataset):
         Returns:
             inst_labels: Instance labels of the bag.
         """
-        inst_labels_file = os.path.join(self.inst_labels_path, name+'.npy')
+        inst_labels_file = os.path.join(self.inst_labels_path, name + ".npy")
         inst_labels = np.load(inst_labels_file)
         return inst_labels
 
@@ -197,7 +199,7 @@ class ProcessedMILDataset(torch.utils.data.Dataset):
         Returns:
             coords: Coordinates of the bag.
         """
-        coords_file = os.path.join(self.coords_path, name+'.npy')
+        coords_file = os.path.join(self.coords_path, name + ".npy")
         coords = np.load(coords_file)
         return coords
 
@@ -214,16 +216,16 @@ class ProcessedMILDataset(torch.utils.data.Dataset):
 
         bag_dict = {}
         if "X" in self.bag_keys:
-            bag_dict['X'] = self._load_features(name)
-        
+            bag_dict["X"] = self._load_features(name)
+
         if "Y" in self.bag_keys:
-            bag_dict['Y'] = self._load_labels(name)
-        
+            bag_dict["Y"] = self._load_labels(name)
+
         if "y_inst" in self.bag_keys:
-            bag_dict['y_inst'] = self._load_inst_labels(name)
+            bag_dict["y_inst"] = self._load_inst_labels(name)
 
         if "coords" in self.bag_keys or "adj" in self.bag_keys:
-            bag_dict['coords'] = self._load_coords(name)
+            bag_dict["coords"] = self._load_coords(name)
 
         return bag_dict
 
@@ -246,17 +248,22 @@ class ProcessedMILDataset(torch.utils.data.Dataset):
             else:
                 edge_val = edge_weight
 
-            bag_dict['adj'] = torch.sparse_coo_tensor(
-                edge_index, edge_val, (bag_dict['coords'].shape[0], bag_dict['coords'].shape[0])).coalesce()
-            bag_dict['coords'] = torch.from_numpy(bag_dict['coords'])
-        
+            bag_dict["adj"] = torch.sparse_coo_tensor(
+                edge_index,
+                edge_val,
+                (bag_dict["coords"].shape[0], bag_dict["coords"].shape[0]),
+            ).coalesce()
+            bag_dict["coords"] = torch.from_numpy(bag_dict["coords"])
+
         for key in ["X", "Y", "y_inst"]:
             if key in bag_dict:
                 bag_dict[key] = torch.from_numpy(bag_dict[key])
 
         return bag_dict
 
-    def _build_adj(self, bag_dict: dict[str, np.ndarray]) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def _build_adj(
+        self, bag_dict: dict[str, np.ndarray]
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
         Build the adjacency matrix of a bag.
 
@@ -269,17 +276,20 @@ class ProcessedMILDataset(torch.utils.data.Dataset):
             norm_edge_weight: Normalized edge weight of the adjacency matrix, of shape `(n_edges,)`.
         """
 
-        bag_size = bag_dict['coords'].shape[0]
+        bag_size = bag_dict["coords"].shape[0]
         if self.adj_with_dist:
             edge_index, edge_weight = build_adj(
-                bag_dict['coords'], bag_dict['X'], dist_thr=self.dist_thr)
+                bag_dict["coords"], bag_dict["X"], dist_thr=self.dist_thr
+            )
         else:
             edge_index, edge_weight = build_adj(
-                bag_dict['coords'], None, dist_thr=self.dist_thr)
-        norm_edge_weight = normalize_adj(
-            edge_index, edge_weight, n_nodes=bag_size)
+                bag_dict["coords"], None, dist_thr=self.dist_thr
+            )
+        norm_edge_weight = normalize_adj(edge_index, edge_weight, n_nodes=bag_size)
         if bag_size == 1:
-            edge_index, norm_edge_weight = add_self_loops(edge_index, norm_edge_weight, bag_size)
+            edge_index, norm_edge_weight = add_self_loops(
+                edge_index, norm_edge_weight, bag_size
+            )
 
         return edge_index, edge_weight, norm_edge_weight
 
@@ -312,8 +322,10 @@ class ProcessedMILDataset(torch.utils.data.Dataset):
         else:
             bag_dict = self._build_bag(bag_name)
             self.loaded_bags[bag_name] = bag_dict
-        
-        return_bag_dict = { key: bag_dict[key] for key in self.bag_keys if key in bag_dict }
+
+        return_bag_dict = {
+            key: bag_dict[key] for key in self.bag_keys if key in bag_dict
+        }
 
         return TensorDict(return_bag_dict)
 
@@ -322,7 +334,7 @@ class ProcessedMILDataset(torch.utils.data.Dataset):
         Returns:
             List of bag labels.
         """
-        return [ self._load_labels(name) for name in self.bag_names ]
+        return [self._load_labels(name) for name in self.bag_names]
 
     def get_bag_names(self) -> list:
         """
@@ -331,7 +343,7 @@ class ProcessedMILDataset(torch.utils.data.Dataset):
         """
         return self.bag_names
 
-    def subset(self, indices: list) -> 'ProcessedMILDataset':
+    def subset(self, indices: list) -> "ProcessedMILDataset":
         """
         Create a subset of the dataset.
 
@@ -344,6 +356,10 @@ class ProcessedMILDataset(torch.utils.data.Dataset):
 
         new_dataset = copy.deepcopy(self)
         new_dataset.bag_names = [self.bag_names[i] for i in indices]
-        new_dataset.loaded_bags = { k : v for k, v in new_dataset.loaded_bags.items() if k in new_dataset.bag_names }
+        new_dataset.loaded_bags = {
+            k: v
+            for k, v in new_dataset.loaded_bags.items()
+            if k in new_dataset.bag_names
+        }
 
         return new_dataset

@@ -7,10 +7,6 @@ import warnings
 from einops import rearrange
 
 
-__all__ = ['forward_hook', 'Clone', 'Add', 'Cat', 'ReLU', 'GELU', 'Dropout', 'BatchNorm2d', 'Linear', 'MaxPool2d',
-           'AdaptiveAvgPool2d', 'AvgPool2d', 'Conv2d', 'Sequential', 'safe_divide', 'einsum', 'Softmax', 'IndexSelect',
-           'LayerNorm', 'AddEye']
-
 def safe_divide(a, b):
     den = b.clamp(min=1e-9) + b.clamp(max=1e-9)
     den = den + den.eq(0).type(den.type()) * 1e-9
@@ -49,13 +45,14 @@ class RelProp(nn.Module):
     def relprop(self, R, alpha=0.5):
         return R
 
+
 class RelPropSimple(RelProp):
     def relprop(self, R, alpha=0.5):
         Z = self.forward(self.X)
         S = safe_divide(R, Z)
         C = self.gradprop(Z, self.X, S)
 
-        if torch.is_tensor(self.X) == False:
+        if not torch.is_tensor(self.X):
             outputs = []
             outputs.append(self.X[0] * C[0])
             outputs.append(self.X[1] * C[1])
@@ -63,22 +60,28 @@ class RelPropSimple(RelProp):
             outputs = self.X * (C[0])
         return outputs
 
+
 class AddEye(RelPropSimple):
     # input of shape B, C, seq_len, seq_len
     def forward(self, input):
         return input + torch.eye(input.shape[2]).expand_as(input).to(input.device)
 
+
 class ReLU(nn.ReLU, RelProp):
     pass
+
 
 class GELU(nn.GELU, RelProp):
     pass
 
+
 class Softmax(nn.Softmax, RelProp):
     pass
 
+
 class LayerNorm(nn.LayerNorm, RelProp):
     pass
+
 
 class Dropout(nn.Dropout, RelProp):
     pass
@@ -87,8 +90,6 @@ class Dropout(nn.Dropout, RelProp):
 class MaxPool2d(nn.MaxPool2d, RelPropSimple):
     pass
 
-class LayerNorm(nn.LayerNorm, RelProp):
-    pass
 
 class AdaptiveAvgPool2d(nn.AdaptiveAvgPool2d, RelPropSimple):
     pass
@@ -123,21 +124,25 @@ class Add(RelPropSimple):
 
         return outputs
 
+
 class Identity(nn.Identity, RelProp):
     def relprop(self, R, alpha=0.5):
         return R
+
 
 class Einsum(RelPropSimple):
     def __init__(self, equation):
         super().__init__()
         self.equation = equation
+
     def forward(self, *operands):
         return torch.einsum(self.equation, *operands)
 
+
 class IndexSelect(RelProp):
     def forward(self, inputs, dim, indices):
-        self.__setattr__('dim', dim)
-        self.__setattr__('indices', indices)
+        self.__setattr__("dim", dim)
+        self.__setattr__("indices", indices)
 
         return torch.index_select(inputs, dim, indices)
 
@@ -146,7 +151,7 @@ class IndexSelect(RelProp):
         S = safe_divide(R, Z)
         C = self.gradprop(Z, self.X, S)
 
-        if torch.is_tensor(self.X) == False:
+        if not torch.is_tensor(self.X):
             outputs = []
             outputs.append(self.X[0] * C[0])
             outputs.append(self.X[1] * C[1])
@@ -154,9 +159,10 @@ class IndexSelect(RelProp):
             outputs = self.X * (C[0])
         return outputs
 
+
 class Clone(RelProp):
     def forward(self, input, num):
-        self.__setattr__('num', num)
+        self.__setattr__("num", num)
         outputs = []
         for _ in range(num):
             outputs.append(input)
@@ -174,9 +180,10 @@ class Clone(RelProp):
 
         return R
 
+
 class Cat(RelProp):
     def forward(self, inputs, dim):
-        self.__setattr__('dim', dim)
+        self.__setattr__("dim", dim)
         return torch.cat(inputs, dim)
 
     def relprop(self, R, alpha=0.5):
@@ -190,23 +197,29 @@ class Cat(RelProp):
 
         return outputs
 
+
 class Sequential(nn.Sequential):
     def relprop(self, R, alpha=0.5):
         for m in reversed(self._modules.values()):
             R = m.relprop(R, alpha)
         return R
 
+
 class BatchNorm2d(nn.BatchNorm2d, RelProp):
     def relprop(self, R, alpha=0.5):
         X = self.X
-        beta = 1 - alpha
         weight = self.weight.unsqueeze(0).unsqueeze(2).unsqueeze(3) / (
-            (self.running_var.unsqueeze(0).unsqueeze(2).unsqueeze(3).pow(2) + self.eps).pow(0.5))
+            (
+                self.running_var.unsqueeze(0).unsqueeze(2).unsqueeze(3).pow(2)
+                + self.eps
+            ).pow(0.5)
+        )
         Z = X * weight + 1e-9
         S = R / Z
         Ca = S * weight
         R = self.X * (Ca)
         return R
+
 
 class Linear(nn.Linear, RelProp):
     def relprop(self, R, alpha=0.5):
@@ -233,43 +246,48 @@ class Linear(nn.Linear, RelProp):
 
         return R
 
+
 def _no_grad_trunc_normal_(tensor, mean, std, a, b):
     # Cut & paste from PyTorch official master until it's in a few official releases - RW
     # Method based on https://people.sc.fsu.edu/~jburkardt/presentations/truncated_normal.pdf
     def norm_cdf(x):
         # Computes standard normal cumulative distribution function
-        return (1. + math.erf(x / math.sqrt(2.))) / 2.
+        return (1.0 + math.erf(x / math.sqrt(2.0))) / 2.0
 
     if (mean < a - 2 * std) or (mean > b + 2 * std):
-        warnings.warn("mean is more than 2 std from [a, b] in nn.init.trunc_normal_. "
-                      "The distribution of values may be incorrect.",
-                      stacklevel=2)
+        warnings.warn(
+            "mean is more than 2 std from [a, b] in nn.init.trunc_normal_. "
+            "The distribution of values may be incorrect.",
+            stacklevel=2,
+        )
 
     with torch.no_grad():
         # Values are generated by using a truncated uniform distribution and
         # then using the inverse CDF for the normal distribution.
         # Get upper and lower cdf values
-        l = norm_cdf((a - mean) / std)
-        u = norm_cdf((b - mean) / std)
+        lower = norm_cdf((a - mean) / std)
+        upper = norm_cdf((b - mean) / std)
 
         # Uniformly fill tensor with values from [l, u], then translate to
         # [2l-1, 2u-1].
-        tensor.uniform_(2 * l - 1, 2 * u - 1)
+        tensor.uniform_(2 * lower - 1, 2 * upper - 1)
 
         # Use inverse cdf transform for normal distribution to get truncated
         # standard normal
         tensor.erfinv_()
 
         # Transform to proper mean, std
-        tensor.mul_(std * math.sqrt(2.))
+        tensor.mul_(std * math.sqrt(2.0))
         tensor.add_(mean)
 
         # Clamp to ensure it's in the proper range
         tensor.clamp_(min=a, max=b)
         return tensor
 
-def trunc_normal_(tensor, mean=0., std=1., a=-2., b=2.):
+
+def trunc_normal_(tensor, mean=0.0, std=1.0, a=-2.0, b=2.0):
     return _no_grad_trunc_normal_(tensor, mean, std, a, b)
+
 
 class MultiheadSelfAttention(RelProp):
     r"""
@@ -278,12 +296,12 @@ class MultiheadSelfAttention(RelProp):
 
     def __init__(
         self,
-        in_dim : int,
-        out_dim : int = None,
-        att_dim : int = 512,
-        n_heads : int = 4,
-        dropout : float = 0.0,
-        learn_weights : bool = True
+        in_dim: int,
+        out_dim: int = None,
+        att_dim: int = 512,
+        n_heads: int = 4,
+        dropout: float = 0.0,
+        learn_weights: bool = True,
     ):
         """
         Class constructor
@@ -322,11 +340,11 @@ class MultiheadSelfAttention(RelProp):
         self.matmul1 = Einsum("b h i d, b h j d -> b h i j")
         self.matmul2 = Einsum("b h i j, b h j d -> b h i d")
 
-        self.scale = 1.0 / (self.head_dim ** 0.5)
-    
+        self.scale = 1.0 / (self.head_dim**0.5)
+
     def _init_weights(self, m):
         if isinstance(m, nn.Linear):
-            trunc_normal_(m.weight, std=.02)
+            trunc_normal_(m.weight, std=0.02)
             if isinstance(m, nn.Linear) and m.bias is not None:
                 nn.init.constant_(m.bias, 0)
         elif isinstance(m, nn.LayerNorm):
@@ -340,38 +358,36 @@ class MultiheadSelfAttention(RelProp):
         self,
         X: torch.Tensor,
     ) -> torch.Tensor:
-        """
-        """
-        QKV = self.qkv_nn(X) # (batch_size, seq_len, 3 * att_dim)
-        Q, K, V = rearrange(QKV, 'b n (p h d) -> p b h n d', h=self.n_heads, p=3)
-        QK = self.matmul1([Q, K])*self.scale # (batch_size, n_heads, seq_len, seq_len)
+        """ """
+        QKV = self.qkv_nn(X)  # (batch_size, seq_len, 3 * att_dim)
+        Q, K, V = rearrange(QKV, "b n (p h d) -> p b h n d", h=self.n_heads, p=3)
+        QK = (
+            self.matmul1([Q, K]) * self.scale
+        )  # (batch_size, n_heads, seq_len, seq_len)
         S = self.softmax(QK)
         S = self.dropout(S)
         Y = self.matmul2([S, V])
-        Y = rearrange(Y, 'b h n d -> b n (h d)')
+        Y = rearrange(Y, "b h n d -> b n (h d)")
         Y = self.out_proj(Y)
         return Y
 
     def relprop(
-        self,
-        R : torch.Tensor,
-        return_att_relevance: bool = False,
-        **kwargs
+        self, R: torch.Tensor, return_att_relevance: bool = False, **kwargs
     ) -> torch.Tensor:
-        """
-        """
+        """ """
         R = self.out_proj.relprop(R, **kwargs)
-        R = rearrange(R, 'b n (h d) -> b h n d', h=self.n_heads)
+        R = rearrange(R, "b n (h d) -> b h n d", h=self.n_heads)
         R_S, RV = self.matmul2.relprop(R, **kwargs)
         R_S = self.dropout.relprop(R_S, **kwargs)
         R_QK = self.softmax.relprop(R_S, **kwargs)
         RQ, RK = self.matmul1.relprop(R_QK, **kwargs)
-        R_QKV = rearrange([RQ, RK, RV], 'p b h n d -> b n (p h d)', h=self.n_heads, p=3)
+        R_QKV = rearrange([RQ, RK, RV], "p b h n d -> b n (p h d)", h=self.n_heads, p=3)
         R = self.qkv_nn.relprop(R_QKV, **kwargs)
         if return_att_relevance:
             return R, R_S
         else:
             return R
+
 
 class TransformerLayer(torch.nn.Module):
     r"""
@@ -381,14 +397,13 @@ class TransformerLayer(torch.nn.Module):
     def __init__(
         self,
         in_dim: int,
-        out_dim : int = None,
+        out_dim: int = None,
         att_dim: int = 512,
         n_heads: int = 4,
         use_mlp: bool = True,
-        dropout: float = 0.0
+        dropout: float = 0.0,
     ):
-        """
-        """
+        """ """
         super().__init__()
 
         self.att_module = MultiheadSelfAttention(
@@ -396,7 +411,7 @@ class TransformerLayer(torch.nn.Module):
             in_dim=in_dim,
             out_dim=att_dim,
             n_heads=n_heads,
-            dropout=dropout
+            dropout=dropout,
         )
 
         if out_dim is None:
@@ -410,11 +425,11 @@ class TransformerLayer(torch.nn.Module):
         self.use_mlp = use_mlp
         if use_mlp:
             self.mlp_module = Sequential(
-                Linear(att_dim, 4*att_dim),
+                Linear(att_dim, 4 * att_dim),
                 ReLU(),
                 Dropout(dropout),
-                Linear(4*att_dim, att_dim),
-                Dropout(dropout)
+                Linear(4 * att_dim, att_dim),
+                Dropout(dropout),
             )
 
         if out_dim != att_dim:
@@ -435,8 +450,7 @@ class TransformerLayer(torch.nn.Module):
         self,
         X: torch.Tensor,
     ) -> torch.Tensor:
-        """
-        """
+        """ """
         X1, X2 = self.clone1(X, 2)
         Y = self.add1([self.in_proj(X1), self.att_module(self.norm1(X2))])
         if self.use_mlp:
@@ -446,13 +460,9 @@ class TransformerLayer(torch.nn.Module):
         return Y
 
     def relprop(
-        self,
-        R : torch.Tensor,
-        return_att_relevance: bool = False,
-        **kwargs
+        self, R: torch.Tensor, return_att_relevance: bool = False, **kwargs
     ) -> torch.Tensor:
-        """
-        """
+        """ """
         R = self.out_proj.relprop(R, **kwargs)
         if self.use_mlp:
             (R1, R2) = self.add2.relprop(R, **kwargs)
@@ -473,6 +483,7 @@ class TransformerLayer(torch.nn.Module):
         else:
             return R
 
+
 class TransformerEncoder(torch.nn.Module):
     r"""
     Transformer encoder with support for Relevance Propagation.
@@ -486,7 +497,7 @@ class TransformerEncoder(torch.nn.Module):
         n_heads: int = 4,
         n_layers: int = 4,
         use_mlp: bool = True,
-        dropout: float = 0.0
+        dropout: float = 0.0,
     ):
         """
         Arguments:
@@ -505,14 +516,19 @@ class TransformerEncoder(torch.nn.Module):
         if out_dim is None:
             out_dim = in_dim
 
-        self.layers = torch.nn.ModuleList([
-            TransformerLayer(
-                in_dim=in_dim if i == 0 else att_dim,
-                out_dim=out_dim if i == n_layers - 1 else att_dim,
-                att_dim=att_dim,  n_heads=n_heads, use_mlp=use_mlp, dropout=dropout
-            )
-            for i in range(n_layers)
-        ])
+        self.layers = torch.nn.ModuleList(
+            [
+                TransformerLayer(
+                    in_dim=in_dim if i == 0 else att_dim,
+                    out_dim=out_dim if i == n_layers - 1 else att_dim,
+                    att_dim=att_dim,
+                    n_heads=n_heads,
+                    use_mlp=use_mlp,
+                    dropout=dropout,
+                )
+                for i in range(n_layers)
+            ]
+        )
         self.norm = LayerNorm(out_dim)
 
     def forward(
@@ -533,18 +549,14 @@ class TransformerEncoder(torch.nn.Module):
         for layer in self.layers:
             Y = layer(Y)
 
-        Y = self.norm(Y) # (batch_size, bag_size, att_dim)
+        Y = self.norm(Y)  # (batch_size, bag_size, att_dim)
 
         return Y
 
     def relprop(
-        self,
-        R: torch.Tensor,
-        return_att_relevance: bool = False,
-        **kwargs
+        self, R: torch.Tensor, return_att_relevance: bool = False, **kwargs
     ) -> torch.Tensor:
-        """
-        """
+        """ """
         R = self.norm.relprop(R, **kwargs)
         if return_att_relevance:
             att_rel_list = []

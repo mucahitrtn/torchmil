@@ -1,5 +1,6 @@
 import torch
 
+
 class MaxPool(torch.nn.Module):
     r"""
     Max pooling aggregation.
@@ -13,15 +14,15 @@ class MaxPool(torch.nn.Module):
 
     where $\left[ \mathbf{a} \right]_i$ denotes the $i$-th element of the vector $\mathbf{a}$.
     """
+
     def __init__(self):
-        """
-        """
+        """ """
         super(MaxPool, self).__init__()
 
     def forward(
         self,
-        X : torch.Tensor,
-        mask : torch.Tensor = None,
+        X: torch.Tensor,
+        mask: torch.Tensor = None,
     ) -> torch.Tensor:
         """
         Arguments:
@@ -39,7 +40,7 @@ class MaxPool(torch.nn.Module):
         mask = mask.unsqueeze(dim=-1)
 
         # Set masked values to -inf
-        X = X.masked_fill(~mask, float('-inf'))
+        X = X.masked_fill(~mask, float("-inf"))
         z = X.max(dim=1)[0]
 
         return z

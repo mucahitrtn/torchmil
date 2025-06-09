@@ -2,7 +2,13 @@ import torch
 
 from torch.nn.attention import SDPBackend
 
-SDP_BACKEND = [SDPBackend.MATH, SDPBackend.FLASH_ATTENTION, SDPBackend.EFFICIENT_ATTENTION, SDPBackend.CUDNN_ATTENTION]
+SDP_BACKEND = [
+    SDPBackend.MATH,
+    SDPBackend.FLASH_ATTENTION,
+    SDPBackend.EFFICIENT_ATTENTION,
+    SDPBackend.CUDNN_ATTENTION,
+]
+
 
 class MultiheadSelfAttention(torch.nn.Module):
     r"""
@@ -20,14 +26,15 @@ class MultiheadSelfAttention(torch.nn.Module):
 
     If $\texttt{out_dim} \neq \texttt{att_dim}$, $\mathbf{Y}$ is passed through a linear layer with output dimension $\texttt{out_dim}$.
     """
+
     def __init__(
         self,
-        in_dim : int,
-        out_dim : int = None,
-        att_dim : int = 512,
-        n_heads : int = 4,
-        dropout : float = 0.0,
-        learn_weights : bool = True
+        in_dim: int,
+        out_dim: int = None,
+        att_dim: int = 512,
+        n_heads: int = 4,
+        dropout: float = 0.0,
+        learn_weights: bool = True,
     ):
         """
         Arguments:
@@ -45,7 +52,7 @@ class MultiheadSelfAttention(torch.nn.Module):
         self.dropout = dropout
         self.learn_weights = learn_weights
         if learn_weights:
-            self.qkv_nn = torch.nn.Linear(in_dim, 3 * att_dim, bias = False)
+            self.qkv_nn = torch.nn.Linear(in_dim, 3 * att_dim, bias=False)
             self.head_dim = att_dim // n_heads
             assert att_dim % n_heads == 0, "att_dim must be divisible by n_heads"
         else:
@@ -61,13 +68,13 @@ class MultiheadSelfAttention(torch.nn.Module):
             self.out_proj = torch.nn.Identity()
 
     def _scaled_dot_product_attention(
-            self,
-            query : torch.Tensor,
-            key : torch.Tensor,
-            value : torch.Tensor,
-            mask : torch.Tensor = None,
-            return_att : bool = False
-        ) -> tuple[torch.Tensor, torch.Tensor]:
+        self,
+        query: torch.Tensor,
+        key: torch.Tensor,
+        value: torch.Tensor,
+        mask: torch.Tensor = None,
+        return_att: bool = False,
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """
 
         Scaled dot product attention.
@@ -84,24 +91,34 @@ class MultiheadSelfAttention(torch.nn.Module):
 
         if mask is not None:
             # the following is equivalent to mask.unsqueeze(-1) @ mask.unsqueeze(-1).transpose(1, 2)
-            mask = mask[:, None, :, None] * mask[:, None, None, :] # (batch_size, 1, seq_len, seq_len)
-            mask = mask.bool() # (batch_size, 1, seq_len, seq_len)
+            mask = (
+                mask[:, None, :, None] * mask[:, None, None, :]
+            )  # (batch_size, 1, seq_len, seq_len)
+            mask = mask.bool()  # (batch_size, 1, seq_len, seq_len)
 
         if return_att:
-            query = query / (self.head_dim ** 0.5)
-            qk = torch.einsum("bhqd,bhkd->bhqk", query, key) # (batch_size, n_heads, seq_len, seq_len)
+            query = query / (self.head_dim**0.5)
+            qk = torch.einsum(
+                "bhqd,bhkd->bhqk", query, key
+            )  # (batch_size, n_heads, seq_len, seq_len)
             if mask is not None:
                 qk.masked_fill_(mask, float("-inf"))
             att = torch.nn.functional.softmax(qk, dim=-1)
-            att_d = torch.nn.functional.dropout(att, p=self.dropout, training=self.training)
-            out = torch.einsum("bhqk,bhkd->bhqd", att_d, value) # (batch_size, n_heads, seq_len, head_dim)
+            att_d = torch.nn.functional.dropout(
+                att, p=self.dropout, training=self.training
+            )
+            out = torch.einsum(
+                "bhqk,bhkd->bhqd", att_d, value
+            )  # (batch_size, n_heads, seq_len, head_dim)
             return out, att
         else:
             with torch.nn.attention.sdpa_kernel(SDP_BACKEND):
-                out = torch.nn.functional.scaled_dot_product_attention(query, key, value, mask, self.dropout) # (batch_size, n_heads, seq_len, head_dim)
+                out = torch.nn.functional.scaled_dot_product_attention(
+                    query, key, value, mask, self.dropout
+                )  # (batch_size, n_heads, seq_len, head_dim)
             return out
 
-    def _qkv(self, x : torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    def _qkv(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
         Compute query, key, and value tensors.
 
@@ -113,17 +130,16 @@ class MultiheadSelfAttention(torch.nn.Module):
             value: Value tensor of shape `(batch_size, seq_len, att_dim)`.
         """
         if self.learn_weights:
-            q, k, v = self.qkv_nn(x).chunk(3, dim=-1) # (batch_size, seq_len, att_dim), (batch_size, seq_len, att_dim), (batch_size, seq_len, att_dim)
+            q, k, v = self.qkv_nn(x).chunk(
+                3, dim=-1
+            )  # (batch_size, seq_len, att_dim), (batch_size, seq_len, att_dim), (batch_size, seq_len, att_dim)
         else:
             q = k = v = x
         return q, k, v
 
     def forward(
-            self,
-            x : torch.Tensor,
-            mask : torch.Tensor = None,
-            return_att : bool = False
-        ) -> torch.Tensor:
+        self, x: torch.Tensor, mask: torch.Tensor = None, return_att: bool = False
+    ) -> torch.Tensor:
         """
         Forward pass.
 
@@ -135,17 +151,37 @@ class MultiheadSelfAttention(torch.nn.Module):
             att: Only returned when `return_att=True`. Attention weights of shape `(batch_size, n_heads, seq_len, seq_len)`.
         """
         batch_size, seq_len, _ = x.size()
-        query, key, value = self._qkv(x) # (batch_size, seq_len, att_dim), (batch_size, seq_len, att_dim), (batch_size, seq_len, att_dim)
-        query = query.view(batch_size, seq_len, self.n_heads, self.head_dim).permute(0, 2, 1, 3) # (batch_size, n_heads, seq_len, head_dim)
-        key = key.view(batch_size, seq_len, self.n_heads, self.head_dim).permute(0, 2, 1, 3) # (batch_size, n_heads, seq_len, head_dim)
-        value = value.view(batch_size, seq_len, self.n_heads, self.head_dim).permute(0, 2, 1, 3) # (batch_size, n_heads, seq_len, head_dim)
+        query, key, value = self._qkv(
+            x
+        )  # (batch_size, seq_len, att_dim), (batch_size, seq_len, att_dim), (batch_size, seq_len, att_dim)
+        query = query.view(batch_size, seq_len, self.n_heads, self.head_dim).permute(
+            0, 2, 1, 3
+        )  # (batch_size, n_heads, seq_len, head_dim)
+        key = key.view(batch_size, seq_len, self.n_heads, self.head_dim).permute(
+            0, 2, 1, 3
+        )  # (batch_size, n_heads, seq_len, head_dim)
+        value = value.view(batch_size, seq_len, self.n_heads, self.head_dim).permute(
+            0, 2, 1, 3
+        )  # (batch_size, n_heads, seq_len, head_dim)
         if return_att:
-            y, att = self._scaled_dot_product_attention(query, key, value, mask, return_att)
-            y = y.permute(0, 2, 1, 3).contiguous().view(batch_size, seq_len, self.att_dim) # (batch_size, seq_len, att_dim)
+            y, att = self._scaled_dot_product_attention(
+                query, key, value, mask, return_att
+            )
+            y = (
+                y.permute(0, 2, 1, 3)
+                .contiguous()
+                .view(batch_size, seq_len, self.att_dim)
+            )  # (batch_size, seq_len, att_dim)
             y = self.out_proj(y)
             return y, att
         else:
-            y = self._scaled_dot_product_attention(query, key, value, mask) # (batch_size, n_heads, seq_len, head_dim)
-            y = y.permute(0, 2, 1, 3).contiguous().view(batch_size, seq_len, self.att_dim) # (batch_size, seq_len, att_dim)
+            y = self._scaled_dot_product_attention(
+                query, key, value, mask
+            )  # (batch_size, n_heads, seq_len, head_dim)
+            y = (
+                y.permute(0, 2, 1, 3)
+                .contiguous()
+                .view(batch_size, seq_len, self.att_dim)
+            )  # (batch_size, seq_len, att_dim)
             y = self.out_proj(y)
             return y

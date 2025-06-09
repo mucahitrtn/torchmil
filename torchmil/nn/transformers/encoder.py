@@ -1,5 +1,6 @@
 import torch
 
+
 class Encoder(torch.nn.Module):
     r"""
     Generic Transformer encoder class.
@@ -19,11 +20,7 @@ class Encoder(torch.nn.Module):
     and $\operatorname{Encoder}(\mathbf{X}) = \mathbf{X}^{L} + \mathbf{X}$ if `add_self=True`.
     """
 
-    def __init__(
-        self,
-        layers: torch.nn.ModuleList,
-        add_self: bool = False
-    ):
+    def __init__(self, layers: torch.nn.ModuleList, add_self: bool = False):
         """
         Arguments:
             layers: List of encoder layers.
@@ -34,10 +31,7 @@ class Encoder(torch.nn.Module):
         self.layers = layers
 
     def forward(
-        self,
-        X: torch.Tensor,
-        return_att: bool = False,
-        **kwargs
+        self, X: torch.Tensor, return_att: bool = False, **kwargs
     ) -> torch.Tensor:
         """
         Forward method.
@@ -61,8 +55,9 @@ class Encoder(torch.nn.Module):
             if self.add_self:
                 Y = Y + X
         if return_att:
-            out_att = torch.stack(out_att, dim=0)  # (n_layers, batch_size, bag_size, bag_size)
+            out_att = torch.stack(
+                out_att, dim=0
+            )  # (n_layers, batch_size, bag_size, bag_size)
             return Y, out_att
         else:
             return Y
-            

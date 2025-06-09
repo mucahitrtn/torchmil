@@ -1,10 +1,10 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import numpy as np
 
 from torchmil.models.mil_model import MILModel
 from torchmil.nn.utils import get_feat_dim, masked_softmax
+
 
 class DSMIL(MILModel):
     r"""
@@ -41,16 +41,17 @@ class DSMIL(MILModel):
     where $\ell_{\text{BCE}}$ is the Binary Cross-Entropy loss, $Y$ is the true bag label, $\hat{Y}$ is the predicted bag label, and $c(\mathbf{x}_m)$ is the predicted label of the critical instance.
 
     """
+
     def __init__(
-            self,
-            in_shape: tuple = None,
-            att_dim: int = 128,
-            nonlinear_q: bool = False,
-            nonlinear_v: bool = False,
-            dropout: float = 0.0,
-            feat_ext: torch.nn.Module = torch.nn.Identity(),
-            criterion: torch.nn.Module = torch.nn.BCEWithLogitsLoss()
-        ) -> None:
+        self,
+        in_shape: tuple = None,
+        att_dim: int = 128,
+        nonlinear_q: bool = False,
+        nonlinear_v: bool = False,
+        dropout: float = 0.0,
+        feat_ext: torch.nn.Module = torch.nn.Identity(),
+        criterion: torch.nn.Module = torch.nn.BCEWithLogitsLoss(),
+    ) -> None:
         """
         Arguments:
             in_shape: Shape of input data expected by the feature extractor (excluding batch dimension).
@@ -72,16 +73,14 @@ class DSMIL(MILModel):
                 nn.Linear(feat_dim, att_dim),
                 nn.ReLU(),
                 nn.Linear(att_dim, att_dim),
-                nn.Tanh()
+                nn.Tanh(),
             )
         else:
             self.q_nn = nn.Linear(feat_dim, att_dim)
 
         if nonlinear_v:
             self.v_nn = nn.Sequential(
-                nn.Dropout(dropout),
-                nn.Linear(feat_dim, feat_dim),
-                nn.ReLU()
+                nn.Dropout(dropout), nn.Linear(feat_dim, feat_dim), nn.ReLU()
             )
         else:
             self.v_nn = nn.Identity()
@@ -94,7 +93,7 @@ class DSMIL(MILModel):
         X: torch.Tensor,
         mask: torch.Tensor = None,
         return_att: bool = False,
-        return_inst_pred: bool = False
+        return_inst_pred: bool = False,
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Forward pass.
@@ -114,38 +113,42 @@ class DSMIL(MILModel):
         if mask is not None:
             mask = mask.bool()
 
-        X = self.feat_ext(X) # (batch_size, bag_size, feat_dim)
+        X = self.feat_ext(X)  # (batch_size, bag_size, feat_dim)
 
-        y_logits = self.inst_classifier(X) # (batch_size, bag_size, 1)
+        y_logits = self.inst_classifier(X)  # (batch_size, bag_size, 1)
 
-        V = self.v_nn(X) # (batch_size, bag_size, feat_dim)
-        Q = self.q_nn(X) # (batch_size, bag_size, att_dim)
+        V = self.v_nn(X)  # (batch_size, bag_size, feat_dim)
+        Q = self.q_nn(X)  # (batch_size, bag_size, att_dim)
 
         # sort class scores along the instance dimension
-        indices_max = torch.sort(y_logits, 1, descending=True)[1] # (batch_size, bag_size, 1)
-        idx_max = indices_max[:, 0, :] # (batch_size, 1)
-        idx_max = idx_max.unsqueeze(-1).expand(-1, -1, Q.size(-1)) # (batch_size, 1, att_dim)
+        indices_max = torch.sort(y_logits, 1, descending=True)[
+            1
+        ]  # (batch_size, bag_size, 1)
+        idx_max = indices_max[:, 0, :]  # (batch_size, 1)
+        idx_max = idx_max.unsqueeze(-1).expand(
+            -1, -1, Q.size(-1)
+        )  # (batch_size, 1, att_dim)
 
         # compute queries of critical instances
-        Q_max = torch.gather(Q, 1, idx_max) # (batch_size, 1, att_dim)
+        Q_max = torch.gather(Q, 1, idx_max)  # (batch_size, 1, att_dim)
 
         # compute inner product of Q to each entry of q_max
-        A = torch.bmm(Q, Q_max.transpose(1, 2)) # (batch_size, bag_size, 1)
+        A = torch.bmm(Q, Q_max.transpose(1, 2))  # (batch_size, bag_size, 1)
 
         # scale and normalize the attention scores
         scale = np.sqrt(Q_max.size(-1))
         A = A / scale
 
-        A = masked_softmax(A, mask) # (batch_size, bag_size, 1)
+        A = masked_softmax(A, mask)  # (batch_size, bag_size, 1)
 
         # compute bag representation
-        z = torch.bmm(A.transpose(1, 2), V) # (batch_size, 1, feat_dim)
+        z = torch.bmm(A.transpose(1, 2), V)  # (batch_size, 1, feat_dim)
 
-        Y_pred = self.bag_classifier(z) # (batch_size, 1, 1)
-        Y_pred = Y_pred.squeeze(-1) # (batch_size, 1)
+        Y_pred = self.bag_classifier(z)  # (batch_size, 1, 1)
+        Y_pred = Y_pred.squeeze(-1)  # (batch_size, 1)
 
-        Y_pred = Y_pred.squeeze(-1) # (batch_size,)
-        y_logits = y_logits.squeeze(-1) # (batch_size, bag_size)
+        Y_pred = Y_pred.squeeze(-1)  # (batch_size,)
+        y_logits = y_logits.squeeze(-1)  # (batch_size, bag_size)
 
         if return_att:
             if return_inst_pred:
@@ -178,18 +181,15 @@ class DSMIL(MILModel):
 
         """
         Y_pred, y_pred = self.forward(X, mask, return_inst_pred=True)
-        max_pred, _ = torch.max(y_pred, 1) # (batch_size,)
-        bag_pred = 0.5*(Y_pred + max_pred) # (batch_size,)
+        max_pred, _ = torch.max(y_pred, 1)  # (batch_size,)
+        bag_pred = 0.5 * (Y_pred + max_pred)  # (batch_size,)
         crit_loss = self.criterion(Y_pred.float(), Y.float())
         crit_name = self.criterion.__class__.__name__
         max_loss = self.criterion(max_pred.float(), Y.float())
-        return bag_pred, { crit_name : crit_loss, f'{crit_name}_max': max_loss }
+        return bag_pred, {crit_name: crit_loss, f"{crit_name}_max": max_loss}
 
     def predict(
-        self,
-        X: torch.Tensor,
-        mask: torch.Tensor = None,
-        return_inst_pred: bool = False
+        self, X: torch.Tensor, mask: torch.Tensor = None, return_inst_pred: bool = False
     ) -> torch.Tensor:
         """
         Predict bag and (optionally) instance labels.
@@ -204,8 +204,8 @@ class DSMIL(MILModel):
             y_inst_pred: If `return_inst_pred=True`, returns instance labels predictions of shape `(batch_size, bag_size)`.
         """
         Y_pred, y_logits_pred = self.forward(X, mask, return_inst_pred=True)
-        max_pred, _ = torch.max(y_logits_pred, 1) # (batch_size,)
-        bag_pred = 0.5*(Y_pred + max_pred) # (batch_size,)
+        max_pred, _ = torch.max(y_logits_pred, 1)  # (batch_size,)
+        bag_pred = 0.5 * (Y_pred + max_pred)  # (batch_size,)
         if return_inst_pred:
             return bag_pred, y_logits_pred
         else:

@@ -1,31 +1,25 @@
-from .encoder import(
-    Encoder
+from .encoder import Encoder as Encoder
+
+from .layer import Layer as Layer
+
+from .conventional_transformer import (
+    TransformerLayer as TransformerLayer,
+    TransformerEncoder as TransformerEncoder,
 )
 
-from .layer import(
-    Layer
+from .sm_transformer import (
+    SmTransformerLayer as SmTransformerLayer,
+    SmTransformerEncoder as SmTransformerEncoder,
 )
 
-from .conventional_transformer import(
-    TransformerLayer,
-    TransformerEncoder
+from .nystrom_transformer import (
+    NystromTransformerLayer as NystromTransformerLayer,
+    NystromTransformerEncoder as NystromTransformerEncoder,
 )
 
-from .sm_transformer import(
-    SmTransformerLayer,
-    SmTransformerEncoder
+from .irpe_transformer import (
+    iRPETransformerLayer as iRPETransformerLayer,
+    iRPETransformerEncoder as iRPETransformerEncoder,
 )
 
-from .nystrom_transformer import(
-    NystromTransformerLayer,
-    NystromTransformerEncoder
-)
-
-from .irpe_transformer import(
-    iRPETransformerLayer,
-    iRPETransformerEncoder
-)
-
-from .t2t import(
-    T2TLayer
-)
+from .t2t import T2TLayer as T2TLayer

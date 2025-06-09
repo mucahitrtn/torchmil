@@ -1,19 +1,21 @@
 import torch
 from .gnn_identity import GNNIdentity
 
+
 class DeepGCNLayer(torch.nn.Module):
     """
     Implementation of a DeepGCN layer.
 
     Adapts the implementation from [torch_geometric](https://pytorch-geometric.readthedocs.io/en/latest/generated/torch_geometric.nn.models.DeepGCNLayer.html).
     """
+
     def __init__(
         self,
-        conv : torch.nn.Module = None,
-        norm : torch.nn.Module = None,
-        act : torch.nn.Module = None,
-        block : str = 'plain',
-        dropout : float = 0.0
+        conv: torch.nn.Module = None,
+        norm: torch.nn.Module = None,
+        act: torch.nn.Module = None,
+        block: str = "plain",
+        dropout: float = 0.0,
     ):
         """
         Arguments:
@@ -30,11 +32,7 @@ class DeepGCNLayer(torch.nn.Module):
         self.dropout = torch.nn.Dropout(dropout)
         self.block = block
 
-    def forward(
-        self,
-        x : torch.Tensor,
-        adj : torch.Tensor
-    ) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, adj: torch.Tensor) -> torch.Tensor:
         """
         Forward method.
 
@@ -46,7 +44,7 @@ class DeepGCNLayer(torch.nn.Module):
             y: Output tensor of shape `(batch_size, n_nodes, out_dim)`.
         """
 
-        if self.block == 'res+':
+        if self.block == "res+":
             y = self.norm(x)
             y = self.act(y)
             y = self.dropout(y)
@@ -56,9 +54,9 @@ class DeepGCNLayer(torch.nn.Module):
             y = self.conv(x, adj)
             y = self.norm(y)
             y = self.act(y)
-            if self.block == 'res':
+            if self.block == "res":
                 y = y + x
-            elif self.block == 'dense':
+            elif self.block == "dense":
                 y = torch.cat([x, y], dim=-1)
             y = self.dropout(y)
         return y

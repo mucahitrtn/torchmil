@@ -4,6 +4,7 @@ import pytest
 # Import the modules to be tested
 from torchmil.models import PatchGCN
 
+
 # Fixtures for test data
 @pytest.fixture
 def sample_patch_gcn_data():
@@ -48,12 +49,17 @@ def test_patch_gcn(sample_patch_gcn_data):
     Y_pred, loss_dict = model.compute_loss(Y, X, adj, mask)
     assert Y_pred.shape == (X.shape[0],), "Output shape should be (batch_size,)"
     assert isinstance(loss_dict, dict), "Loss should be a dictionary"
-    assert "BCEWithLogitsLoss" in loss_dict, "Loss dict should contain the criterion loss"
+    assert (
+        "BCEWithLogitsLoss" in loss_dict
+    ), "Loss dict should contain the criterion loss"
 
     # Test forward pass with attention
     Y_pred, att = model(X, adj, mask, return_att=True)
     assert Y_pred.shape == (X.shape[0],), "Output shape should be (batch_size,)"
-    assert att.shape == (X.shape[0], X.shape[1]), "Attention shape should be (batch_size, bag_size)"
+    assert att.shape == (
+        X.shape[0],
+        X.shape[1],
+    ), "Attention shape should be (batch_size, bag_size)"
 
     # Test predict
     Y_pred = model.predict(X, adj, mask, return_inst_pred=False)
@@ -61,4 +67,7 @@ def test_patch_gcn(sample_patch_gcn_data):
 
     Y_pred, y_inst_pred = model.predict(X, adj, mask, return_inst_pred=True)
     assert Y_pred.shape == (X.shape[0],), "Output shape should be (batch_size,)"
-    assert y_inst_pred.shape == (X.shape[0], X.shape[1]), "Instance prediction shape should be (batch_size, bag_size)"
+    assert y_inst_pred.shape == (
+        X.shape[0],
+        X.shape[1],
+    ), "Instance prediction shape should be (batch_size, bag_size)"

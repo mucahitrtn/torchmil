@@ -5,13 +5,14 @@ from .ctscan_dataset import CTScanDataset
 
 from ..utils.common import read_csv, keep_only_existing_files
 
+
 class RSNAMILDataset(BinaryClassificationDataset, CTScanDataset):
     r"""
     RSNA Intracranial Hemorrhage Detection dataset for Multiple Instance Learning (MIL).
     Download it from [Hugging Face Datasets](https://huggingface.co/datasets/Franblueee/RSNA_ICH_MIL).
 
     **About the original RSNA Dataset.**
-    The original [RSNA-ICH dataset](https://www.kaggle.com/competitions/rsna-intracranial-hemorrhage-detection) contains head CT scans. The task is to identify whether a CT scan contains acute intracranial hemorrhage and its subtypes. The dataset includes a label for each slice. 
+    The original [RSNA-ICH dataset](https://www.kaggle.com/competitions/rsna-intracranial-hemorrhage-detection) contains head CT scans. The task is to identify whether a CT scan contains acute intracranial hemorrhage and its subtypes. The dataset includes a label for each slice.
 
     **Dataset description.**
     We have preprocessed the CT scans by computing features for each slice using various feature extractors.
@@ -45,15 +46,16 @@ class RSNAMILDataset(BinaryClassificationDataset, CTScanDataset):
 
     Each `.npy` file corresponds to a single CT scan. The `splits.csv` file defines train/test splits for standardized experimentation.
     """
+
     def __init__(
         self,
-        root : str,
-        features : str = 'resnet50',
-        partition : str = 'train',
+        root: str,
+        features: str = "resnet50",
+        partition: str = "train",
         bag_keys: list = ["X", "Y", "y_inst", "adj", "coords"],
         adj_with_dist: bool = False,
         norm_adj: bool = True,
-        load_at_init: bool = True
+        load_at_init: bool = True,
     ) -> None:
         """
         Arguments:
@@ -65,13 +67,15 @@ class RSNAMILDataset(BinaryClassificationDataset, CTScanDataset):
             norm_adj: If True, normalize the adjacency matrix.
             load_at_init: If True, load the bags at initialization. If False, load the bags on demand.
         """
-        features_path = f'{root}/features/features_{features}/'
-        labels_path = f'{root}/labels/'
-        slice_labels_path = f'{root}/slice_labels/'
+        features_path = f"{root}/features/features_{features}/"
+        labels_path = f"{root}/labels/"
+        slice_labels_path = f"{root}/slice_labels/"
 
-        splits_file = f'{root}/splits.csv'
+        splits_file = f"{root}/splits.csv"
         dict_list = read_csv(splits_file)
-        ctscan_names = [ row['bag_name'] for row in dict_list if row['split'] == partition]
+        ctscan_names = [
+            row["bag_name"] for row in dict_list if row["split"] == partition
+        ]
         ctscan_names = list(set(ctscan_names))
         ctscan_names = keep_only_existing_files(features_path, ctscan_names)
 
@@ -84,7 +88,7 @@ class RSNAMILDataset(BinaryClassificationDataset, CTScanDataset):
             ctscan_names=ctscan_names,
             adj_with_dist=adj_with_dist,
             norm_adj=norm_adj,
-            load_at_init=load_at_init
+            load_at_init=load_at_init,
         )
 
     def _load_bag(self, name: str) -> dict[str, np.ndarray]:

@@ -4,9 +4,10 @@ import torch
 
 from torchmil.models.mil_model import MILModel
 
-from torchmil.nn import SmAttentionPool, LazyLinear
+from torchmil.nn import SmAttentionPool
 
 from torchmil.nn.utils import get_feat_dim
+
 
 class SmABMIL(MILModel):
     r"""
@@ -30,9 +31,9 @@ class SmABMIL(MILModel):
         self,
         in_shape: tuple,
         att_dim: int = 128,
-        att_act: str = 'tanh',
-        sm_mode: str = 'approx',
-        sm_alpha: Union[float, str] = 'trainable',
+        att_act: str = "tanh",
+        sm_mode: str = "approx",
+        sm_alpha: Union[float, str] = "trainable",
         sm_layers: int = 0,
         sm_steps: int = 10,
         sm_pre: bool = False,
@@ -71,7 +72,7 @@ class SmABMIL(MILModel):
             sm_steps=sm_steps,
             sm_pre=sm_pre,
             sm_post=sm_post,
-            sm_spectral_norm=sm_spectral_norm
+            sm_spectral_norm=sm_spectral_norm,
         )
         self.last_layer = torch.nn.Linear(feat_dim, 1)
 
@@ -82,7 +83,7 @@ class SmABMIL(MILModel):
         X: torch.Tensor,
         adj: torch.Tensor,
         mask: torch.Tensor = None,
-        return_att: bool = False
+        return_att: bool = False,
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Forward pass.
@@ -120,7 +121,7 @@ class SmABMIL(MILModel):
         Y: torch.Tensor,
         X: torch.Tensor,
         adj: torch.Tensor,
-        mask: torch.Tensor = None
+        mask: torch.Tensor = None,
     ) -> tuple[torch.Tensor, dict]:
         """
         Compute loss given true bag labels.
@@ -148,7 +149,7 @@ class SmABMIL(MILModel):
         X: torch.Tensor,
         adj: torch.Tensor,
         mask: torch.Tensor = None,
-        return_inst_pred: bool = True
+        return_inst_pred: bool = True,
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Predict bag and (optionally) instance labels.

@@ -2,6 +2,7 @@ from typing import Union
 
 import torch
 
+
 class Sm(torch.nn.Module):
     r"""
     The $\texttt{Sm}$ operator, proposed in the paper [$\texttt{Sm}$: enhanced localization in Multiple Instance Learning for medical imaging classification](https://arxiv.org/abs/2410.03276).
@@ -22,11 +23,12 @@ class Sm(torch.nn.Module):
     for $t \in \{1, \ldots, T\}$, and $\alpha \in (0, 1)$ is a hyperparameter.
 
     """
+
     def __init__(
         self,
-        alpha : Union[float, str] = 'trainable',
-        num_steps : int = 10,
-        mode : str = 'approx'
+        alpha: Union[float, str] = "trainable",
+        num_steps: int = 10,
+        mode: str = "approx",
     ) -> None:
         """
         Arguments:
@@ -39,18 +41,14 @@ class Sm(torch.nn.Module):
         self.num_steps = num_steps
         self.mode = mode
 
-        if self.mode == 'approx':
+        if self.mode == "approx":
             self.sm = ApproxSm(alpha=alpha, num_steps=num_steps)
-        elif self.mode == 'exact':
+        elif self.mode == "exact":
             self.sm = ExactSm(alpha=alpha)
         else:
             raise ValueError("mode must be 'approx' or 'exact'")
 
-    def forward(
-        self,
-        f : torch.Tensor,
-        adj_mat : torch.Tensor
-    ) -> torch.Tensor:
+    def forward(self, f: torch.Tensor, adj_mat: torch.Tensor) -> torch.Tensor:
         """
         Forward method.
 
@@ -63,6 +61,7 @@ class Sm(torch.nn.Module):
         """
         g = self.sm(f, adj_mat)
         return g
+
 
 class ApproxSm(torch.nn.Module):
     r"""
@@ -77,10 +76,9 @@ class ApproxSm(torch.nn.Module):
     for $t \in \{1, \ldots, T\}$, and $\alpha \in (0, 1)$ is a hyperparameter.
 
     """
+
     def __init__(
-        self,
-        alpha : Union[float, str] = 'trainable',
-        num_steps : int = 10
+        self, alpha: Union[float, str] = "trainable", num_steps: int = 10
     ) -> None:
         """
         Arguments:
@@ -92,17 +90,13 @@ class ApproxSm(torch.nn.Module):
         self.num_steps = num_steps
 
         if isinstance(self.alpha, float):
-            self.coef = (1.0/(1.0-self.alpha)-1)
-        elif self.alpha == 'trainable':
+            self.coef = 1.0 / (1.0 - self.alpha) - 1
+        elif self.alpha == "trainable":
             self.coef = torch.nn.Parameter(torch.tensor(1.0), requires_grad=True)
         else:
             raise ValueError("alpha must be float or 'trainable'")
 
-    def forward(
-        self,
-        f : torch.Tensor,
-        adj_mat : torch.Tensor
-    ) -> torch.Tensor:
+    def forward(self, f: torch.Tensor, adj_mat: torch.Tensor) -> torch.Tensor:
         """
         Forward method.
 
@@ -118,20 +112,22 @@ class ApproxSm(torch.nn.Module):
         recover_f = False
         if f.shape[2] == 1:
             recover_f = True
-            f = torch.stack([f, f], dim=2).squeeze(-1) # (batch_size, bag_size, 2)
+            f = torch.stack([f, f], dim=2).squeeze(-1)  # (batch_size, bag_size, 2)
 
         g = f
         alpha = 1.0 / (1.0 + self.coef)
         for _ in range(self.num_steps):
-            g = (1.0 - alpha)*f + alpha*torch.bmm(adj_mat, g) # (batch_size, bag_size, ...)
+            g = (1.0 - alpha) * f + alpha * torch.bmm(
+                adj_mat, g
+            )  # (batch_size, bag_size, ...)
 
         if recover_f:
-            g = g[:, :, 0].unsqueeze(-1) # (batch_size, bag_size, 1)
+            g = g[:, :, 0].unsqueeze(-1)  # (batch_size, bag_size, 1)
 
         return g
 
-class ExactSm(torch.nn.Module):
 
+class ExactSm(torch.nn.Module):
     r"""
     $\texttt{Sm}$ operator in the exact mode, proposed in the paper [$\texttt{Sm}$: enhanced localization in Multiple Instance Learning for medical imaging classification](https://arxiv.org/abs/2410.03276).
 
@@ -146,10 +142,7 @@ class ExactSm(torch.nn.Module):
 
     """
 
-    def __init__(
-        self,
-        alpha : Union[float, str] = 'trainable'
-    ) -> None:
+    def __init__(self, alpha: Union[float, str] = "trainable") -> None:
         """
         Arguments:
             alpha: Alpha value for the Sm operator. If 'trainable', alpha is a trainable parameter.
@@ -158,17 +151,13 @@ class ExactSm(torch.nn.Module):
         self.alpha = alpha
 
         if isinstance(self.alpha, float):
-            self.coef = (1.0/(1.0-self.alpha)-1)
-        elif self.alpha == 'trainable':
+            self.coef = 1.0 / (1.0 - self.alpha) - 1
+        elif self.alpha == "trainable":
             self.coef = torch.nn.Parameter(torch.tensor(1.0), requires_grad=True)
         else:
             raise ValueError("alpha must be float or 'trainable'")
 
-    def forward(
-        self,
-        f : torch.Tensor,
-        adj_mat : torch.Tensor
-    ) -> torch.Tensor:
+    def forward(self, f: torch.Tensor, adj_mat: torch.Tensor) -> torch.Tensor:
         """
         Forward method.
 
@@ -182,17 +171,19 @@ class ExactSm(torch.nn.Module):
         batch_size = f.shape[0]
         bag_size = f.shape[1]
 
-        id_mat = torch.eye(bag_size, device=adj_mat.device).unsqueeze(0).repeat(batch_size, 1, 1) # (batch_size, bag_size, bag_size)
+        id_mat = (
+            torch.eye(bag_size, device=adj_mat.device)
+            .unsqueeze(0)
+            .repeat(batch_size, 1, 1)
+        )  # (batch_size, bag_size, bag_size)
 
-        M = (1+self.coef)*id_mat - self.coef*adj_mat # (batch_size, bag_size, bag_size)
-        g = self._solve_system(M, f) # (batch_size, bag_size, d_dim)
+        M = (
+            1 + self.coef
+        ) * id_mat - self.coef * adj_mat  # (batch_size, bag_size, bag_size)
+        g = self._solve_system(M, f)  # (batch_size, bag_size, d_dim)
         return g
 
-    def _solve_system(
-        self,
-        A : torch.Tensor,
-        b : torch.Tensor
-        ):
+    def _solve_system(self, A: torch.Tensor, b: torch.Tensor):
         """
         Solve the system Ax = b.
 

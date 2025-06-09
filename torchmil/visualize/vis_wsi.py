@@ -127,7 +127,7 @@ def draw_heatmap_wsi(
 
         # if min_color is string, it should be 'blank' or 'black'
 
-        if type(min_color) == str and min_color == "blank":
+        if type(min_color) is str and min_color == "blank":
             color = 255 * max_color
             alpha = values[i]
         else:

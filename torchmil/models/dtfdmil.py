@@ -5,6 +5,7 @@ from torchmil.models import MILModel
 from torchmil.nn import AttentionPool, LazyLinear
 from torchmil.nn.utils import get_feat_dim
 
+
 class DTFDMIL(MILModel):
     r"""
     Double-Tier Feature Distillation Multiple Instance Learning (DFTD-MIL) model, proposed in the paper [DTFD-MIL: Double-Tier Feature Distillation Multiple Instance Learning for Histopathology Whole Slide Image Classification](https://arxiv.org/abs/2203.12081).
@@ -34,14 +35,15 @@ class DTFDMIL(MILModel):
     where $\ell_{\text{BCE}}$ is the binary cross entropy loss.
 
     """
+
     def __init__(
         self,
         in_shape: tuple = None,
         att_dim: int = 128,
-        n_groups : int = 8,
-        distill_mode : str = 'maxmin',
+        n_groups: int = 8,
+        distill_mode: str = "maxmin",
         feat_ext: torch.nn.Module = torch.nn.Identity(),
-        criterion: torch.nn.Module = torch.nn.BCEWithLogitsLoss()
+        criterion: torch.nn.Module = torch.nn.BCEWithLogitsLoss(),
     ) -> None:
         """
         Arguments:
@@ -59,31 +61,33 @@ class DTFDMIL(MILModel):
         self.n_groups = n_groups
         self.distill_mode = distill_mode
 
-        if distill_mode not in ['maxmin', 'max', 'afs']:
-            raise ValueError(f"Invalid distill_mode: {distill_mode}. Choose from ['maxmin', 'max', 'afs']")
+        if distill_mode not in ["maxmin", "max", "afs"]:
+            raise ValueError(
+                f"Invalid distill_mode: {distill_mode}. Choose from ['maxmin', 'max', 'afs']"
+            )
 
         if in_shape is not None:
             feat_dim = get_feat_dim(feat_ext, in_shape)
         else:
             feat_dim = None
 
-        self.attention_pool = AttentionPool(in_dim = feat_dim, att_dim = att_dim)
+        self.attention_pool = AttentionPool(in_dim=feat_dim, att_dim=att_dim)
         self.classifier = LazyLinear(feat_dim, 1)
 
-        self.u_attention_pool = AttentionPool(in_dim = feat_dim, att_dim = att_dim)
+        self.u_attention_pool = AttentionPool(in_dim=feat_dim, att_dim=att_dim)
         self.u_classifier = LazyLinear(feat_dim, 1)
 
     def _cam_1d(self, classifier, features):
         tweight = list(classifier.parameters())[-2]
-        cam_maps = torch.einsum('bgf,cf->bcg', [features, tweight])
+        cam_maps = torch.einsum("bgf,cf->bcg", [features, tweight])
         return cam_maps
 
     def forward(
         self,
-        X : torch.Tensor,
-        mask : torch.Tensor = None,
-        return_pseudo_pred : bool = False,
-        return_inst_cam : bool = False
+        X: torch.Tensor,
+        mask: torch.Tensor = None,
+        return_pseudo_pred: bool = False,
+        return_inst_cam: bool = False,
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Forward pass.
@@ -111,7 +115,7 @@ class DTFDMIL(MILModel):
         np.random.shuffle(bag_index)
         bag_chunks = np.array_split(bag_index, n_groups)
 
-        X = self.feat_ext(X) # (batch_size, bag_size, feat_dim)
+        X = self.feat_ext(X)  # (batch_size, bag_size, feat_dim)
         feat_dim = X.size(-1)
 
         pseudo_pred_list = []
@@ -122,48 +126,78 @@ class DTFDMIL(MILModel):
             mask_chunk = mask[:, bag_chunk].bool() if mask is not None else None
             chunk_size = X_chunk.size(1)
 
-            z = self.attention_pool(X_chunk, mask_chunk) # (batch_size, feat_dim), [batch_size, chunk_size)
+            z = self.attention_pool(
+                X_chunk, mask_chunk
+            )  # (batch_size, feat_dim), [batch_size, chunk_size)
 
-            pseudo_pred = self.classifier(z) # (batch_size, 1)
+            pseudo_pred = self.classifier(z)  # (batch_size, 1)
             pseudo_pred_list.append(pseudo_pred)
 
-            inst_cam = self._cam_1d(self.classifier, X_chunk) # (batch_size, 1, chunk_size)
-            inst_cam = inst_cam.squeeze(1) # (batch_size, chunk_size)
+            inst_cam = self._cam_1d(
+                self.classifier, X_chunk
+            )  # (batch_size, 1, chunk_size)
+            inst_cam = inst_cam.squeeze(1)  # (batch_size, chunk_size)
             inst_cam_list.append(inst_cam)
 
             if self.distill_mode == "afs":
-                pseudo_feat = z.unsqueeze(1) # (batch_size, 1, feat_dim)
+                pseudo_feat = z.unsqueeze(1)  # (batch_size, 1, feat_dim)
             else:
-                inst_cam_max = inst_cam.masked_fill(~mask_chunk, -1e9) # (batch_size, chunk_size)
-                inst_cam_min = inst_cam.masked_fill(~mask_chunk, 1e9) # (batch_size, chunk_size)
+                inst_cam_max = inst_cam.masked_fill(
+                    ~mask_chunk, -1e9
+                )  # (batch_size, chunk_size)
+                inst_cam_min = inst_cam.masked_fill(
+                    ~mask_chunk, 1e9
+                )  # (batch_size, chunk_size)
 
-                sort_idx_max = torch.sort(inst_cam_max, 1, descending=True)[1] # (batch_size, chunk_size)
-                topk_idx_max = sort_idx_max[:, :chunk_size].long() # (batch_size, chunk_size)
+                sort_idx_max = torch.sort(inst_cam_max, 1, descending=True)[
+                    1
+                ]  # (batch_size, chunk_size)
+                topk_idx_max = sort_idx_max[
+                    :, :chunk_size
+                ].long()  # (batch_size, chunk_size)
 
-                sort_idx_min = torch.sort(inst_cam_min, 1, descending=False)[1] # (batch_size, chunk_size)
-                topk_idx_min = sort_idx_min[:, :chunk_size].long() # (batch_size, chunk_size)
+                sort_idx_min = torch.sort(inst_cam_min, 1, descending=False)[
+                    1
+                ]  # (batch_size, chunk_size)
+                topk_idx_min = sort_idx_min[
+                    :, :chunk_size
+                ].long()  # (batch_size, chunk_size)
 
-                topk_idx = torch.cat([topk_idx_max, topk_idx_min], dim=1) # (batch_size, 2*chunk_size)
+                topk_idx = torch.cat(
+                    [topk_idx_max, topk_idx_min], dim=1
+                )  # (batch_size, 2*chunk_size)
 
-                if self.distill_mode == 'maxmin':
-                    index = topk_idx.unsqueeze(-1).expand(-1, -1, feat_dim) # (batch_size, 2*chunk_size, feat_dim)
-                    pseudo_feat = torch.gather(X_chunk, 1, index) # (batch_size, 2*chunk_size, feat_dim)
-                elif self.distill_mode == 'max':
-                    index = topk_idx_max.unsqueeze(-1).expand(-1, -1, feat_dim) # (batch_size, chunk_size, feat_dim)
-                    pseudo_feat = torch.gather(X_chunk, 1, index) # (batch_size, chunk_size, feat_dim)
+                if self.distill_mode == "maxmin":
+                    index = topk_idx.unsqueeze(-1).expand(
+                        -1, -1, feat_dim
+                    )  # (batch_size, 2*chunk_size, feat_dim)
+                    pseudo_feat = torch.gather(
+                        X_chunk, 1, index
+                    )  # (batch_size, 2*chunk_size, feat_dim)
+                elif self.distill_mode == "max":
+                    index = topk_idx_max.unsqueeze(-1).expand(
+                        -1, -1, feat_dim
+                    )  # (batch_size, chunk_size, feat_dim)
+                    pseudo_feat = torch.gather(
+                        X_chunk, 1, index
+                    )  # (batch_size, chunk_size, feat_dim)
 
             pseudo_feat_list.append(pseudo_feat)
 
-        pseudo_pred = torch.cat(pseudo_pred_list, dim=1) # (batch_size, n_groups]
-        pseudo_feat = torch.cat(pseudo_feat_list, dim=1) # (batch_size, n_groups, k, feat_dim); k = 2*chunk_size or chunk_size or 1
-        pseudo_feat = pseudo_feat.view(batch_size, -1, feat_dim) # (batch_size, n_groups*k, feat_dim)
+        pseudo_pred = torch.cat(pseudo_pred_list, dim=1)  # (batch_size, n_groups]
+        pseudo_feat = torch.cat(
+            pseudo_feat_list, dim=1
+        )  # (batch_size, n_groups, k, feat_dim); k = 2*chunk_size or chunk_size or 1
+        pseudo_feat = pseudo_feat.view(
+            batch_size, -1, feat_dim
+        )  # (batch_size, n_groups*k, feat_dim)
 
-        pseudo_z = self.u_attention_pool(pseudo_feat) # (batch_size, feat_dim)
-        Y_pred = self.u_classifier(pseudo_z) # (batch_size, 1]
-        Y_pred = Y_pred.squeeze(-1) # (batch_size,]
+        pseudo_z = self.u_attention_pool(pseudo_feat)  # (batch_size, feat_dim)
+        Y_pred = self.u_classifier(pseudo_z)  # (batch_size, 1]
+        Y_pred = Y_pred.squeeze(-1)  # (batch_size,]
 
         if return_inst_cam:
-            inst_cam = torch.cat(inst_cam_list, dim=1) # (batch_size, bag_size)
+            inst_cam = torch.cat(inst_cam_list, dim=1)  # (batch_size, bag_size)
 
             inst_cam_reorder = torch.zeros_like(inst_cam)
             bag_chunks_idx = np.concatenate(bag_chunks)
@@ -182,9 +216,9 @@ class DTFDMIL(MILModel):
 
     def compute_loss(
         self,
-        Y : torch.Tensor,
-        X : torch.Tensor,
-        mask : torch.Tensor = None,
+        Y: torch.Tensor,
+        X: torch.Tensor,
+        mask: torch.Tensor = None,
     ) -> tuple[torch.Tensor, dict]:
         """
         Compute loss given true bag labels.
@@ -198,19 +232,24 @@ class DTFDMIL(MILModel):
             Y_pred: Bag label logits of shape `(batch_size,)`.
             loss_dict: Dictionary containing the loss value.
         """
-        Y_pred, pseudo_pred = self.forward(X, mask, return_pseudo_pred=True) # (batch_size,], [batch_size, n_groups]
+        Y_pred, pseudo_pred = self.forward(
+            X, mask, return_pseudo_pred=True
+        )  # (batch_size,], [batch_size, n_groups]
         n_groups = pseudo_pred.size(1)
         crit_name = self.criterion.__class__.__name__
         crit_loss_t1 = self.criterion(Y_pred, Y.float())
-        Y_repeat = Y.unsqueeze(1).repeat(1, n_groups) # (batch_size, num_groups]
+        Y_repeat = Y.unsqueeze(1).repeat(1, n_groups)  # (batch_size, num_groups]
         crit_loss_t2 = self.criterion(pseudo_pred, Y_repeat.float()).mean()
-        return Y_pred, { f'{crit_name}_t1': crit_loss_t1, f'{crit_name}_t2': crit_loss_t2 }
+        return Y_pred, {
+            f"{crit_name}_t1": crit_loss_t1,
+            f"{crit_name}_t2": crit_loss_t2,
+        }
 
     def predict(
         self,
-        X : torch.Tensor,
-        mask : torch.Tensor = None,
-        return_inst_pred : bool = True,
+        X: torch.Tensor,
+        mask: torch.Tensor = None,
+        return_inst_pred: bool = True,
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Predict bag and (optionally) instance labels.

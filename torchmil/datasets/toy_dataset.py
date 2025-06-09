@@ -10,7 +10,6 @@ from typing import Union
 
 
 class ToyDataset(torch.utils.data.Dataset):
-
     r"""
 
     This class represents a synthetic dataset for Multiple Instance Learning (MIL) tasks.
@@ -58,15 +57,15 @@ class ToyDataset(torch.utils.data.Dataset):
     """
 
     def __init__(
-            self,
-            data : np.ndarray,
-            labels : np.ndarray,
-            num_bags : int,
-            obj_labels : list[int],
-            bag_size : Union[int, tuple[int, int]],
-            pos_class_prob : float = 0.5,
-            seed : int = 0
-        ) -> None:
+        self,
+        data: np.ndarray,
+        labels: np.ndarray,
+        num_bags: int,
+        obj_labels: list[int],
+        bag_size: Union[int, tuple[int, int]],
+        pos_class_prob: float = 0.5,
+        seed: int = 0,
+    ) -> None:
         """
         ToyMIL dataset class constructor.
 
@@ -118,7 +117,7 @@ class ToyDataset(torch.utils.data.Dataset):
             if bag_size // 2 <= 1:
                 num_positives = 1
             else:
-                num_positives = np.random.randint(1, bag_size//2)
+                num_positives = np.random.randint(1, bag_size // 2)
             num_negatives = bag_size - num_positives
             for _ in range(num_positives):
                 a = pos_idx_queue.pop()
@@ -137,11 +136,13 @@ class ToyDataset(torch.utils.data.Dataset):
             inst_labels = np.where(np.isin(inst_labels, self.obj_labels), 1, 0)
             label = np.max(inst_labels)
 
-            bag_dict = TensorDict({
-                'X': torch.from_numpy(data).float(),
-                'Y': torch.as_tensor(label).long(),
-                'y_inst': torch.from_numpy(inst_labels).long()
-            })
+            bag_dict = TensorDict(
+                {
+                    "X": torch.from_numpy(data).float(),
+                    "Y": torch.as_tensor(label).long(),
+                    "y_inst": torch.from_numpy(inst_labels).long(),
+                }
+            )
             bags_list.append(bag_dict)
 
         for _ in range(num_neg_bags):
@@ -163,11 +164,13 @@ class ToyDataset(torch.utils.data.Dataset):
             inst_labels = np.zeros_like(inst_labels)
             label = 0
 
-            bag_dict = TensorDict({
-                'X': torch.from_numpy(data).float(),
-                'Y': torch.as_tensor(label).long(),
-                'y_inst': torch.from_numpy(inst_labels).long()
-            })
+            bag_dict = TensorDict(
+                {
+                    "X": torch.from_numpy(data).float(),
+                    "Y": torch.as_tensor(label).long(),
+                    "y_inst": torch.from_numpy(inst_labels).long(),
+                }
+            )
             bags_list.append(bag_dict)
 
         # Shuffle bags
@@ -195,5 +198,7 @@ class ToyDataset(torch.utils.data.Dataset):
                 - y_inst: Instance labels of the bag.
         """
         if index >= len(self.bags_list):
-            raise IndexError(f"Index {index} out of range (max: {len(self.bags_list) - 1})")
+            raise IndexError(
+                f"Index {index} out of range (max: {len(self.bags_list) - 1})"
+            )
         return self.bags_list[index]

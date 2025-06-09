@@ -5,6 +5,7 @@ from .mil_model import MILModel
 from torchmil.nn import AttentionPool, TransformerEncoder
 from torchmil.nn.utils import get_feat_dim
 
+
 class TransformerABMIL(MILModel):
     r"""
     Transformer Attention-based Multiple Instance Learning model.
@@ -25,21 +26,22 @@ class TransformerABMIL(MILModel):
 
     See [AttentionPool](../nn/attention/attention_pool.md) for more details on the attention-based pooling, and [TransformerEncoder](../nn/transformers/conventional_transformer.md) for more details on the transformer encoder.
     """
+
     def __init__(
         self,
-        in_shape : tuple,
-        pool_att_dim : int = 128,
-        pool_act : str = 'tanh',
-        pool_gated : bool = False,
+        in_shape: tuple,
+        pool_att_dim: int = 128,
+        pool_act: str = "tanh",
+        pool_gated: bool = False,
         feat_ext: torch.nn.Module = torch.nn.Identity(),
-        transf_att_dim : int = 512,
-        transf_n_layers : int = 1,
-        transf_n_heads : int = 8,
-        transf_use_mlp : bool = True,
-        transf_add_self : bool = True,
-        transf_dropout : float = 0.0,
+        transf_att_dim: int = 512,
+        transf_n_layers: int = 1,
+        transf_n_heads: int = 8,
+        transf_use_mlp: bool = True,
+        transf_add_self: bool = True,
+        transf_dropout: float = 0.0,
         criterion: torch.nn.Module = torch.nn.BCEWithLogitsLoss(),
-        ) -> None:
+    ) -> None:
         """
         Class constructor.
 
@@ -69,17 +71,15 @@ class TransformerABMIL(MILModel):
             n_heads=transf_n_heads,
             use_mlp=transf_use_mlp,
             add_self=transf_add_self,
-            dropout=transf_dropout
+            dropout=transf_dropout,
         )
-        self.pool = AttentionPool(in_dim=feat_dim, att_dim=pool_att_dim, act=pool_act, gated=pool_gated)
+        self.pool = AttentionPool(
+            in_dim=feat_dim, att_dim=pool_att_dim, act=pool_act, gated=pool_gated
+        )
         self.last_layer = torch.nn.Linear(feat_dim, 1)
 
-
     def forward(
-        self,
-        X: torch.Tensor,
-        mask: torch.Tensor = None,
-        return_att: bool = False
+        self, X: torch.Tensor, mask: torch.Tensor = None, return_att: bool = False
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Forward pass.
@@ -94,18 +94,18 @@ class TransformerABMIL(MILModel):
             att: Only returned when `return_att=True`. Attention values (before normalization) of shape (batch_size, bag_size).
         """
 
-        X = self.feat_ext(X) # (batch_size, bag_size, feat_dim)
+        X = self.feat_ext(X)  # (batch_size, bag_size, feat_dim)
 
-        X = self.transformer_encoder(X, mask) # (batch_size, bag_size, feat_dim)
+        X = self.transformer_encoder(X, mask)  # (batch_size, bag_size, feat_dim)
 
         out_pool = self.pool(X, mask, return_att=return_att)
         if return_att:
-            z, f = out_pool # z: (batch_size, emb_dim), f: (batch_size, bag_size)
+            z, f = out_pool  # z: (batch_size, emb_dim), f: (batch_size, bag_size)
         else:
-            z = out_pool # (batch_size, emb_dim)
+            z = out_pool  # (batch_size, emb_dim)
 
-        Y_pred = self.last_layer(z) # (batch_size, n_samples, 1)
-        Y_pred = Y_pred.squeeze(-1) # (batch_size,)
+        Y_pred = self.last_layer(z)  # (batch_size, n_samples, 1)
+        Y_pred = Y_pred.squeeze(-1)  # (batch_size,)
 
         if return_att:
             return Y_pred, f
@@ -139,10 +139,7 @@ class TransformerABMIL(MILModel):
         return Y_pred, {crit_name: crit_loss}
 
     def predict(
-        self,
-        X: torch.Tensor,
-        mask: torch.Tensor = None,
-        return_inst_pred: bool = True
+        self, X: torch.Tensor, mask: torch.Tensor = None, return_inst_pred: bool = True
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Predict bag and (optionally) instance labels.

@@ -4,6 +4,7 @@ import warnings
 
 from torchmil.datasets import ProcessedMILDataset
 
+
 class BinaryClassificationDataset(ProcessedMILDataset):
     r"""
     Dataset for binary classification MIL problems. See [`torchmil.datasets.ProcessedMILDataset`](./processed_mil_dataset.md) for more information.
@@ -18,6 +19,7 @@ class BinaryClassificationDataset(ProcessedMILDataset):
     When the instance labels are not provided, they are set to 0 if the bag label is 0, and to -1 if the bag label is 1.
     If the instance labels are provided, but they are not consistent with the bag label, a warning is issued and the instance labels are all set to -1.
     """
+
     def __init__(
         self,
         features_path: str,
@@ -74,20 +76,21 @@ class BinaryClassificationDataset(ProcessedMILDataset):
         """
         Check if the instance labels are consistent with the bag label.
         """
-        if 'Y' in bag_dict:
-
-            if 'y_inst' in bag_dict:
-                if bag_dict['Y'] != (bag_dict['y_inst']).max():
+        if "Y" in bag_dict:
+            if "y_inst" in bag_dict:
+                if bag_dict["Y"] != (bag_dict["y_inst"]).max():
                     msg = f"Instance labels (max(y_inst)={(bag_dict['y_inst']).max()}) are not consistent with bag label (Y={bag_dict['Y']}) for bag {name}. Setting all instance labels to -1 (unknown)."
                     warnings.warn(msg)
-                    bag_dict['y_inst'] = np.full((bag_dict['X'].shape[0],), -1)
+                    bag_dict["y_inst"] = np.full((bag_dict["X"].shape[0],), -1)
             else:
-                if bag_dict['Y'] == 0:
-                    bag_dict['y_inst'] = np.zeros(bag_dict['X'].shape[0])
+                if bag_dict["Y"] == 0:
+                    bag_dict["y_inst"] = np.zeros(bag_dict["X"].shape[0])
                 else:
-                    msg = f'Instance labels not found for bag {name}. Setting all to -1.'
+                    msg = (
+                        f"Instance labels not found for bag {name}. Setting all to -1."
+                    )
                     warnings.warn(msg)
-                    bag_dict['y_inst'] = np.full((bag_dict['X'].shape[0],), -1)
+                    bag_dict["y_inst"] = np.full((bag_dict["X"].shape[0],), -1)
         return bag_dict
 
     def _load_bag(self, name: str) -> dict[str, torch.Tensor]:

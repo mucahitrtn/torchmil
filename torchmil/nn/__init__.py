@@ -8,11 +8,7 @@ from .utils import (
 from .mean_pool import MeanPool as MeanPool
 from .max_pool import MaxPool as MaxPool
 
-from .sm import (
-    Sm as Sm,
-    ApproxSm as ApproxSm,
-    ExactSm as ExactSm
-)
+from .sm import Sm as Sm, ApproxSm as ApproxSm, ExactSm as ExactSm
 
 from .attention import (
     AttentionPool as AttentionPool,
@@ -21,7 +17,7 @@ from .attention import (
     MultiheadSelfAttention as MultiheadSelfAttention,
     MultiheadCrossAttention as MultiheadCrossAttention,
     iRPEMultiheadSelfAttention as iRPEMultiheadSelfAttention,
-    NystromAttention as NystromAttention
+    NystromAttention as NystromAttention,
 )
 
 from .transformers import (
@@ -40,5 +36,5 @@ from .transformers import (
 from .gnns import (
     GCNConv as GCNConv,
     DeepGCNLayer as DeepGCNLayer,
-    dense_mincut_pool as dense_mincut_pool
+    dense_mincut_pool as dense_mincut_pool,
 )

@@ -34,7 +34,6 @@ def test_index_out_of_range():
 def test_poisoning_present(train):
     dataset = MCStandardMILDataset(D=2, num_bags=10, train=train, seed=42)
     poisoned_found = False
-    poison_value = -10  # Poisoning distribution mean
 
     for i in range(len(dataset)):
         X = dataset[i]["X"]

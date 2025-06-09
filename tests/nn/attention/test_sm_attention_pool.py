@@ -3,16 +3,22 @@ import torch
 
 from torchmil.nn.attention.sm_attention_pool import SmAttentionPool
 
-@pytest.mark.parametrize("batch_size, bag_size, in_dim", [(2, 10, 10), (4, 20, 20), (1, 5, 30)])
+
+@pytest.mark.parametrize(
+    "batch_size, bag_size, in_dim", [(2, 10, 10), (4, 20, 20), (1, 5, 30)]
+)
 def test_sm_attention_pool_forward(batch_size, bag_size, in_dim):
     """
     Test the forward pass of the SmAttentionPool module.
     """
     pool = SmAttentionPool(in_dim)
     X = torch.randn(batch_size, bag_size, in_dim)
-    adj = torch.eye(bag_size).unsqueeze(0).repeat(batch_size, 1, 1)  # Identity adjacency matrix
+    adj = (
+        torch.eye(bag_size).unsqueeze(0).repeat(batch_size, 1, 1)
+    )  # Identity adjacency matrix
     z = pool(X, adj)
     assert z.shape == (batch_size, in_dim)
+
 
 def test_sm_attention_pool_forward_with_mask():
     """
@@ -28,6 +34,7 @@ def test_sm_attention_pool_forward_with_mask():
     z = pool(X, adj, mask=mask)
     assert z.shape == (batch_size, in_dim)
 
+
 def test_sm_attention_pool_forward_return_att():
     """
     Test the forward pass of the SmAttentionPool module with return_att=True.
@@ -41,6 +48,7 @@ def test_sm_attention_pool_forward_return_att():
     z, att = pool(X, adj, return_att=True)
     assert z.shape == (batch_size, in_dim)
     assert att.shape == (batch_size, bag_size)
+
 
 def test_sm_attention_pool_invalid_act():
     """

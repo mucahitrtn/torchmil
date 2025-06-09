@@ -1,4 +1,3 @@
-import math
 import torch
 from torch.nn.attention import SDPBackend
 
@@ -60,7 +59,7 @@ class iRPETransformerLayer(Layer):
             rpe_method: Relative position encoding method. Possible values: ['euc', 'quant', 'cross', 'product']
             rpe_mode: Relative position encoding mode. Possible values: [None, 'bias', 'contextual']
             rpe_shared_head: Whether to share weights across heads.
-            rpe_skip: Relative position encoding skip. Possible values: [0, 1]. 
+            rpe_skip: Relative position encoding skip. Possible values: [0, 1].
             rpe_on: Where to apply relative positional encoding. Possible values: ['q', 'k', 'v', 'qk', 'kv', 'qkv'].
         """
 
@@ -79,20 +78,16 @@ class iRPETransformerLayer(Layer):
         )
 
         super(iRPETransformerLayer, self).__init__(
-            in_dim=in_dim, 
+            in_dim=in_dim,
             att_in_dim=in_dim,
-            out_dim=out_dim, 
-            att_out_dim=att_dim, 
-            att_module=att_module, 
-            use_mlp=use_mlp, 
-            dropout=dropout
+            out_dim=out_dim,
+            att_out_dim=att_dim,
+            att_module=att_module,
+            use_mlp=use_mlp,
+            dropout=dropout,
         )
 
-    def forward(
-        self,
-        X: torch.Tensor,
-        return_att: bool = False
-    ) -> torch.Tensor:
+    def forward(self, X: torch.Tensor, return_att: bool = False) -> torch.Tensor:
         """
         Forward method.
 
@@ -156,7 +151,7 @@ class iRPETransformerEncoder(Encoder):
             rpe_method: Relative position encoding method. Possible values: ['euc', 'quant', 'cross', 'product']
             rpe_mode: Relative position encoding mode. Possible values: [None, 'bias', 'contextual']
             rpe_shared_head: Whether to share weights across heads.
-            rpe_skip: Relative position encoding skip. Possible values: [0, 1]. 
+            rpe_skip: Relative position encoding skip. Possible values: [0, 1].
             rpe_on: Where to apply relative positional encoding. Possible values: ['q', 'k', 'v', 'qk', 'kv', 'qkv'].
         """
 
@@ -192,7 +187,7 @@ class iRPETransformerEncoder(Encoder):
     def forward(
         self,
         X: torch.Tensor,
-        return_att : bool = False,
+        return_att: bool = False,
     ) -> torch.Tensor:
         """
         Forward method.
@@ -207,13 +202,12 @@ class iRPETransformerEncoder(Encoder):
 
         out = super().forward(X, return_att=return_att)
         if return_att:
-            Y = out[0] # (batch_size, bag_size, out_dim)
-            att = out[1] # (n_layers, batch_size, n_heads, bag_size, new_seq_len)
+            Y = out[0]  # (batch_size, bag_size, out_dim)
+            att = out[1]  # (n_layers, batch_size, n_heads, bag_size, new_seq_len)
         else:
-            Y = out # (batch_size, bag_size, out_dim)
+            Y = out  # (batch_size, bag_size, out_dim)
         Y = self.norm(Y)  # (batch_size, bag_size, att_dim)
-        
+
         if return_att:
             return Y, att
         return Y
-

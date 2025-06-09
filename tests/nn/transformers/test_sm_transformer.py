@@ -1,4 +1,3 @@
-import pytest
 import torch
 
 from torchmil.nn.transformers.sm_transformer import (
@@ -25,7 +24,9 @@ def test_sm_multihead_self_attention():
 
     # Test with specified out_dim
     out_dim = 12
-    att = SmMultiheadSelfAttention(in_dim=in_dim, out_dim=out_dim, att_dim=att_dim, n_heads=n_heads)
+    att = SmMultiheadSelfAttention(
+        in_dim=in_dim, out_dim=out_dim, att_dim=att_dim, n_heads=n_heads
+    )
     output = att(X, adj)
     assert output.shape == (X.shape[0], X.shape[1], out_dim)
 
@@ -39,7 +40,14 @@ def test_sm_multihead_self_attention():
     assert output.shape == (X.shape[0], X.shape[1], out_dim)
 
     # Test with different sm_alpha and sm_mode
-    att = SmMultiheadSelfAttention(in_dim=in_dim, att_dim=att_dim, n_heads=n_heads, sm_alpha=0.5, sm_mode='approx', sm_steps=5)
+    att = SmMultiheadSelfAttention(
+        in_dim=in_dim,
+        att_dim=att_dim,
+        n_heads=n_heads,
+        sm_alpha=0.5,
+        sm_mode="approx",
+        sm_steps=5,
+    )
     output = att(X, adj)
     assert output.shape == (X.shape[0], X.shape[1], in_dim)
 
@@ -61,12 +69,16 @@ def test_sm_transformer_layer():
 
     # Test with specified out_dim
     out_dim = 12
-    layer = SmTransformerLayer(in_dim=in_dim, out_dim=out_dim, att_dim=att_dim, n_heads=n_heads)
+    layer = SmTransformerLayer(
+        in_dim=in_dim, out_dim=out_dim, att_dim=att_dim, n_heads=n_heads
+    )
     output = layer(X, adj)
     assert output.shape == (X.shape[0], X.shape[1], out_dim)
 
     # Test with use_mlp=False
-    layer = SmTransformerLayer(in_dim=in_dim, att_dim=att_dim, n_heads=n_heads, use_mlp=False)
+    layer = SmTransformerLayer(
+        in_dim=in_dim, att_dim=att_dim, n_heads=n_heads, use_mlp=False
+    )
     output = layer(X, adj)
     assert output.shape == (X.shape[0], X.shape[1], in_dim)
 
@@ -80,7 +92,9 @@ def test_sm_transformer_layer():
     assert output.shape == (X.shape[0], X.shape[1], in_dim)
 
     # Test with different sm parameters
-    layer = SmTransformerLayer(in_dim=in_dim, att_dim=att_dim, n_heads=n_heads, sm_alpha=0.3, sm_mode='exact')
+    layer = SmTransformerLayer(
+        in_dim=in_dim, att_dim=att_dim, n_heads=n_heads, sm_alpha=0.3, sm_mode="exact"
+    )
     output = layer(X, adj)
     assert output.shape == (X.shape[0], X.shape[1], in_dim)
 
@@ -97,23 +111,39 @@ def test_sm_transformer_encoder():
     n_layers = 2
 
     # Test with default parameters
-    encoder = SmTransformerEncoder(in_dim=in_dim, att_dim=att_dim, n_heads=n_heads, n_layers=n_layers)
+    encoder = SmTransformerEncoder(
+        in_dim=in_dim, att_dim=att_dim, n_heads=n_heads, n_layers=n_layers
+    )
     output = encoder(X, adj)
     assert output.shape == (X.shape[0], X.shape[1], in_dim)
 
     # Test with specified out_dim
     out_dim = 12
-    encoder = SmTransformerEncoder(in_dim=in_dim, out_dim=out_dim, att_dim=att_dim, n_heads=n_heads, n_layers=n_layers)
+    encoder = SmTransformerEncoder(
+        in_dim=in_dim,
+        out_dim=out_dim,
+        att_dim=att_dim,
+        n_heads=n_heads,
+        n_layers=n_layers,
+    )
     output = encoder(X, adj)
     assert output.shape == (X.shape[0], X.shape[1], out_dim)
 
     # Test with add_self=True
-    encoder = SmTransformerEncoder(in_dim=in_dim, att_dim=in_dim, n_heads=n_heads, n_layers=n_layers, add_self=True)
+    encoder = SmTransformerEncoder(
+        in_dim=in_dim, att_dim=in_dim, n_heads=n_heads, n_layers=n_layers, add_self=True
+    )
     output = encoder(X, adj)
     assert output.shape == (X.shape[0], X.shape[1], in_dim)
 
     # Test with use_mlp=False
-    encoder = SmTransformerEncoder(in_dim=in_dim, att_dim=att_dim, n_heads=n_heads, n_layers=n_layers, use_mlp=False)
+    encoder = SmTransformerEncoder(
+        in_dim=in_dim,
+        att_dim=att_dim,
+        n_heads=n_heads,
+        n_layers=n_layers,
+        use_mlp=False,
+    )
     output = encoder(X, adj)
     assert output.shape == (X.shape[0], X.shape[1], in_dim)
 
@@ -128,6 +158,14 @@ def test_sm_transformer_encoder():
     assert output.shape == (X.shape[0], X.shape[1], in_dim)
 
     # Test with different sm parameters
-    encoder = SmTransformerEncoder(in_dim=in_dim, att_dim=att_dim, n_heads=n_heads, n_layers=n_layers, sm_alpha=0.7, sm_mode='approx', sm_steps=8)
+    encoder = SmTransformerEncoder(
+        in_dim=in_dim,
+        att_dim=att_dim,
+        n_heads=n_heads,
+        n_layers=n_layers,
+        sm_alpha=0.7,
+        sm_mode="approx",
+        sm_steps=8,
+    )
     output = encoder(X, adj)
     assert output.shape == (X.shape[0], X.shape[1], in_dim)
