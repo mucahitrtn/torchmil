@@ -54,11 +54,11 @@ To see the full list of available models, datasets, and modules, check the [API 
 
 We welcome contributions to **torchmil**! There several ways you can contribute:
 
-- Reporting bugs or issues you encounter while using the library: use the [Github issues](https://github.com/Franblueee/torchmil/issues).
+- Reporting bugs or issues you encounter while using the library, asking questions, or requesting new features: use the [Github issues](https://github.com/Franblueee/torchmil/issues).
 - Improving the documentation: if you find any part of the documentation unclear or incomplete, feel free to submit a pull request with improvements.
 - If you have a new model, dataset, or utility that you think would be useful for the community, please consider submitting a pull request to add it to the library.
 
-Take a look at [CONTRIBUTING.md](https://github.com/Franblueee/torchmil/main/CONTRIBUTING.md) for more details on how to contribute.
+Take a look at [CONTRIBUTING.md](https://github.com/Franblueee/torchmil/blob/main/CONTRIBUTING.md) for more details on how to contribute.
 
 ## Citation
 
