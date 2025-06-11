@@ -1,11 +1,18 @@
 # torchmil
 
-<p align="left">
+
+
+<p align="center">
+    <a align="center">
+        <img align="middle" src="./imgs/torchmil_logo.png" width="300" />
+    </a>
+</p>
+
+<p align="middle">
     <img src="https://img.shields.io/badge/license-Apache_2.0-blue" alt="License">
     <a href="#"><img src="https://badgen.net/github/contributors/Franblueee/torchmil" alt="Contributors"></a>
     <a href="#"><img src="https://badgen.net/github/release/Franblueee/torchmil" alt="Release"></a>
 </p>
-
 
 **torchmil** is a [PyTorch](https://pytorch.org/)-based library for deep Multiple Instance Learning (MIL).
 It provides a simple, flexible, and extensible framework for working with MIL models and data.
