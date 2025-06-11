@@ -4,7 +4,7 @@
 
 <p align="center">
     <a align="center">
-        <img align="middle" src="./imgs/torchmil_logo.png" width="300" />
+        <img align="middle" src="./imgs/torchmil_logo.png" width="700" />
     </a>
 </p>
 
