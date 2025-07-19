@@ -29,7 +29,7 @@ class ChebConv(torch.nn.Module):
         self.fc = torch.nn.Linear(K * in_channels, out_channels, bias=False)
 
     def forward(
-        self, x: torch.Tensor, adj: torch.Tensor, lambda_max=None
+        self, x: torch.Tensor, adj: torch.Tensor, lambda_max: torch.Tensor = None
     ) -> torch.Tensor:
         """
         Forward pass of the Chebyshev convolutional layer.
