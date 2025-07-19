@@ -36,5 +36,6 @@ from .transformers import (
 from .gnns import (
     GCNConv as GCNConv,
     DeepGCNLayer as DeepGCNLayer,
+    ChebConv as ChebConv,
     dense_mincut_pool as dense_mincut_pool,
 )

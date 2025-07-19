@@ -1,6 +1,6 @@
 import torch
 
-from torchmil.nn import GCNConv, DeepGCNLayer
+from torchmil.nn import ChebConv
 
 from torchmil.nn.utils import get_feat_dim, LazyLinear, masked_softmax
 
@@ -36,28 +36,33 @@ class DeepGraphSurv(torch.nn.Module):
     def __init__(
         self,
         in_shape: tuple = None,
-        n_layers_rep: int = 4,
-        n_layers_att: int = 2,
+        n_layers_rep: int = 1,
+        n_layers_att: int = 1,
         hidden_dim: int = None,
         att_dim: int = 128,
         dropout: float = 0.0,
+        K: int = 5,
+        compute_lambda_max: bool = False,
         feat_ext: torch.nn.Module = torch.nn.Identity(),
         criterion: torch.nn.Module = torch.nn.BCEWithLogitsLoss(),
     ):
         """
         Arguments:
             in_shape: Shape of input data expected by the feature extractor (excluding batch dimension). If not provided, it will be lazily initialized.
-            n_layers_rep: Number of GCN layers in the representation branch.
-            n_layers_att: Number of GCN layers in the attention branch.
+            n_layers_rep: Number of ChebConv layers in the representation branch.
+            n_layers_att: Number of ChebConv layers in the attention branch.
             hidden_dim: Hidden dimension. If not provided, it will be set to the feature dimension.
             att_dim: Attention dimension.
             dropout: Dropout rate.
+            K: Order of the Chebyshev polynomial approximation for the ChebConv layers.
+            compute_lambda_max: If True, computes the maximum eigenvalue of the adjacency matrix for normalization. If False, it will be set to 2.0.
             feat_ext: Feature extractor.
             criterion: Loss function.
         """
         super(DeepGraphSurv, self).__init__()
         self.criterion = criterion
         self.feat_ext = feat_ext
+        self.dropout_prob = dropout
 
         if in_shape is not None:
             feat_dim = get_feat_dim(feat_ext, in_shape)
@@ -69,35 +74,23 @@ class DeepGraphSurv(torch.nn.Module):
 
         self.layers_rep = torch.nn.ModuleList()
         for i in range(n_layers_rep):
-            conv_layer = GCNConv(
+            conv_layer = ChebConv(
                 feat_dim if i == 0 else hidden_dim,
                 hidden_dim,
-                add_self_loops=True,
-                learn_weights=True,
+                K=K,
+                compute_lambda_max=compute_lambda_max,
             )
-            norm_layer = torch.nn.LayerNorm(hidden_dim, elementwise_affine=True)
-            act_layer = torch.nn.ReLU()
-            self.layers_rep.append(
-                DeepGCNLayer(
-                    conv_layer, norm_layer, act_layer, dropout=dropout, block="plain"
-                )
-            )
+            self.layers_rep.append(conv_layer)
 
         self.layers_att = torch.nn.ModuleList()
         for i in range(n_layers_att):
-            conv_layer = GCNConv(
-                hidden_dim if i == 0 else att_dim,
+            conv_layer = ChebConv(
+                feat_dim if i == 0 else att_dim,
                 att_dim,
-                add_self_loops=True,
-                learn_weights=True,
+                K=K,
+                compute_lambda_max=compute_lambda_max,
             )
-            norm_layer = torch.nn.LayerNorm(att_dim, elementwise_affine=True)
-            act_layer = torch.nn.ReLU()
-            self.layers_att.append(
-                DeepGCNLayer(
-                    conv_layer, norm_layer, act_layer, dropout=dropout, block="plain"
-                )
-            )
+            self.layers_att.append(conv_layer)
 
         self.proj1d = LazyLinear(att_dim, 1)
 
@@ -125,16 +118,26 @@ class DeepGraphSurv(torch.nn.Module):
         """
         X = self.feat_ext(X)  # (batch_size, bag_size, feat_dim)
 
+        X_rep = X  # Initialize with input features
         for layer in self.layers_rep:
-            X = layer(X, adj)
+            X_rep = layer(X_rep, adj)
+            X_rep = torch.nn.functional.relu(X_rep)
+            X_rep = torch.nn.functional.dropout(
+                X_rep, p=self.dropout_prob, training=self.training
+            )
 
-        H = X  # (batch_size, bag_size, hidden_dim)
+        X_att = X  # Initialize with input features
         for layer in self.layers_att:
-            H = layer(H, adj)  # (batch_size, bag_size, att_dim)
-        f = self.proj1d(H)  # (batch_size, bag_size, 1)
+            X_att = layer(X_att, adj)
+            X_att = torch.nn.functional.relu(X_att)
+            X_att = torch.nn.functional.dropout(
+                X_att, p=self.dropout_prob, training=self.training
+            )
+
+        f = self.proj1d(X_att)  # (batch_size, bag_size, 1)
         s = masked_softmax(f, mask)  # (batch_size, bag_size, 1)
 
-        z = torch.bmm(X.transpose(1, 2), s).squeeze(-1)  # (batch_size, hidden_dim)
+        z = torch.bmm(X_rep.transpose(1, 2), s).squeeze(-1)  # (batch_size, hidden_dim)
 
         Y_pred = self.classifier(z).squeeze(-1)  # (batch_size,)
 

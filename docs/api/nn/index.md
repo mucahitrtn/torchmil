@@ -16,6 +16,7 @@ These modules are designed to be flexible and easy to use, allowing you to build
     - [Deep Graph Convolutional Network (DeepGCN) layer](gnns/deepgcn.md)
     - [Graph Convolutional Network (GCN) convolution](gnns/gcn_conv.md)
     - [Dense MinCut pooling](gnns/dense_mincut_pool.md)
+    - [Chebyshev spectral graph convolution (ChebConv)](gnns/chebconv.md)
 - [Transformers](transformers/index.md)
     - [Transformer base class](transformers/base_transformer.md)
     - [Conventional Transformer](transformers/conventional_transformer.md)

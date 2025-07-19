@@ -33,6 +33,7 @@
     - [Deep Graph Convolutional Network (DeepGCN) layer](nn/gnns/deepgcn.md)
     - [Graph Convolutional Network (GCN) convolution](nn/gnns/gcn_conv.md)
     - [Dense MinCut pooling](nn/gnns/dense_mincut_pool.md)
+    - [Chebyshev spectral graph convolution (ChebConv)](nn/gnns/chebconv.md)
 - [Transformers](nn/transformers/index.md)
     - [Transformer base class](nn/transformers/base_transformer.md)
     - [Conventional Transformer](nn/transformers/conventional_transformer.md)
