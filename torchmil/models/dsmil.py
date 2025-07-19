@@ -209,4 +209,4 @@ class DSMIL(MILModel):
         if return_inst_pred:
             return bag_pred, y_logits_pred
         else:
-            return bag_pred, y_logits_pred
+            return bag_pred
