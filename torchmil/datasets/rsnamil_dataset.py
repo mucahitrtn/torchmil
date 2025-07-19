@@ -9,7 +9,7 @@ from ..utils.common import read_csv, keep_only_existing_files
 class RSNAMILDataset(BinaryClassificationDataset, CTScanDataset):
     r"""
     RSNA Intracranial Hemorrhage Detection dataset for Multiple Instance Learning (MIL).
-    Download it from [Hugging Face Datasets](https://huggingface.co/datasets/Franblueee/RSNA_ICH_MIL).
+    Download it from [Hugging Face Datasets](https://huggingface.co/datasets/torchmil/RSNA_ICH_MIL).
 
     **About the original RSNA Dataset.**
     The original [RSNA-ICH dataset](https://www.kaggle.com/competitions/rsna-intracranial-hemorrhage-detection) contains head CT scans. The task is to identify whether a CT scan contains acute intracranial hemorrhage and its subtypes. The dataset includes a label for each slice.

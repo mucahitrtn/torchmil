@@ -9,7 +9,7 @@ from ..utils.common import read_csv, keep_only_existing_files
 class PANDAMILDataset(BinaryClassificationDataset, WSIDataset):
     r"""
     Prostate cANcer graDe Assessment (PANDA) dataset for Multiple Instance Learning (MIL).
-    Download it from [Hugging Face Datasets](https://huggingface.co/datasets/Franblueee/PANDA_MIL).
+    Download it from [Hugging Face Datasets](https://huggingface.co/datasets/torchmil/PANDA_MIL).
 
     **About the original PANDA Dataset.**
     The original [PANDA dataset](https://panda.grand-challenge.org/data/) contains WSIs of hematoxylin and eosin (H&E) stained prostate biopsy samples. The task is to classify the severity of prostate cancer within each slide, and to localize the cancerous tissue precisely. The dataset includes high-quality pixel-level annotations marking the cancerous tissue.

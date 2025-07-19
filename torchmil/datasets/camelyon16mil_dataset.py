@@ -8,7 +8,7 @@ from ..utils.common import read_csv, keep_only_existing_files
 
 class CAMELYON16MILDataset(BinaryClassificationDataset, WSIDataset):
     r"""
-    CAMELYON16 dataset for Multiple Instance Learning (MIL). Download it from [Hugging Face Datasets](https://huggingface.co/datasets/Franblueee/Camelyon16_MIL/).
+    CAMELYON16 dataset for Multiple Instance Learning (MIL). Download it from [Hugging Face Datasets](https://huggingface.co/datasets/torchmil/Camelyon16_MIL/).
 
     **About the Original CAMELYON16 Dataset.**
     The original [CAMELYON16 dataset](https://camelyon17.grand-challenge.org/Data/) contains WSIs of hematoxylin and eosin (H&E) stained lymph node sections. The task is to identify whether each slide contains metastatic tissue and to localize it precisely. The dataset includes high-quality pixel-level annotations marking the metastases.
