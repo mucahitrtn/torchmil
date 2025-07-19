@@ -64,10 +64,14 @@ class CyclicalAnnealingScheduler(AnnealingScheduler):
 
         self.coef = self.min_coef
 
+        self.warmup_step_count = 0
+
         self.step_count = 0
 
     def step(self):
-        if self.step_count >= self.warmup_steps:
+        if self.warmup_step_count < self.warmup_steps:
+            self.warmup_step_count += 1
+        else:
             mod_step = self.step_count % self.cycle_len
 
             if mod_step < self.cut_step:
@@ -75,7 +79,7 @@ class CyclicalAnnealingScheduler(AnnealingScheduler):
             else:
                 self.coef = self.max_coef
 
-        self.step_count += 1
+            self.step_count += 1
 
         if self.verbose:
             print(f"[AnnealingScheduler] coef: {self.coef}")

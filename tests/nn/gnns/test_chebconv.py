@@ -1,6 +1,5 @@
 import torch
 
-# Assuming ChebConv is in a file named chebconv_module.py
 from torchmil.nn.gnns.chebconv import ChebConv
 
 

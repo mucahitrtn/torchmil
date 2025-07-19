@@ -10,8 +10,12 @@
 
 <p align="middle">
     <img src="https://img.shields.io/badge/license-Apache_2.0-blue" alt="License">
+    <a href="https://codecov.io/gh/franblueee/torchmil">
+    <img src="https://codecov.io/gh/franblueee/torchmil/branch/main/graph/badge.svg"/>
+    </a>
     <a href="#"><img src="https://badgen.net/github/contributors/Franblueee/torchmil" alt="Contributors"></a>
     <a href="#"><img src="https://badgen.net/github/release/Franblueee/torchmil" alt="Release"></a>
+
 </p>
 
 **torchmil** is a [PyTorch](https://pytorch.org/)-based library for deep Multiple Instance Learning (MIL).
