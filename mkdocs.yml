@@ -112,7 +112,7 @@ nav:
     - Training your first MIL model: examples/training_your_first_mil_model.ipynb
     - WSI classification: examples/wsi_classification.ipynb
     - CT scan classification: examples/ctscan_classification.ipynb
-    - Integrating torchmil with Graph Neural Networks (GNNs) frameworks: examples/gnns_integration.ipynb
+    - Integrating torchmil with Graph Neural Networks (GNNs) frameworks: examples/gnn_integration.ipynb
   - API reference:
     - api/index.md
     - <tt>torchmil.data</tt>:
