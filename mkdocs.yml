@@ -1,7 +1,7 @@
 site_name: torchmil
 site_description: torchmil is a PyTorch-based library for Multiple Instance Learning (MIL)
 site_author: Fran Castro
-site_url: "https://franblueee.github.io/torchmil/"
+site_url: !ENV READTHEDOCS_CANONICAL_URL
 
 repo_url: https://github.com/Franblueee/torchmil
 repo_name: Franblueee/torchmil
