@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{#
+The entry point for the MkDocs Theme.
+ 
+Any theme customisations should override this file to redefine blocks defined in
+the various templates. The custom theme should only need to define a main.html
+which `{% extends "base.html" %}` and defines various blocks which will replace
+the blocks defined in base.html and its included child templates.
+#}
+
+{% block extrahead %}
+    <meta name="google-site-verification" content="5do7HXudz2FlHM780P0L2b5iItEKCEY8dXzgslawN1A" />
+  {# You can add other custom head elements here if needed, e.g., external scripts or stylesheets that aren't handled by extra_javascript/extra_css #}
+{% endblock %}

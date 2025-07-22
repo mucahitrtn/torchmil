@@ -1,7 +1,7 @@
 site_name: torchmil
-site_description: Documentation for the torchmil package.
+site_description: torchmil is a PyTorch-based library for Multiple Instance Learning (MIL)
 site_author: Fran Castro
-site_url: ""
+site_url: "https://franblueee.github.io/torchmil/"
 
 repo_url: https://github.com/Franblueee/torchmil
 repo_name: Franblueee/torchmil
@@ -41,9 +41,6 @@ theme:
   favicon: "_static/abacus.png"
   custom_dir: "docs/_overrides"  # Overriding part of the HTML
 
-  # twitter_name: "@Franblueee"
-  # twitter_url: "https://x.com/franblueee"
-
 strict: True
 
 extra_javascript:
@@ -53,7 +50,7 @@ extra_javascript:
 
 extra_css:
   - _static/custom_css.css
-
+  
 markdown_extensions:
   - pymdownx.arithmatex:  # Render LaTeX via MathJax
       generic: true

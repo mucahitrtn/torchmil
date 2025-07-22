@@ -1,3 +1,7 @@
+---
+description: torchmil is a PyTorch library for building Multiple Instance Learning (MIL) models with ease. Learn how to implement MIL in PyTorch with torchmil.
+---
+
 # torchmil
 
 **torchmil** is a [PyTorch](https://pytorch.org/)-based library for deep Multiple Instance Learning (MIL).

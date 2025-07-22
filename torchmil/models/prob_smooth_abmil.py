@@ -8,7 +8,7 @@ from torchmil.nn import ProbSmoothAttentionPool, get_feat_dim, LazyLinear
 class ProbSmoothABMIL(MILModel):
     r"""
     Attention-based Multiple Instance Learning (ABMIL) model with Probabilistic Smooth Attention Pooling.
-    Proposed in [Probabilistic Smooth Attention for Deep Multiple Instance Learning in Medical Imaging]() and
+    Proposed in [Probabilistic Smooth Attention for Deep Multiple Instance Learning in Medical Imaging](https://arxiv.org/abs/2507.14932) and
     [Smooth Attention for Deep Multiple Instance Learning: Application to CT Intracranial Hemorrhage Detection](https://arxiv.org/abs/2307.09457)
 
     **Overview.**
