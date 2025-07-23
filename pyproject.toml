@@ -54,7 +54,13 @@ docs = [
   "mkdocs-exclude"
 ]
 tests = [
-  "torchmil",
+  "torch",
+  "tensordict",
+  "torchmetrics",
+  "einops",
+  "scipy",
+  "tqdm",
+  "numpy",
   "pytest",
   "pytest-cov",
   "pandas"

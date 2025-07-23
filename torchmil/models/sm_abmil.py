@@ -34,11 +34,9 @@ class SmABMIL(MILModel):
         att_act: str = "tanh",
         sm_mode: str = "approx",
         sm_alpha: Union[float, str] = "trainable",
-        sm_layers: int = 0,
         sm_steps: int = 10,
-        sm_pre: bool = False,
-        sm_post: bool = False,
-        sm_spectral_norm: bool = False,
+        sm_where: str = "early",
+        spectral_norm: bool = False,
         feat_ext: torch.nn.Module = torch.nn.Identity(),
         criterion: torch.nn.Module = torch.nn.BCEWithLogitsLoss(),
     ) -> None:
@@ -49,11 +47,9 @@ class SmABMIL(MILModel):
             att_act (str): Activation function for attention. Possible values: 'tanh', 'relu', 'gelu'.
             sm_mode (str): Mode for the Sm operator. Possible values: 'approx', 'exact'.
             sm_alpha (Union[float, str]): Alpha value for the Sm operator. If 'trainable', alpha is trainable.
-            sm_layers (int): Number of layers that use the Sm operator.
-            sm_steps (int): Number of steps for the Sm operator.
-            sm_pre (bool): If True, apply Sm operator before the attention pooling.
-            sm_post (bool): If True, apply Sm operator after the attention pooling.
-            sm_spectral_norm (bool): If True, apply spectral normalization to all linear layers.
+            sm_steps (int): Number of steps for the Sm operator. Only used if `sm_mode='approx'`.
+            sm_where (str): Where to apply the Sm operator. Possible values: 'early', 'mid', 'late'.
+            spectral_norm (bool): If True, apply spectral normalization to all linear layers.
             feat_ext (torch.nn.Module): Feature extractor.
             criterion (torch.nn.Module): Loss function. By default, Binary Cross-Entropy loss from logits for binary classification.
         """
@@ -68,11 +64,9 @@ class SmABMIL(MILModel):
             act=att_act,
             sm_mode=sm_mode,
             sm_alpha=sm_alpha,
-            sm_layers=sm_layers,
             sm_steps=sm_steps,
-            sm_pre=sm_pre,
-            sm_post=sm_post,
-            sm_spectral_norm=sm_spectral_norm,
+            sm_where=sm_where,
+            spectral_norm=spectral_norm,
         )
         self.last_layer = torch.nn.Linear(feat_dim, 1)
 

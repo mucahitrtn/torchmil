@@ -40,11 +40,9 @@ class SmTransformerABMIL(MILModel):
         pool_act: str = "tanh",
         pool_sm_mode: str = "approx",
         pool_sm_alpha: Union[float, str] = "trainable",
-        pool_sm_layers: int = 1,
         pool_sm_steps: int = 10,
-        pool_sm_pre: bool = False,
-        pool_sm_post: bool = False,
-        pool_sm_spectral_norm: bool = False,
+        pool_sm_where: str = "early",
+        pool_spectral_norm: bool = False,
         feat_ext: torch.nn.Module = torch.nn.Identity(),
         transf_att_dim: int = 512,
         transf_n_layers: int = 1,
@@ -66,11 +64,9 @@ class SmTransformerABMIL(MILModel):
             pool_act: Activation function for pooling. Possible values: 'tanh', 'relu', 'gelu'.
             pool_sm_mode: Mode for the Sm operator in pooling. Possible values: 'approx', 'exact'.
             pool_sm_alpha: Alpha value for the Sm operator in pooling. If 'trainable', alpha is trainable.
-            pool_sm_layers: Number of layers that use the Sm operator in pooling.
-            pool_sm_steps: Number of steps for the Sm operator in pooling.
-            pool_sm_pre: If True, apply Sm operator before the attention pooling.
-            pool_sm_post: If True, apply Sm operator after the attention pooling.
-            pool_sm_spectral_norm: If True, apply spectral normalization to all linear layers in pooling.
+            pool_sm_steps: Number of steps for the Sm operator in pooling. Only used if `pool_sm_mode='approx'`.
+            pool_sm_where: Where to apply the Sm operator in pooling. Possible values: 'early', 'mid', 'late'.
+            pool_spectral_norm: If True, apply spectral normalization to linear layers in the SmAttentionPool.
             feat_ext: Feature extractor.
             transf_att_dim: Attention dimension for transformer encoder.
             transf_n_layers: Number of layers in transformer encoder.
@@ -106,11 +102,9 @@ class SmTransformerABMIL(MILModel):
             act=pool_act,
             sm_mode=pool_sm_mode,
             sm_alpha=pool_sm_alpha,
-            sm_layers=pool_sm_layers,
             sm_steps=pool_sm_steps,
-            sm_pre=pool_sm_pre,
-            sm_post=pool_sm_post,
-            sm_spectral_norm=pool_sm_spectral_norm,
+            sm_where=pool_sm_where,
+            spectral_norm=pool_spectral_norm,
         )
         self.last_layer = torch.nn.Linear(feat_dim, 1)
 

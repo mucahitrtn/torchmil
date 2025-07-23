@@ -12,28 +12,34 @@ class SmAttentionPool(torch.nn.Module):
     Attention-based pooling with the Sm operator, as proposed in [Sm: enhanced localization in Multiple Instance Learning for medical imaging classification](https://arxiv.org/abs/2410.03276).
 
     Given an input bag $\mathbf{X} = \left[ \mathbf{x}_1, \ldots, \mathbf{x}_N \right]^\top \in \mathbb{R}^{N \times \texttt{in_dim}}$,
-    this model aggregates the instance features into a bag representation $\mathbf{z} \in \mathbb{R}^{\texttt{in_dim}}$ as,
+    this module aggregates the instance features into a bag representation in a similar way as [ABMIL](../../models/abmil.md), 
+    but it incorporates the $\texttt{Sm}$ operator to promote smoothness in the attention values, see [Sm](../sm.md) for more details.
+
+    Formally, if $\texttt{sm_where == "early"}$, the module first applies the $\texttt{Sm}$ operator to the input bag features $\mathbf{X}$,
+    
+    \begin{gather}
+        \mathbf{X} = \operatorname{Sm}(\mathbf{X}).
+    \end{gather}
+
+    Then, it computes the attention values $\mathbf{f} \in \mathbb{R}^{N}$ as,
 
     \begin{gather}
-        \mathbf{f} = \operatorname{SmMLP}(\mathbf{X}) \in \mathbb{R}^{N}, \\
+        \mathbf{f} = \operatorname{act}( \operatorname{Sm}(\mathbf{X} \mathbf{W}^\top)) \mathbf{w}, \quad \text{if } \texttt{sm_where == "mid"},\\
+        \mathbf{f} = \operatorname{Sm}(\operatorname{act}(\mathbf{X} \mathbf{W}^\top) \mathbf{w}), \quad \text{if } \texttt{sm_where == "late"}, 
+    \end{gather}
+
+    where $\mathbf{W} \in \mathbb{R}^{\texttt{in_dim} \times \texttt{att_dim}}$ and $\mathbf{w} \in \mathbb{R}^{\texttt{att_dim} \times 1}$ are learnable parameters, and $\operatorname{act}$ is the activation function.
+    Then, it computes the bag representation $\mathbf{z} \in \mathbb{R}^{\texttt{in_dim}}$ as,
+
+    \begin{gather}
         \mathbf{z} = \mathbf{X}^\top \operatorname{Softmax}(\mathbf{f}) = \sum_{n=1}^N s_n \mathbf{x}_n,
     \end{gather}
-
+    
     where $s_n$ is the normalized attention score for the $n$-th instance.
 
-    To compute the attention values, $\operatorname{SmMLP}$ is defined as $\operatorname{SmMLP}(\mathbf{X}) = \mathbf{Y}^L$ where
-
-    \begin{gather}
-        \mathbf{Y}^0 = \mathbf{X}\mathbf{W^0}, \\
-        \mathbf{Y}^l = \operatorname{act}( \texttt{Sm}(\mathbf{Y}^{l-1}\mathbf{W}^l)), \quad \text{for } l = 1, \ldots, L-1, \\
-        \mathbf{Y}^L = \mathbf{Y}^{L-1}\mathbf{w},
-    \end{gather}
-
-    where $\mathbf{W^0} \in \mathbb{R}^{\texttt{in_dim} \times \texttt{att_dim}}$, $\mathbf{W}^l \in \mathbb{R}^{\texttt{att_dim} \times \texttt{att_dim}}$, $\mathbf{w} \in \mathbb{R}^{\texttt{att_dim} \times 1}$,
-    $\operatorname{act} \ \colon \mathbb{R} \to \mathbb{R}$ is the activation function,
-    and $\texttt{Sm}$ is the Sm operator, see [Sm](../sm.md) for more details.
-
-    **Note**: If `sm_pre=True`, the Sm operator is applied before $\operatorname{SmMLP}$. If `sm_post=True`, the Sm operator is applied after $\operatorname{SmMLP}$.
+    **Spectral normalization:** To ensure that the Dirichlet energy decreases after applying the $\texttt{Sm}$ operator, the linear layers can be optionally normalized using spectral normalization.
+    In the original paper, this results in better performance.
+    If `spectral_norm=True`, the linear layers after the $\texttt{Sm}$ operator are normalized using spectral normalization.
     """
 
     def __init__(
@@ -43,11 +49,9 @@ class SmAttentionPool(torch.nn.Module):
         act: str = "gelu",
         sm_mode: str = "approx",
         sm_alpha: Union[float, str] = "trainable",
-        sm_layers: int = 1,
         sm_steps: int = 10,
-        sm_pre: bool = False,
-        sm_post: bool = False,
-        sm_spectral_norm: bool = False,
+        sm_where: str = "early",
+        spectral_norm: bool = False,
     ):
         """
         Arguments:
@@ -56,11 +60,9 @@ class SmAttentionPool(torch.nn.Module):
             act: Activation function for attention. Possible values: 'tanh', 'relu', 'gelu'.
             sm_mode: Mode for the Sm operator. Possible values: 'approx', 'exact'.
             sm_alpha: Alpha value for the Sm operator. If 'trainable', alpha is trainable.
-            sm_layers: Number of layers that use the Sm operator.
             sm_steps: Number of steps for the Sm operator.
-            sm_pre: If True, apply Sm operator before the attention pooling.
-            sm_post: If True, apply Sm operator after the attention pooling.
-            sm_spectral_norm: If True, apply spectral normalization to all linear layers.
+            sm_where: Where to apply the Sm operator. Possible values: 'early', 'mid', 'late', 'none'.
+            spectral_norm: If True, apply spectral normalization to linear layers. If `sm_where` is 'none', all linear layers are normalized.
         """
 
         super(SmAttentionPool, self).__init__()
@@ -69,39 +71,39 @@ class SmAttentionPool(torch.nn.Module):
         self.act = act
         self.sm_mode = sm_mode
         self.sm_alpha = sm_alpha
-        self.sm_layers = sm_layers
         self.sm_steps = sm_steps
-        self.sm_pre = sm_pre
-        self.sm_post = sm_post
-        self.sm_spectral_norm = sm_spectral_norm
-
-        self.proj1 = torch.nn.Linear(in_dim, att_dim)
-        self.proj2 = torch.nn.Linear(att_dim, 1, bias=False)
+        self.sm_where = sm_where
+        self.spectral_norm = spectral_norm
 
         if self.act == "tanh":
-            act_layer_fn = torch.nn.Tanh
+            self.act_layer_fn = torch.nn.functional.tanh
         elif self.act == "relu":
-            act_layer_fn = torch.nn.ReLU
+            self.act_layer_fn = torch.nn.functional.relu
         elif self.act == "gelu":
-            act_layer_fn = torch.nn.GELU
+            self.act_layer_fn = torch.nn.functional.gelu
         else:
             raise ValueError(
                 f"[{self.__class__.__name__}] act must be 'tanh', 'relu' or 'gelu'"
             )
-        self.act_layer = act_layer_fn()
 
-        self.sm = Sm(alpha=sm_alpha, num_steps=sm_steps, mode=sm_mode)
-
-        self.mlp = torch.nn.ModuleList()
-        for _ in range(sm_layers):
-            linear = torch.nn.utils.parametrizations.spectral_norm(
-                torch.nn.Linear(att_dim, att_dim)
+        if (sm_steps > 0) and (sm_alpha not in [0.0, 0]) and sm_where != "none":
+            self.sm = Sm(
+                alpha=sm_alpha,
+                num_steps=sm_steps,
+                mode=sm_mode,
             )
-            self.mlp.append(linear)
+        else:
+            self.sm = torch.nn.Identity()
 
-        if self.sm_pre:
-            self.proj1 = torch.nn.utils.parametrizations.spectral_norm(self.proj1)
-            self.proj2 = torch.nn.utils.parametrizations.spectral_norm(self.proj2)
+        self.proj1 = torch.nn.Linear(in_dim, att_dim)
+        self.proj2 = torch.nn.Linear(att_dim, 1, bias=False)
+
+        if self.spectral_norm:
+            if self.sm_where == "mid":
+                self.proj2 = torch.nn.utils.parametrizations.spectral_norm(self.proj2)
+            elif self.sm_where in ["early", "none"]:
+                self.proj1 = torch.nn.utils.parametrizations.spectral_norm(self.proj1)
+                self.proj2 = torch.nn.utils.parametrizations.spectral_norm(self.proj2)
 
     def forward(
         self, X: Tensor, adj: Tensor, mask: Tensor = None, return_att: bool = False
@@ -127,20 +129,17 @@ class SmAttentionPool(torch.nn.Module):
             mask = torch.ones(batch_size, bag_size, device=X.device)
         mask = mask.unsqueeze(dim=-1)  # (batch_size, bag_size, 1)
 
-        if self.sm_pre:
+        if self.sm_where == "early":
             X = self.sm(X, adj)  # (batch_size, bag_size, in_dim)
 
         H = self.proj1(X)  # (batch_size, bag_size, att_dim)
-        H = self.act_layer(H)  # (batch_size, bag_size, att_dim)
 
-        for layer in self.mlp:
-            H = self.sm(H, adj)
-            H = layer(H)
-            H = self.act_layer(H)
+        if self.sm_where == "mid":
+            H = self.sm(H, adj)  # (batch_size, bag_size, att_dim)
+        H = self.act_layer_fn(H)  # (batch_size, bag_size, att_dim)
 
         f = self.proj2(H)  # (batch_size, bag_size, 1)
-
-        if self.sm_post:
+        if self.sm_where == "late":
             f = self.sm(f, adj)
 
         s = masked_softmax(f, mask)  # (batch_size, bag_size, 1)

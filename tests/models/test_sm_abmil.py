@@ -1,109 +1,149 @@
-import torch
 import pytest
-from torch import nn
+import torch
 
-from torchmil.models import SmABMIL
-
-
-# Fixtures for common setup
-@pytest.fixture
-def sample_data():
-    # Returns a tuple of (X, adj, Y, mask)
-    X = torch.randn(2, 3, 5)  # batch_size, bag_size, feat_dim
-    adj = torch.randn(2, 3, 3)  # batch_size, bag_size, bag_size
-    Y = torch.randint(0, 2, (2,))  # batch_size
-    mask = torch.randint(0, 2, (2, 3)).bool()  # batch_size, bag_size
-    return X, adj, Y, mask
+from torchmil.models.sm_abmil import SmABMIL
+from torchmil.nn import SmAttentionPool
 
 
 @pytest.fixture
-def smabmil_model():
-    # Returns an instance of the SmABMIL model with default parameters
-    return SmABMIL(in_shape=(3, 5))
+def sample_inputs():
+    """Provides sample input tensors for testing."""
+    batch_size = 2
+    bag_size = 5
+    feat_dim = 10
+    in_shape = (bag_size, feat_dim)  # Example in_shape for a single instance
+
+    X = torch.randn(batch_size, bag_size, feat_dim)
+    adj = torch.randint(0, 2, (batch_size, bag_size, bag_size)).float()
+    mask = torch.randint(0, 2, (batch_size, bag_size)).bool()
+    Y = torch.randint(0, 2, (batch_size,)).float()  # Binary labels
+
+    return X, adj, mask, Y, in_shape, batch_size, bag_size, feat_dim
 
 
-def test_smabmil_forward_pass(sample_data, smabmil_model):
-    # Tests the forward pass of the model with and without mask and return_att
-    X, adj, _, mask = sample_data
-    Y_pred = smabmil_model(X, adj, mask)
-    assert Y_pred.shape == (2,)
+def test_smabmil_init_default(sample_inputs):
+    """Test model initialization with default parameters."""
+    _, _, _, _, in_shape, _, _, _ = sample_inputs
+    model = SmABMIL(in_shape=in_shape)
 
-    Y_pred = smabmil_model(X, adj)
-    assert Y_pred.shape == (2,)
-
-    Y_pred, att = smabmil_model(X, adj, mask, return_att=True)
-    assert Y_pred.shape == (2,)
-    assert att.shape == (2, 3)
-
-
-def test_smabmil_compute_loss(sample_data, smabmil_model):
-    # Tests the compute_loss method of the model
-    X, adj, Y, mask = sample_data
-    Y_pred, loss_dict = smabmil_model.compute_loss(Y, X, adj, mask)
-    assert Y_pred.shape == (2,)
-    assert "BCEWithLogitsLoss" in loss_dict
-    assert loss_dict["BCEWithLogitsLoss"].shape == ()  # loss is a scalar
+    assert isinstance(model, SmABMIL)
+    assert isinstance(model.feat_ext, torch.nn.Identity)
+    assert isinstance(model.pool, SmAttentionPool)
+    assert model.pool.att_dim == 128
+    assert model.pool.act == "tanh"
+    assert model.pool.sm_mode == "approx"
+    assert model.pool.sm_alpha == "trainable"
+    assert model.pool.sm_steps == 10
+    assert model.pool.sm_where == "early"
+    assert not model.pool.spectral_norm
+    assert isinstance(model.last_layer, torch.nn.Linear)
+    assert model.last_layer.in_features == in_shape[-1]
+    assert model.last_layer.out_features == 1
+    assert isinstance(model.criterion, torch.nn.BCEWithLogitsLoss)
 
 
-def test_smabmil_predict(sample_data, smabmil_model):
-    # Tests the predict method of the model with and without return_inst_pred
-    X, adj, _, mask = sample_data
-    Y_pred = smabmil_model.predict(X, adj, mask, return_inst_pred=False)
-    assert Y_pred.shape == (2,)
-
-    Y_pred, y_inst_pred = smabmil_model.predict(X, adj, mask, return_inst_pred=True)
-    assert Y_pred.shape == (2,)
-    assert y_inst_pred.shape == (2, 3)
-
-
-def test_smabmil_with_feature_extractor(sample_data):
-    # Tests the model with a feature extractor
-    X, adj, Y, mask = sample_data
-    feat_ext = nn.Sequential(
-        nn.Linear(5, 10),
-        nn.ReLU(),
-        nn.Linear(10, 7),
-    )
+@pytest.mark.parametrize(
+    "att_dim, att_act, sm_mode, sm_alpha, sm_steps, sm_where, spectral_norm",
+    [
+        (64, "relu", "exact", 0.5, 5, "mid", True),
+        (256, "gelu", "approx", "trainable", 20, "late", False),
+    ],
+)
+def test_smabmil_init_custom(
+    sample_inputs,
+    att_dim,
+    att_act,
+    sm_mode,
+    sm_alpha,
+    sm_steps,
+    sm_where,
+    spectral_norm,
+):
+    """Test model initialization with custom parameters."""
+    _, _, _, _, in_shape, _, _, _ = sample_inputs
     model = SmABMIL(
-        in_shape=(3, 5), feat_ext=feat_ext
-    )  # in_shape is the shape of the original input
-    Y_pred = model(X, adj, mask)
-    assert Y_pred.shape == (2,)
+        in_shape=in_shape,
+        att_dim=att_dim,
+        att_act=att_act,
+        sm_mode=sm_mode,
+        sm_alpha=sm_alpha,
+        sm_steps=sm_steps,
+        sm_where=sm_where,
+        spectral_norm=spectral_norm,
+        feat_ext=torch.nn.Linear(in_shape[-1], in_shape[-1]),  # Custom feat_ext
+        criterion=torch.nn.MSELoss(),  # Custom criterion
+    )
 
+    assert isinstance(model, SmABMIL)
+    assert isinstance(model.feat_ext, torch.nn.Linear)
+    assert isinstance(model.pool, SmAttentionPool)
+    assert model.pool.att_dim == att_dim
+    assert model.pool.act == att_act
+    assert model.pool.sm_mode == sm_mode
+    assert model.pool.sm_alpha == sm_alpha
+    assert model.pool.sm_steps == sm_steps
+    assert model.pool.sm_where == sm_where
+    assert model.pool.spectral_norm == spectral_norm
+    assert isinstance(model.last_layer, torch.nn.Linear)
+    assert model.last_layer.in_features == in_shape[-1]
+    assert model.last_layer.out_features == 1
+    assert isinstance(model.criterion, torch.nn.MSELoss)
+
+
+def test_smabmil_forward_no_att(sample_inputs):
+    """Test forward pass without returning attention."""
+    X, adj, mask, _, in_shape, batch_size, _, _ = sample_inputs
+    model = SmABMIL(in_shape=in_shape)
+    Y_pred = model.forward(X, adj, mask, return_att=False)
+
+    assert isinstance(Y_pred, torch.Tensor)
+    assert Y_pred.shape == (batch_size,)  # (batch_size,) for logits
+
+
+def test_smabmil_forward_with_att(sample_inputs):
+    """Test forward pass with returning attention."""
+    X, adj, mask, _, in_shape, batch_size, bag_size, _ = sample_inputs
+    model = SmABMIL(in_shape=in_shape)
+    Y_pred, att = model.forward(X, adj, mask, return_att=True)
+
+    assert isinstance(Y_pred, torch.Tensor)
+    assert Y_pred.shape == (batch_size,)  # (batch_size,) for logits
+    assert isinstance(att, torch.Tensor)
+    assert att.shape == (batch_size, bag_size)  # (batch_size, bag_size) for attention
+
+
+def test_smabmil_compute_loss(sample_inputs):
+    """Test compute_loss method."""
+    X, adj, mask, Y, in_shape, batch_size, _, _ = sample_inputs
+    model = SmABMIL(in_shape=in_shape)
     Y_pred, loss_dict = model.compute_loss(Y, X, adj, mask)
-    assert Y_pred.shape == (2,)
+
+    assert isinstance(Y_pred, torch.Tensor)
+    assert Y_pred.shape == (batch_size,)
+    assert isinstance(loss_dict, dict)
+    assert len(loss_dict) == 1
     assert "BCEWithLogitsLoss" in loss_dict
-    assert loss_dict["BCEWithLogitsLoss"].shape == ()
+    assert isinstance(loss_dict["BCEWithLogitsLoss"], torch.Tensor)
+    assert loss_dict["BCEWithLogitsLoss"].ndim == 0  # Scalar loss
 
 
-def test_smabmil_different_pooling_params(sample_data):
-    # Test different attention and Sm pooling parameters
-    X, adj, _, mask = sample_data
-    model_relu = SmABMIL(in_shape=(3, 5), att_act="relu")
-    model_exact_sm = SmABMIL(in_shape=(3, 5), sm_mode="exact")
-    model_trainable_alpha = SmABMIL(in_shape=(3, 5), sm_alpha="trainable")
-    model_sm_layers = SmABMIL(in_shape=(3, 5), sm_layers=2)
-    model_sm_pre = SmABMIL(in_shape=(3, 5), sm_pre=True)
-    model_sm_post = SmABMIL(in_shape=(3, 5), sm_post=True)
-    model_spectral_norm = SmABMIL(in_shape=(3, 5), sm_spectral_norm=True)
+def test_smabmil_predict_bag_only(sample_inputs):
+    """Test predict method returning only bag predictions."""
+    X, adj, mask, _, in_shape, batch_size, _, _ = sample_inputs
+    model = SmABMIL(in_shape=in_shape)
+    Y_pred = model.predict(X, adj, mask, return_inst_pred=False)
 
-    Y_pred_relu = model_relu(X, adj, mask)
-    Y_pred_exact_sm = model_exact_sm(X, adj, mask)
-    Y_pred_trainable_alpha = model_trainable_alpha(X, adj, mask)
-    Y_pred_sm_layers = model_sm_layers(X, adj, mask)
-    Y_pred_sm_pre = model_sm_pre(X, adj, mask)
-    Y_pred_sm_post = model_sm_post(X, adj, mask)
-    Y_pred_spectral_norm = model_spectral_norm(X, adj, mask)
-
-    assert Y_pred_relu.shape == (2,)
-    assert Y_pred_exact_sm.shape == (2,)
-    assert Y_pred_trainable_alpha.shape == (2,)
-    assert Y_pred_sm_layers.shape == (2,)
-    assert Y_pred_sm_pre.shape == (2,)
-    assert Y_pred_sm_post.shape == (2,)
-    assert Y_pred_spectral_norm.shape == (2,)
+    assert isinstance(Y_pred, torch.Tensor)
+    assert Y_pred.shape == (batch_size,)
 
 
-if __name__ == "__main__":
-    # Run the tests
-    pytest.main([__file__])
+def test_smabmil_predict_with_inst_pred(sample_inputs):
+    """Test predict method returning bag and instance predictions."""
+    X, adj, mask, _, in_shape, batch_size, bag_size, _ = sample_inputs
+    model = SmABMIL(in_shape=in_shape)
+    Y_pred, y_inst_pred = model.predict(X, adj, mask, return_inst_pred=True)
+
+    assert isinstance(Y_pred, torch.Tensor)
+    assert Y_pred.shape == (batch_size,)
+    assert isinstance(y_inst_pred, torch.Tensor)
+    assert y_inst_pred.shape == (batch_size, bag_size)

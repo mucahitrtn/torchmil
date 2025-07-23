@@ -1,29 +1,48 @@
+import pytest
 import torch
-from torch.nn import BCEWithLogitsLoss, Identity
 
-from torchmil.nn import SmAttentionPool, SmTransformerEncoder
 from torchmil.models.sm_transformer_abmil import SmTransformerABMIL
+from torchmil.nn.transformers.sm_transformer import SmTransformerEncoder
+from torchmil.nn.attention.sm_attention_pool import SmAttentionPool
 
 
-def test_sm_transformer_abmil_initialization():
-    # Define input shape
-    in_dim = 256
-    in_shape = (in_dim,)
+@pytest.fixture
+def sample_inputs_sm_transformer():
+    """Provides sample input tensors for SmTransformerABMIL testing."""
+    batch_size = 2
+    bag_size = 4
+    in_dim = 256  # Feature dimension
+    in_shape = (in_dim,)  # Input shape for a single instance
 
-    # Test with default parameters
+    X = torch.randn(batch_size, bag_size, *in_shape)
+    adj = torch.randn(batch_size, bag_size, bag_size)
+    mask = torch.randint(0, 2, (batch_size, bag_size)).bool()
+    Y = torch.randint(0, 2, (batch_size,)).float()  # Binary labels
+
+    return X, adj, mask, Y, in_shape, batch_size, bag_size, in_dim
+
+
+def test_sm_transformer_abmil_initialization_default(sample_inputs_sm_transformer):
+    """Test SmTransformerABMIL initialization with default parameters."""
+    _, _, _, _, in_shape, _, _, in_dim = sample_inputs_sm_transformer
     model = SmTransformerABMIL(in_shape=in_shape)
+
     assert isinstance(model, SmTransformerABMIL)
-    assert isinstance(model.feat_ext, Identity)
+    assert isinstance(model.feat_ext, torch.nn.Identity)
     assert isinstance(model.transformer_encoder, SmTransformerEncoder)
     assert isinstance(model.pool, SmAttentionPool)
     assert isinstance(model.last_layer, torch.nn.Linear)
-    assert isinstance(model.criterion, BCEWithLogitsLoss)
+    assert isinstance(model.criterion, torch.nn.BCEWithLogitsLoss)
 
-    # Test with custom parameters
+
+def test_sm_transformer_abmil_initialization_custom(sample_inputs_sm_transformer):
+    """Test SmTransformerABMIL initialization with custom parameters."""
+    _, _, _, _, in_shape, _, _, in_dim = sample_inputs_sm_transformer
+
     class CustomFeatExt(torch.nn.Module):
-        def __init__(self, in_dim):
+        def __init__(self, in_dim_arg):
             super().__init__()
-            self.linear = torch.nn.Linear(in_dim, 128)
+            self.linear = torch.nn.Linear(in_dim_arg, 128)
 
         def forward(self, x):
             return self.linear(x)
@@ -33,11 +52,9 @@ def test_sm_transformer_abmil_initialization():
     pool_act = "relu"
     pool_sm_mode = "exact"
     pool_sm_alpha = 0.8
-    pool_sm_layers = 2
     pool_sm_steps = 5
-    pool_sm_pre = True
-    pool_sm_post = True
-    pool_sm_spectral_norm = True
+    pool_sm_where = "late"
+    pool_spectral_norm = True
     transf_att_dim = 256
     transf_n_layers = 2
     transf_n_heads = 8
@@ -55,11 +72,9 @@ def test_sm_transformer_abmil_initialization():
         pool_act=pool_act,
         pool_sm_mode=pool_sm_mode,
         pool_sm_alpha=pool_sm_alpha,
-        pool_sm_layers=pool_sm_layers,
         pool_sm_steps=pool_sm_steps,
-        pool_sm_pre=pool_sm_pre,
-        pool_sm_post=pool_sm_post,
-        pool_sm_spectral_norm=pool_sm_spectral_norm,
+        pool_sm_where=pool_sm_where,
+        pool_spectral_norm=pool_spectral_norm,
         feat_ext=feat_ext,
         transf_att_dim=transf_att_dim,
         transf_n_layers=transf_n_layers,
@@ -72,78 +87,65 @@ def test_sm_transformer_abmil_initialization():
         transf_sm_steps=transf_sm_steps,
         criterion=criterion,
     )
+
     assert isinstance(model, SmTransformerABMIL)
     assert isinstance(model.feat_ext, CustomFeatExt)
     assert isinstance(model.transformer_encoder, SmTransformerEncoder)
+
     assert isinstance(model.pool, SmAttentionPool)
+
     assert isinstance(model.last_layer, torch.nn.Linear)
+    assert model.last_layer.in_features == feat_ext.linear.out_features
+    assert model.last_layer.out_features == 1
     assert isinstance(model.criterion, torch.nn.CrossEntropyLoss)
 
 
-def test_sm_transformer_abmil_forward():
-    # Define input shape
-    in_dim = 256
-    in_shape = (in_dim,)
-    # Initialize model
+def test_sm_transformer_abmil_forward(sample_inputs_sm_transformer):
+    """Test forward pass of SmTransformerABMIL."""
+    X, adj, mask, _, in_shape, batch_size, bag_size, _ = sample_inputs_sm_transformer
     model = SmTransformerABMIL(in_shape=in_shape)
-    # Create dummy input
-    batch_size = 2
-    bag_size = 4
-    # The input X should match the in_shape, so (batch_size, bag_size, C, H, W)
-    X = torch.randn(batch_size, bag_size, *in_shape)
-    adj = torch.randn(batch_size, bag_size, bag_size)
-    mask = torch.randint(0, 2, (batch_size, bag_size)).bool()
 
     # Test forward pass without attention
-    Y_pred = model(X, adj, mask)
+    Y_pred = model(X, adj, mask, return_att=False)
+    assert isinstance(Y_pred, torch.Tensor)
     assert Y_pred.shape == (batch_size,)
 
     # Test forward pass with attention
     Y_pred, att = model(X, adj, mask, return_att=True)
+    assert isinstance(Y_pred, torch.Tensor)
     assert Y_pred.shape == (batch_size,)
-    assert att.shape == (batch_size, bag_size)
+    assert isinstance(att, torch.Tensor)
+    assert att.shape == (batch_size, bag_size)  # Assertion for attention shape
 
 
-def test_sm_transformer_abmil_compute_loss():
-    # Define input shape
-    in_dim = 256
-    in_shape = (in_dim,)
-    # Initialize model
+def test_sm_transformer_abmil_compute_loss(sample_inputs_sm_transformer):
+    """Test compute_loss method of SmTransformerABMIL."""
+    X, adj, mask, Y, in_shape, batch_size, _, _ = sample_inputs_sm_transformer
     model = SmTransformerABMIL(in_shape=in_shape)
-    # Create dummy input and target
-    batch_size = 2
-    bag_size = 4
-    X = torch.randn(batch_size, bag_size, *in_shape)
-    adj = torch.randn(batch_size, bag_size, bag_size)
-    mask = torch.randint(0, 2, (batch_size, bag_size)).bool()
-    Y = torch.randint(0, 2, (batch_size,)).float()  # Binary labels
 
-    # Test compute_loss
     Y_pred, loss_dict = model.compute_loss(Y, X, adj, mask)
+    assert isinstance(Y_pred, torch.Tensor)
     assert Y_pred.shape == (batch_size,)
     assert isinstance(loss_dict, dict)
+    assert len(loss_dict) == 1
     assert "BCEWithLogitsLoss" in loss_dict
-    assert loss_dict["BCEWithLogitsLoss"].shape == torch.Size([])  # Scalar loss
+    assert isinstance(loss_dict["BCEWithLogitsLoss"], torch.Tensor)
+    assert loss_dict["BCEWithLogitsLoss"].ndim == 0  # Scalar loss
 
 
-def test_sm_transformer_abmil_predict():
-    # Define input shape
-    in_dim = 256
-    in_shape = (in_dim,)
-    # Initialize model
+def test_sm_transformer_abmil_predict(sample_inputs_sm_transformer):
+    """Test predict method of SmTransformerABMIL."""
+    X, adj, mask, _, in_shape, batch_size, bag_size, _ = sample_inputs_sm_transformer
     model = SmTransformerABMIL(in_shape=in_shape)
-    # Create dummy input
-    batch_size = 2
-    bag_size = 4
-    X = torch.randn(batch_size, bag_size, *in_shape)
-    adj = torch.randn(batch_size, bag_size, bag_size)
-    mask = torch.randint(0, 2, (batch_size, bag_size)).bool()
 
     # Test predict without instance predictions
     Y_pred = model.predict(X, adj, mask, return_inst_pred=False)
+    assert isinstance(Y_pred, torch.Tensor)
     assert Y_pred.shape == (batch_size,)
 
     # Test predict with instance predictions
     Y_pred, y_inst_pred = model.predict(X, adj, mask, return_inst_pred=True)
+    assert isinstance(Y_pred, torch.Tensor)
     assert Y_pred.shape == (batch_size,)
+    assert isinstance(y_inst_pred, torch.Tensor)
     assert y_inst_pred.shape == (batch_size, bag_size)
