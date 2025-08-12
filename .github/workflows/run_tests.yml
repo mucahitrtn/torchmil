@@ -39,6 +39,10 @@ jobs:
         run: |
           python -m pytest --cov=./torchmil --cov-report=xml
       
+      - name: Display coverage.xml content
+        run: |
+          cat ./coverage.xml
+          
       - name: Upload coverage to Codecov
         # Use the codecov-action to upload the generated coverage.xml
         uses: codecov/codecov-action@v4

@@ -7,12 +7,20 @@ repo_url: https://github.com/Franblueee/torchmil
 repo_name: Franblueee/torchmil
 edit_uri: ""  # No edit button, as some of our pages are in /docs and some in /examples via symlink, so it's impossible for them all to be accurate
 
+extra:
+  analytics:
+    provider: google
+    property: G-XNBR29JRQ3
+  generator: false
+
 theme:
   name: material
+  font:
+    text: Inter
+    code: ui-monospace
   features:
     - navigation.sections  # Sections are included in the navigation on the left.
     - toc.integrate  # Table of contents is integrated on the left; does not appear separately on the right.
-    # - header.autohide  # header disappears as you scroll
     - navigation.path
     - navigation.indexes
     - navigation.tabs
@@ -115,11 +123,11 @@ nav:
     - Integrating torchmil with Graph Neural Networks (GNNs) frameworks: examples/gnn_integration.ipynb
   - API reference:
     - api/index.md
-    - <tt>torchmil.data</tt>:
+    - torchmil.data:
       - api/data/index.md
       - api/data/collate.md
       - api/data/representation.md
-    - <tt>torchmil.datasets</tt>:
+    - torchmil.datasets:
       - api/datasets/index.md
       - api/datasets/processed_mil_dataset.md
       - api/datasets/toy_dataset.md
@@ -132,7 +140,7 @@ nav:
       - api/datasets/false_frequency_dataset.md
       - api/datasets/mc_standard_dataset.md
       - api/datasets/sc_standard_dataset.md
-    - <tt>torchmil.nn</tt>:
+    - torchmil.nn:
       - api/nn/index.md
       - Attention:
         - api/nn/attention/index.md
@@ -159,7 +167,7 @@ nav:
       - api/nn/sm.md
       - api/nn/mean_pool.md
       - api/nn/max_pool.md
-    - <tt>torchmil.models</tt>:
+    - torchmil.models:
       - api/models/index.md
       - api/models/mil_model.md
       - api/models/abmil.md
@@ -179,11 +187,11 @@ nav:
       - api/models/transmil.md
       - api/models/setmil.md
       - api/models/iibmil.md
-    - <tt>torchmil.visualize</tt>:
+    - torchmil.visualize:
       - api/visualize/index.md
       - api/visualize/vis_ctscan.md
       - api/visualize/vis_wsi.md
-    - <tt>torchmil.utils</tt>:
+    - torchmil.utils:
       - api/utils/index.md
       - api/utils/annealing_scheduler.md
       - api/utils/graph_utils.md
