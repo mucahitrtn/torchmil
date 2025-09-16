@@ -64,7 +64,6 @@
 - [TransformerProbSmoothABMIL](models/transformer_prob_smooth_abmil.md)
 - [TransMIL](models/transmil.md)
 - [SETMIL](models/setmil.md)
-- [IIBMIL](models/iibmil.md)
 
 ## Visualize: [torchmil.visualize](visualize/index.md)
 - [Introduction](visualize/index.md)

@@ -14,6 +14,7 @@ class ProcessedMILDataset(torch.utils.data.Dataset):
 
     **MIL processing and directory structure.**
    The dataset expects pre-processed bags saved as individual numpy files.
+   
     - A feature file should yield an array of shape `(bag_size, ...)`, where `...` represents the shape of the features.
     - A label file should yield an array of shape arbitrary shape, e.g., `(1,)` for binary classification.
     - An instance label file should yield an array of shape `(bag_size, ...)`, where `...` represents the shape of the instance labels.
@@ -46,21 +47,20 @@ class ProcessedMILDataset(torch.utils.data.Dataset):
     If the coordinates of the instances are available, the adjacency matrix will be built using the Euclidean distance between the coordinates.
     Formally, the adjacency matrix $\mathbf{A} = \left[ A_{ij} \right]$ is defined as:
 
-    \begin{equation}
-    A_{ij} = \begin{cases}
+    $$A_{ij} = \begin{cases}
     d_{ij}, & \text{if } \left\| \mathbf{c}_i - \mathbf{c}_j \right\| \leq \text{dist_thr}, \\
     0, & \text{otherwise},
     \end{cases} \quad d_{ij} = \begin{cases}
     1, & \text{if } \text{adj_with_dist=False}, \\
     \exp\left( -\frac{\left\| \mathbf{x}_i - \mathbf{x}_j \right\|}{d} \right), & \text{if } \text{adj_with_dist=True}.
-    \end{cases}
-    \end{equation}
+    \end{cases}$$
 
     where $\mathbf{c}_i$ and $\mathbf{c}_j$ are the coordinates of the instances $i$ and $j$, respectively, $\text{dist_thr}$ is a threshold distance,
     and $\mathbf{x}_i \in \mathbb{R}^d$ and $\mathbf{x}_j \in \mathbb{R}^d$ are the features of instances $i$ and $j$, respectively.
     
     **How bags are built.**
     When the `__getitem__` method is called, the bag is built as follows (pseudocode):
+
     1. The `__getitem__` method is called with an index.
     2. The bag name is retrieved from the list of bag names.
     3. The `_build_bag` method is called with the bag name:
@@ -117,26 +117,33 @@ class ProcessedMILDataset(torch.utils.data.Dataset):
         self.load_at_init = load_at_init
 
         if "X" in self.bag_keys and self.features_path is None:
-            raise ValueError("features_path must be provided if 'X' is in bag_keys")
+            raise ValueError(
+                "features_path must be provided if 'X' is in bag_keys")
         if "Y" in self.bag_keys and self.labels_path is None:
-            raise ValueError("labels_path must be provided if 'Y' is in bag_keys")
+            raise ValueError(
+                "labels_path must be provided if 'Y' is in bag_keys")
         if "y_inst" in self.bag_keys and self.inst_labels_path is None:
             raise ValueError(
-                "inst_labels_path must be provided if 'y_inst' is in bag_keys"
-            )
+                "inst_labels_path must be provided if 'y_inst' is in bag_keys")
         if "coords" in self.bag_keys and self.coords_path is None:
-            raise ValueError("coords_path must be provided if 'coords' is in bag_keys")
+            raise ValueError(
+                "coords_path must be provided if 'coords' is in bag_keys")
         if "adj" in self.bag_keys and self.coords_path is None:
-            raise ValueError("coords_path must be provided if 'adj' is in bag_keys")
+            raise ValueError(
+                "coords_path must be provided if 'adj' is in bag_keys")
 
         if self.bag_names is None:
             if self.features_path is None:
-                raise ValueError("features_path must be provided if bag_names is None")
+                raise ValueError(
+                    "features_path must be provided if bag_names is None")
 
             self.bag_names = [
-                file for file in os.listdir(self.features_path) if file.endswith(".npy")
+                file for file in os.listdir(self.features_path)
+                if file.endswith(".npy")
             ]
-            self.bag_names = [os.path.splitext(file)[0] for file in self.bag_names]
+            self.bag_names = [
+                os.path.splitext(file)[0] for file in self.bag_names
+            ]
             if len(self.bag_names) == 0:
                 raise ValueError("No bags found in features_path")
 
@@ -242,7 +249,8 @@ class ProcessedMILDataset(torch.utils.data.Dataset):
         bag_dict = self._load_bag(name)
 
         if "adj" in self.bag_keys and bag_dict["coords"] is not None:
-            edge_index, edge_weight, norm_edge_weight = self._build_adj(bag_dict)
+            edge_index, edge_weight, norm_edge_weight = self._build_adj(
+                bag_dict)
             if self.norm_adj:
                 edge_val = norm_edge_weight
             else:
@@ -278,18 +286,19 @@ class ProcessedMILDataset(torch.utils.data.Dataset):
 
         bag_size = bag_dict["coords"].shape[0]
         if self.adj_with_dist:
-            edge_index, edge_weight = build_adj(
-                bag_dict["coords"], bag_dict["X"], dist_thr=self.dist_thr
-            )
+            edge_index, edge_weight = build_adj(bag_dict["coords"],
+                                                bag_dict["X"],
+                                                dist_thr=self.dist_thr)
         else:
-            edge_index, edge_weight = build_adj(
-                bag_dict["coords"], None, dist_thr=self.dist_thr
-            )
-        norm_edge_weight = normalize_adj(edge_index, edge_weight, n_nodes=bag_size)
+            edge_index, edge_weight = build_adj(bag_dict["coords"],
+                                                None,
+                                                dist_thr=self.dist_thr)
+        norm_edge_weight = normalize_adj(edge_index,
+                                         edge_weight,
+                                         n_nodes=bag_size)
         if bag_size == 1:
             edge_index, norm_edge_weight = add_self_loops(
-                edge_index, norm_edge_weight, bag_size
-            )
+                edge_index, norm_edge_weight, bag_size)
 
         return edge_index, edge_weight, norm_edge_weight
 
@@ -324,7 +333,8 @@ class ProcessedMILDataset(torch.utils.data.Dataset):
             self.loaded_bags[bag_name] = bag_dict
 
         return_bag_dict = {
-            key: bag_dict[key] for key in self.bag_keys if key in bag_dict
+            key: bag_dict[key]
+            for key in self.bag_keys if key in bag_dict
         }
 
         return TensorDict(return_bag_dict)

@@ -32,6 +32,7 @@ class BinaryClassificationDataset(ProcessedMILDataset):
         adj_with_dist: bool = False,
         norm_adj: bool = True,
         load_at_init: bool = True,
+        verbose: bool = True,
     ) -> None:
         super().__init__(
             features_path=features_path,
@@ -45,6 +46,7 @@ class BinaryClassificationDataset(ProcessedMILDataset):
             norm_adj=norm_adj,
             load_at_init=load_at_init,
         )
+        self.verbose = verbose
 
     def _fix_inst_labels(self, inst_labels):
         """
@@ -79,17 +81,17 @@ class BinaryClassificationDataset(ProcessedMILDataset):
         if "Y" in bag_dict:
             if "y_inst" in bag_dict:
                 if bag_dict["Y"] != (bag_dict["y_inst"]).max():
-                    msg = f"Instance labels (max(y_inst)={(bag_dict['y_inst']).max()}) are not consistent with bag label (Y={bag_dict['Y']}) for bag {name}. Setting all instance labels to -1 (unknown)."
-                    warnings.warn(msg)
+                    if self.verbose:
+                        msg = f"Instance labels (max(y_inst)={(bag_dict['y_inst']).max()}) are not consistent with bag label (Y={bag_dict['Y']}) for bag {name}. Setting all instance labels to -1 (unknown)."
+                        warnings.warn(msg)
                     bag_dict["y_inst"] = np.full((bag_dict["X"].shape[0],), -1)
             else:
                 if bag_dict["Y"] == 0:
                     bag_dict["y_inst"] = np.zeros(bag_dict["X"].shape[0])
                 else:
-                    msg = (
-                        f"Instance labels not found for bag {name}. Setting all to -1."
-                    )
-                    warnings.warn(msg)
+                    if self.verbose:
+                        msg = f"Instance labels not found for bag {name}. Setting all to -1."
+                        warnings.warn(msg)
                     bag_dict["y_inst"] = np.full((bag_dict["X"].shape[0],), -1)
         return bag_dict
 
