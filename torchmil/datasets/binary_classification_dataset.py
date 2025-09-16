@@ -46,7 +46,6 @@ class BinaryClassificationDataset(ProcessedMILDataset):
             norm_adj=norm_adj,
             load_at_init=load_at_init,
         )
-        self.verbose = verbose
 
     def _fix_inst_labels(self, inst_labels):
         """
