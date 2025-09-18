@@ -23,7 +23,9 @@ dependencies = [
   "einops",
   "scipy",
   "tqdm",
-  "numpy"
+  "numpy",
+  "pandas",
+  "h5py"
 ]
 description = "Deep Multiple Instance Learning library for Pytorch"
 keywords = [

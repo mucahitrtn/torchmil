@@ -3,6 +3,7 @@ from .binary_classification_dataset import (
     BinaryClassificationDataset as BinaryClassificationDataset,
 )
 from .camelyon16mil_dataset import CAMELYON16MILDataset as CAMELYON16MILDataset
+from .clam_wsi_dataset import CLAMWSIDataset as CLAMWSIDataset
 from .pandamil_dataset import PANDAMILDataset as PANDAMILDataset
 from .rsnamil_dataset import RSNAMILDataset as RSNAMILDataset
 

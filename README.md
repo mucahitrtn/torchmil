@@ -63,6 +63,32 @@ trainer.train(dataloader, epochs=10)
 torch.save(model.state_dict(), 'model.pth')
 ```
 
+## Loading CLAM-style WSI features
+
+If you already processed Whole Slide Images with
+[CLAM](https://github.com/mahmoodlab/CLAM) and stored the bags as `.pt` feature
+files plus optional `.h5` coordinate files, you can load them with
+`CLAMWSIDataset`:
+
+```python
+from torchmil.datasets import CLAMWSIDataset
+
+dataset = CLAMWSIDataset(
+    csv_path="dataset/slides.csv",          # slide metadata exported by CLAM
+    features_dir="dataset/pt_files",        # optional: one {slide_id}.pt per slide
+    coords_dir="dataset/h5_files",          # optional: one {slide_id}.h5 per slide
+    label_map={"normal": 0, "tumor": 1},   # map slide labels to integers
+    bag_keys=["X", "Y", "coords", "adj"],
+)
+
+bag = dataset[0]
+print(bag.keys())  # -> ['X', 'Y', 'coords', 'adj']
+```
+
+Set `use_h5_features=True` when the CLAM export only contains `.h5` files (the
+dataset will read both the features and coordinates from them). The adjacency
+matrix is built automatically whenever coordinates are available.
+
 ## Next steps
 
 You can take a look at the [examples](https://franblueee.github.io/torchmil/examples/) to see how to use **torchmil** in practice.
